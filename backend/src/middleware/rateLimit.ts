@@ -10,7 +10,7 @@ export const generalLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 100,
   message: { error: 'Příliš mnoho pokusů o přihlášení. Zkuste to za 15 minut.' },
   standardHeaders: true,
   legacyHeaders: false,
