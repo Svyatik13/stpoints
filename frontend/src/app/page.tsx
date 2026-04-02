@@ -43,24 +43,6 @@ export default function HomePage() {
           Těžte, sbírejte a chraňte svůj zůstatek.
         </p>
 
-        {/* Stats Badge */}
-        <div className="glass-card-static inline-flex items-center gap-6 px-8 py-4 mb-10">
-          <div className="text-center">
-            <div className="text-st-cyan font-mono font-bold text-lg">∞</div>
-            <div className="text-text-muted text-xs">Obtížnost</div>
-          </div>
-          <div className="w-px h-8 bg-glass-border" />
-          <div className="text-center">
-            <div className="text-st-gold font-mono font-bold text-lg">0.0001</div>
-            <div className="text-text-muted text-xs">ST / 10k hashů</div>
-          </div>
-          <div className="w-px h-8 bg-glass-border" />
-          <div className="text-center">
-            <div className="text-st-purple font-mono font-bold text-lg">SHA-256</div>
-            <div className="text-text-muted text-xs">Algoritmus</div>
-          </div>
-        </div>
-
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/auth/register" className="btn-primary text-center" id="register-cta">

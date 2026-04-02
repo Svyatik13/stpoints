@@ -17,6 +17,7 @@ import terminalRoutes from './routes/terminal.routes';
 import adminRoutes from './routes/admin.routes';
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── Security ──
 app.use(helmet());
