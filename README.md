@@ -53,10 +53,10 @@ npm run dev
 - **pgAdmin**: http://localhost:5050
 
 ## 🔐 Demo Credentials
-| User | Email | Password |
-|------|-------|----------|
-| Admin | admin@stpoints.fun | admin123! |
-| Demo | demo@stpoints.fun | demo123! |
+| User | Password |
+|------|----------|
+| Admin | admin123! |
+| Demo | demo123! |
 
 ## ⛏️ Mining System
 - Server issues time-limited SHA-256 challenges
@@ -65,11 +65,14 @@ npm run dev
 - Reward: `0.001 ST` per 10,000 hashes computed
 - Anti-cheat: timing plausibility checks, replay prevention
 
-## 🎁 Giveaway Engine
-- Server-side cron job runs every 6 hours
-- Randomly selects from users active in last 24 hours
-- Uses `crypto.randomInt()` for fair selection
-- All draws logged in the database
+## 🎁 Giveaway Engine (ST-Drops)
+- **Admin Controlled**: Administrators create giveaways with custom prize pools and winner counts.
+- **Participation**: Users must manually "Join" active giveaways.
+- **Eligibility**: Requires account activity (mining/transfers) within the last 24 hours.
+- **Distribution Modes**:
+  - `EQUAL`: Prize pool split evenly among winners.
+  - `WEIGHTED`: Top places receive a larger percentage (e.g., 1st: 40%, 2nd: 25%, etc.).
+- **Auto-Draw**: A server-side cron job checks every minute and resolves expired giveaways.
 
 ## 🔒 ST-RM Terminal
 - Locked behind a 500 ST minimum balance
