@@ -20,4 +20,7 @@ router.post('/toggle-active', adminController.toggleUserActive);
 router.post('/giveaway/create', giveawayController.createGiveaway);
 router.post('/giveaway/draw', giveawayController.forceDraw);
 
+// Delete User
+router.delete('/user/:userId', adminController.deleteUser);
+
 export default router;

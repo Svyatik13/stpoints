@@ -164,4 +164,43 @@ export async function toggleUserActive(req: Request, res: Response, next: NextFu
   }
 }
 
+// ── Delete user (Hard Delete) ──
+export async function deleteUser(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = z.object({ userId: z.string() }).parse(req.params);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete all mining challenges
+      await tx.miningChallenge.deleteMany({ where: { userId } });
+
+      // 2. Delete giveaway participations and wins
+      await tx.giveawayEntry.deleteMany({ where: { userId } });
+      await tx.giveawayWinner.deleteMany({ where: { userId } });
+
+      // 3. Find if user created any giveaways and delete their related records
+      const createdGiveaways = await tx.giveaway.findMany({ where: { createdBy: userId }, select: { id: true } });
+      if (createdGiveaways.length > 0) {
+        const gaIds = createdGiveaways.map(g => g.id);
+        await tx.giveawayEntry.deleteMany({ where: { giveawayId: { in: gaIds } } });
+        await tx.giveawayWinner.deleteMany({ where: { giveawayId: { in: gaIds } } });
+        await tx.giveaway.deleteMany({ where: { id: { in: gaIds } } });
+      }
+
+      // 4. Delete transactions (sender or receiver)
+      await tx.transaction.deleteMany({
+        where: {
+          OR: [{ senderId: userId }, { receiverId: userId }]
+        }
+      });
+
+      // 5. Finally, delete the user
+      await tx.user.delete({ where: { id: userId } });
+    });
+
+    logger.info(`ADMIN: User ${userId} hard deleted from database and all relations.`);
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+}
 

@@ -87,6 +87,8 @@ export const api = {
       request<any>('/admin/role', { method: 'POST', body }),
     toggleActive: (body: { userId: string }) =>
       request<any>('/admin/toggle-active', { method: 'POST', body }),
+    deleteUser: (userId: string) =>
+      request<any>(`/admin/user/${userId}`, { method: 'DELETE' }),
     createGiveaway: (body: { title: string; prizePool: string; winnerCount: number; distribution: string; durationMinutes: number }) =>
       request<any>('/admin/giveaway/create', { method: 'POST', body }),
     drawGiveaway: (body: { giveawayId: string }) =>

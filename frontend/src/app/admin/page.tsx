@@ -114,6 +114,20 @@ export default function AdminPage() {
     }
   }
 
+  async function handleDeleteUser(u: AdminUser) {
+    if (!window.confirm(`OPRAVDU chcete TRVALE SMAZAT z celého systému uživatele ${u.username}? Tato akce smaže i všechny jeho transakce, těžby a drops.`)) return;
+    setActionLoading(true);
+    try {
+      await api.admin.deleteUser(u.id);
+      showMessage('success', `Uživatel ${u.username} byl trvale smazán ze všeho.`);
+      loadUsers();
+      loadStats();
+    } catch (err: any) {
+      showMessage('error', err.message);
+    }
+    setActionLoading(false);
+  }
+
   const [gaTitle, setGaTitle] = useState('');
   const [gaPool, setGaPool] = useState('');
   const [gaWinners, setGaWinners] = useState('');
@@ -314,6 +328,13 @@ export default function AdminPage() {
                               title="Změnit roli"
                             >
                               {u.role === 'ADMIN' ? '👤' : '👑'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u)}
+                              className="px-3 py-1.5 text-xs rounded-lg bg-st-red-dim text-st-red hover:bg-st-red/20 transition-colors font-semibold"
+                              title="Trvale smazat"
+                            >
+                              🗑️
                             </button>
                           </div>
                         </td>
