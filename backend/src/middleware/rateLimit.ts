@@ -18,7 +18,7 @@ export const authLimiter = rateLimit({
 
 export const miningLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5,
+  max: 30,
   message: { error: 'Příliš mnoho těžebních požadavků. Zpomalte.' },
   standardHeaders: true,
   legacyHeaders: false,
