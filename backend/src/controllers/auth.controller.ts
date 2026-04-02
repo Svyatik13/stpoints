@@ -13,7 +13,6 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
-  passCode: z.string().min(1, 'Přístupový kód je povinný.'),
 });
 
 function setCookies(res: Response, tokens: authService.AuthTokens) {
@@ -51,17 +50,12 @@ export async function register(req: Request, res: Response, next: NextFunction) 
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
     const validated = loginSchema.parse(req.body);
-    // 1. Validate pass code (throws 401 if wrong)
-    await passCodeService.validatePassCode(validated.passCode);
-    // 2. Authenticate user
     const { user, tokens } = await authService.loginUser(validated);
-    // 3. Rotate code — single-use (only after successful auth)
-    await passCodeService.rotateCodeAfterUse(user.id, user.username);
     setCookies(res, tokens);
     res.json({ user });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Neplatné přihlašovací údaje nebo kód.' });
+      res.status(400).json({ error: 'Neplatné přihlašovací údaje.' });
       return;
     }
     next(error);

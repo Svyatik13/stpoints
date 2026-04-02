@@ -4,7 +4,6 @@ import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
-const MAX_SESSION_SECONDS = 1800; // 30 min cap
 const ST_PER_SECOND = 0.00005;    // 0.18 ST per hour base rate
 
 export async function startMiningSession(req: Request, res: Response, next: NextFunction) {
@@ -34,7 +33,7 @@ export async function stopMiningSession(req: Request, res: Response, next: NextF
       if (!user.miningStartedAt) throw new AppError('Těžba nebyla spuštěna.', 400);
 
       const elapsedMs = Date.now() - new Date(user.miningStartedAt).getTime();
-      const elapsedSec = Math.min(Math.floor(elapsedMs / 1000), MAX_SESSION_SECONDS);
+      const elapsedSec = Math.floor(elapsedMs / 1000);
 
       if (elapsedSec < 5) throw new AppError('Příliš krátká těžba (minimum 5 sekund).', 400);
 
@@ -78,9 +77,8 @@ export async function getMiningSession(req: Request, res: Response, next: NextFu
     if (!user.miningStartedAt) return res.json({ active: false });
 
     const elapsedSeconds = Math.floor((Date.now() - new Date(user.miningStartedAt).getTime()) / 1000);
-    const capped = Math.min(elapsedSeconds, MAX_SESSION_SECONDS);
-    const estimatedReward = (capped * ST_PER_SECOND).toFixed(6);
+    const estimatedReward = (elapsedSeconds * ST_PER_SECOND).toFixed(6);
 
-    res.json({ active: true, miningStartedAt: user.miningStartedAt, elapsedSeconds: capped, estimatedReward });
+    res.json({ active: true, miningStartedAt: user.miningStartedAt, elapsedSeconds, estimatedReward });
   } catch (error) { next(error); }
 }

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 
-const MAX_SESSION_SECONDS = 1800;
 const ST_PER_SECOND = 0.00005;
 
 function formatTime(sec: number) {
@@ -51,12 +50,8 @@ export default function MiningPage() {
     if (isMining) {
       timerRef.current = setInterval(() => {
         setElapsedSeconds(prev => {
-          const next = Math.min(prev + 1, MAX_SESSION_SECONDS);
+          const next = prev + 1;
           setEstimatedReward(next * ST_PER_SECOND);
-          if (next >= MAX_SESSION_SECONDS) {
-            // Auto-stop at 30 min
-            handleStop();
-          }
           return next;
         });
       }, 1000);
@@ -138,7 +133,6 @@ export default function MiningPage() {
 
   if (!user) return null;
 
-  const progressPct = Math.min((elapsedSeconds / MAX_SESSION_SECONDS) * 100, 100);
 
   return (
     <AppShell>
@@ -172,37 +166,19 @@ export default function MiningPage() {
             {/* Live stats during mining */}
             {isMining && (
               <div className="flex flex-wrap items-center justify-center gap-8 mt-6 mb-2">
-                {/* Timer */}
                 <div className="text-center">
                   <p className="text-3xl md:text-4xl font-bold font-mono text-st-cyan text-glow-cyan">{formatTime(elapsedSeconds)}</p>
                   <p className="text-[10px] uppercase tracking-widest text-text-muted mt-1">Čas těžby</p>
                 </div>
                 <div className="w-px h-10 bg-glass-border hidden sm:block" />
-                {/* Estimated reward */}
                 <div className="text-center">
                   <p className="text-3xl md:text-4xl font-bold font-mono text-st-gold text-glow-gold">~{estimatedReward.toFixed(4)}</p>
                   <p className="text-[10px] uppercase tracking-widest text-text-muted mt-1">Odhadovaná ST</p>
                 </div>
-                <div className="w-px h-10 bg-glass-border hidden sm:block" />
-                {/* Progress to 30min */}
-                <div className="text-center">
-                  <p className="text-3xl md:text-4xl font-bold font-mono text-st-purple">{progressPct.toFixed(0)}%</p>
-                  <p className="text-[10px] uppercase tracking-widest text-text-muted mt-1">z 30 min max</p>
-                </div>
               </div>
             )}
 
-            {/* Progress bar */}
-            {isMining && (
-              <div className="w-full max-w-sm mt-2 mb-4">
-                <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg, #06b6d4, #a855f7)' }} />
-                </div>
-                <p className="text-[10px] text-text-muted mt-1 text-center">Max 30 minut na sezení</p>
-              </div>
-            )}
 
-            {/* Button */}
             <button
               onClick={isMining ? handleStop : handleStart}
               disabled={loading}
@@ -284,8 +260,8 @@ export default function MiningPage() {
         <div className="glass-card-static p-5 flex items-start gap-4">
           <span className="text-2xl">ℹ️</span>
           <div className="text-sm text-text-secondary space-y-1">
-            <p><strong className="text-text-primary">Jak těžba funguje:</strong> Spusť těžbu a nechej ji běžet klidně i 30 minut. Po zastavení dostaneš odměnu podle doby těžby.</p>
-            <p>Sazba: <span className="text-st-cyan font-mono">~0.18 ST/hod</span> (s náhodnou odchylkou ±15 %). Maximum na jedno sezení: <span className="text-st-gold font-mono">0.09 ST</span>.</p>
+            <p><strong className="text-text-primary">Jak těžba funguje:</strong> Spusť těžbu a nechej ji běžet jak dlouho chceš. Po zastavení dostaneš odměnu podle doby těžby.</p>
+            <p>Sazba: <span className="text-st-cyan font-mono">~0.18 ST/hod</span> (s náhodnou odchylkou ±15 %). Žádný časový limit.</p>
           </div>
         </div>
       </div>

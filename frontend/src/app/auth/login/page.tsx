@@ -10,7 +10,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [passCode, setPassCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(username, password, passCode);
+      await login(username, password);
       router.push('/wallet');
     } catch (err: any) {
       setError(err.message || 'Přihlášení se nezdařilo.');
@@ -100,23 +99,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div>
-            <label htmlFor="pass-code" className="block text-sm font-medium text-text-secondary mb-2">
-              🔐 Přístupový kód
-            </label>
-            <input
-              id="pass-code"
-              type="text"
-              value={passCode}
-              onChange={(e) => setPassCode(e.target.value.toUpperCase())}
-              className="glass-input tracking-widest font-mono text-center text-lg"
-              placeholder="XXXXXX"
-              maxLength={6}
-              required
-              autoComplete="off"
-            />
-            <p className="text-text-muted text-xs mt-1">Denní přístupový kód (od administrátora)</p>
-          </div>
 
           <button
             type="submit"
