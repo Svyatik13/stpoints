@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { NAV_ITEMS } from '@/lib/constants';
+import { NAV_ITEMS, ADMIN_NAV_ITEMS } from '@/lib/constants';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -31,6 +31,17 @@ export default function Navbar() {
               key={item.href}
               href={item.href}
               className={`nav-link ${pathname === item.href ? 'active' : ''}`}
+            >
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+          {user.role === 'ADMIN' && ADMIN_NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-link ${pathname === item.href ? 'active' : ''}`}
+              style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', marginLeft: 4, paddingLeft: 12 }}
             >
               <span>{item.icon}</span>
               <span>{item.label}</span>

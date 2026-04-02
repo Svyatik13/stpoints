@@ -3,9 +3,14 @@ export const APP_DOMAIN = 'stpoints.fun';
 export const TERMINAL_MIN_BALANCE = 500;
 
 export const NAV_ITEMS = [
-  { href: '/wallet', label: 'Moje Peněženka', icon: '💎' },
-  { href: '/mining', label: 'ZČU Těžební Uzel', icon: '⛏️' },
-  { href: '/terminal', label: 'ST-RM Terminál', icon: '🔒' },
+  { href: '/wallet', label: 'Peněženka', icon: '💎' },
+  { href: '/mining', label: 'Těžba', icon: '⛏️' },
+  { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
+  { href: '/terminal', label: 'Terminál', icon: '🔒' },
+] as const;
+
+export const ADMIN_NAV_ITEMS = [
+  { href: '/admin', label: 'Admin', icon: '⚙️' },
 ] as const;
 
 export const TRANSACTION_TYPE_LABELS: Record<string, string> = {

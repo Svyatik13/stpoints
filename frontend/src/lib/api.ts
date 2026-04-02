@@ -72,4 +72,20 @@ export const api = {
     recent: (limit: number = 10) =>
       request<{ giveaways: any[] }>(`/giveaway/recent?limit=${limit}`),
   },
+
+  // ── Admin ──
+  admin: {
+    stats: () =>
+      request<any>('/admin/stats'),
+    users: (page: number = 1, limit: number = 20, search: string = '') =>
+      request<any>(`/admin/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`),
+    grant: (body: { userId: string; amount: string; reason: string }) =>
+      request<any>('/admin/grant', { method: 'POST', body }),
+    setRole: (body: { userId: string; role: string }) =>
+      request<any>('/admin/role', { method: 'POST', body }),
+    toggleActive: (body: { userId: string }) =>
+      request<any>('/admin/toggle-active', { method: 'POST', body }),
+    triggerGiveaway: () =>
+      request<any>('/admin/giveaway/trigger', { method: 'POST' }),
+  },
 };

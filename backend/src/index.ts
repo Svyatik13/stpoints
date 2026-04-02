@@ -14,6 +14,7 @@ import miningRoutes from './routes/mining.routes';
 import walletRoutes from './routes/wallet.routes';
 import giveawayRoutes from './routes/giveaway.routes';
 import terminalRoutes from './routes/terminal.routes';
+import adminRoutes from './routes/admin.routes';
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/mining', miningRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/giveaway', giveawayRoutes);
 app.use('/api/terminal', terminalRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {
