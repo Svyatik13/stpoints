@@ -5,12 +5,11 @@ import { env } from '../config/env';
 
 const registerSchema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, 'Uživatelské jméno smí obsahovat pouze písmena, čísla a podtržítka.'),
-  email: z.string().email('Neplatný formát emailu.'),
   password: z.string().min(8, 'Heslo musí mít alespoň 8 znaků.'),
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1),
 });
 

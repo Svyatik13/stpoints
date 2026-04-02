@@ -31,9 +31,9 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
 // ── Auth ──
 export const api = {
   auth: {
-    register: (body: { username: string; email: string; password: string }) =>
+    register: (body: { username: string; password: string }) =>
       request<{ user: any }>('/auth/register', { method: 'POST', body }),
-    login: (body: { email: string; password: string }) =>
+    login: (body: { username: string; password: string }) =>
       request<{ user: any }>('/auth/login', { method: 'POST', body }),
     logout: () =>
       request<{ message: string }>('/auth/logout', { method: 'POST' }),
@@ -70,7 +70,9 @@ export const api = {
   // ── Giveaway ──
   giveaway: {
     recent: (limit: number = 10) =>
-      request<{ giveaways: any[] }>(`/giveaway/recent?limit=${limit}`),
+      request<{ giveaways: any[] }>(`/giveaway?limit=${limit}`),
+    join: (giveawayId: string) =>
+      request<{ success: boolean; message: string }>('/giveaway/join', { method: 'POST', body: { giveawayId } }),
   },
 
   // ── Admin ──
@@ -85,7 +87,9 @@ export const api = {
       request<any>('/admin/role', { method: 'POST', body }),
     toggleActive: (body: { userId: string }) =>
       request<any>('/admin/toggle-active', { method: 'POST', body }),
-    triggerGiveaway: () =>
-      request<any>('/admin/giveaway/trigger', { method: 'POST' }),
+    createGiveaway: (body: { title: string; prizePool: string; winnerCount: number; distribution: string; durationMinutes: number }) =>
+      request<any>('/admin/giveaway/create', { method: 'POST', body }),
+    drawGiveaway: (body: { giveawayId: string }) =>
+      request<any>('/admin/giveaway/draw', { method: 'POST', body }),
   },
 };

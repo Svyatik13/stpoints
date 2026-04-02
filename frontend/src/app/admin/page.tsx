@@ -19,7 +19,6 @@ interface SystemStats {
 interface AdminUser {
   id: string;
   username: string;
-  email: string;
   balance: string;
   role: string;
   isActive: boolean;
@@ -115,13 +114,41 @@ export default function AdminPage() {
     }
   }
 
-  async function handleTriggerGiveaway() {
+  const [gaTitle, setGaTitle] = useState('');
+  const [gaPool, setGaPool] = useState('');
+  const [gaWinners, setGaWinners] = useState('');
+  const [gaDist, setGaDist] = useState<'EQUAL'|'WEIGHTED'>('EQUAL');
+  const [gaTime, setGaTime] = useState('');
+
+  async function handleCreateGiveaway() {
     setActionLoading(true);
     try {
-      const data = await api.admin.triggerGiveaway();
-      setGiveawayResult(data);
-      showMessage('success', data.message || 'Giveaway dokončen!');
+      await api.admin.createGiveaway({
+        title: gaTitle,
+        prizePool: gaPool,
+        winnerCount: parseInt(gaWinners),
+        distribution: gaDist,
+        durationMinutes: parseInt(gaTime)
+      });
+      showMessage('success', 'Giveaway přidán!');
+      setGaTitle('');
+      setGaPool('');
+      setGaWinners('');
+      setGaTime('');
       loadStats();
+    } catch (err: any) {
+      showMessage('error', err.message);
+    }
+    setActionLoading(false);
+  }
+
+  async function handleForceDraw(giveawayId: string) {
+    setActionLoading(true);
+    try {
+      await api.admin.drawGiveaway({ giveawayId });
+      showMessage('success', 'ST-Drop byl úspěšně vyhodnocen.');
+      loadStats();
+      // A quick reload workaround since we don't fetch giveaways array in admin page yet
     } catch (err: any) {
       showMessage('error', err.message);
     }
@@ -248,7 +275,6 @@ export default function AdminPage() {
                               {u.username}
                               {!u.isActive && <span className="badge badge-red text-[9px]">BAN</span>}
                             </p>
-                            <p className="text-text-muted text-xs">{u.email}</p>
                           </div>
                         </td>
                         <td className="p-4 text-right">
@@ -325,56 +351,53 @@ export default function AdminPage() {
         {/* ═══ GIVEAWAY TAB ═══ */}
         {tab === 'giveaway' && (
           <div className="space-y-4">
-            {/* Trigger Giveaway */}
             <div className="glass-card p-6 glow-gold">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold mb-2">🎰 Manuální ST-Drop</h2>
-                  <p className="text-text-secondary text-sm">
-                    Okamžitě spustí giveaway — vybere náhodného aktivního uživatele a přidělí mu odměnu.
-                  </p>
+              <h2 className="text-xl font-bold mb-4">🎰 Vytvořit ST-Drop</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">Název</label>
+                  <input type="text" value={gaTitle} onChange={e => setGaTitle(e.target.value)} className="glass-input" placeholder="Např. Vánoční drop" />
                 </div>
-                <button
-                  onClick={handleTriggerGiveaway}
-                  disabled={actionLoading}
-                  className="btn-primary text-lg px-8 py-3 whitespace-nowrap disabled:opacity-50"
-                >
-                  {actionLoading ? '⏳ Probíhá...' : '🎁 Spustit ST-Drop'}
-                </button>
-              </div>
-
-              {giveawayResult?.result && (
-                <div className="mt-4 p-4 rounded-xl bg-st-gold-dim/50 border border-st-gold/20">
-                  <div className="flex items-center gap-4">
-                    <span className="text-3xl">🏆</span>
-                    <div>
-                      <p className="font-bold text-lg">Výherce: {giveawayResult.result.winnerUsername}</p>
-                      <p className="text-text-secondary text-sm">
-                        Odměna: <span className="text-st-gold font-mono font-bold">{giveawayResult.result.amount} ST</span> 
-                        &nbsp;•&nbsp; Pool: {giveawayResult.result.pool} uživatelů
-                      </p>
-                    </div>
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">Celková Odměna (Pool ST)</label>
+                  <input type="number" step="0.000001" value={gaPool} onChange={e => setGaPool(e.target.value)} className="glass-input" placeholder="10.0" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">Počet výherců</label>
+                  <input type="number" value={gaWinners} onChange={e => setGaWinners(e.target.value)} className="glass-input" placeholder="3" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">Doba trvání (minuty)</label>
+                  <input type="number" value={gaTime} onChange={e => setGaTime(e.target.value)} className="glass-input" placeholder="60 (1 hodina)" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-text-secondary block mb-2">Rozdělení odměny</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input type="radio" checked={gaDist === 'EQUAL'} onChange={() => setGaDist('EQUAL')} className="accent-st-gold" />
+                      Rovnoměrně (Všichni stejně)
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input type="radio" checked={gaDist === 'WEIGHTED'} onChange={() => setGaDist('WEIGHTED')} className="accent-st-gold" />
+                      Odstupňovaně (1. místo bere víc)
+                    </label>
                   </div>
                 </div>
-              )}
+              </div>
+              <button
+                onClick={handleCreateGiveaway}
+                disabled={actionLoading || !gaTitle || !gaPool || !gaWinners || !gaTime}
+                className="btn-primary w-full text-lg py-3 disabled:opacity-50"
+              >
+                {actionLoading ? '⏳ Vytvářím...' : '🎁 Spustit nový ST-Drop'}
+              </button>
             </div>
-
-            {/* Giveaway Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="glass-card-static p-5">
-                <p className="text-text-muted text-xs uppercase tracking-wider mb-2">Auto-Schedule</p>
-                <p className="text-xl font-bold font-mono">Každých 6h</p>
-                <p className="text-text-muted text-xs mt-1">CRON: 0 */6 * * *</p>
-              </div>
-              <div className="glass-card-static p-5">
-                <p className="text-text-muted text-xs uppercase tracking-wider mb-2">Odměna / Drop</p>
-                <p className="text-xl font-bold font-mono text-st-gold">0.5 ST</p>
-              </div>
-              <div className="glass-card-static p-5">
-                <p className="text-text-muted text-xs uppercase tracking-wider mb-2">Min. Aktivita</p>
-                <p className="text-xl font-bold font-mono">24h</p>
-                <p className="text-text-muted text-xs mt-1">Posl. přihlášení</p>
-              </div>
+            
+            <div className="glass-card-static p-6">
+              <h3 className="font-bold mb-2">Jak to funguje?</h3>
+              <p className="text-text-secondary text-sm">
+                Nový ST-Drop se objeví na hlavní stránce /giveaways. Uživatelé musí přijít a ručně se přihlásit tlačítkem "Připojit se" (a musí být aktivní v posledních 24 hodinách). Jakmile odpočet vyprší, systém minutu po skončení automaticky rozlosuje výherce. Výsledky se ukážou v historii obou stran.
+              </p>
             </div>
           </div>
         )}

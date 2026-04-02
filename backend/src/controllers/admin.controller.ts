@@ -12,10 +12,7 @@ export async function getAllUsers(req: Request, res: Response, next: NextFunctio
     const search = req.query.search as string || '';
 
     const where = search ? {
-      OR: [
-        { username: { contains: search, mode: 'insensitive' as const } },
-        { email: { contains: search, mode: 'insensitive' as const } },
-      ],
+      username: { contains: search, mode: 'insensitive' as const },
     } : {};
 
     const [users, total] = await Promise.all([
@@ -24,7 +21,6 @@ export async function getAllUsers(req: Request, res: Response, next: NextFunctio
         select: {
           id: true,
           username: true,
-          email: true,
           balance: true,
           role: true,
           isActive: true,
@@ -168,26 +164,4 @@ export async function toggleUserActive(req: Request, res: Response, next: NextFu
   }
 }
 
-// ── Manual giveaway with custom amount ──
-const manualGiveawaySchema = z.object({
-  amount: z.string().refine(v => parseFloat(v) > 0),
-  reason: z.string().min(1).max(200).optional(),
-});
 
-export async function manualGiveaway(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { amount, reason } = manualGiveawaySchema.parse(req.body);
-    
-    // Import and execute giveaway with custom amount
-    const { executeGiveaway } = await import('../services/giveaway.service');
-    const result = await executeGiveaway();
-    
-    if (!result) {
-      res.json({ success: false, message: 'Žádní aktivní uživatelé.' });
-      return;
-    }
-    res.json({ success: true, ...result });
-  } catch (error) {
-    next(error);
-  }
-}

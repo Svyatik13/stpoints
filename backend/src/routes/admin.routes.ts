@@ -17,6 +17,7 @@ router.post('/role', adminController.setUserRole);
 router.post('/toggle-active', adminController.toggleUserActive);
 
 // Giveaway
-router.post('/giveaway/trigger', giveawayController.triggerGiveaway);
+router.post('/giveaway/create', giveawayController.createGiveaway);
+router.post('/giveaway/draw', giveawayController.forceDraw);
 
 export default router;

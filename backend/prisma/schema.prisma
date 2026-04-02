@@ -10,7 +10,6 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
-  email        String   @unique
   passwordHash String   @map("password_hash")
   balance      Decimal  @default(0) @db.Decimal(18, 6)
   role         Role     @default(USER)
@@ -22,7 +21,9 @@ model User {
   sentTransactions     Transaction[] @relation("sender")
   receivedTransactions Transaction[] @relation("receiver")
   miningChallenges     MiningChallenge[]
-  giveawayWins         Giveaway[]
+  giveawaysCreated     Giveaway[] @relation("giveawayCreator")
+  giveawayEntries      GiveawayEntry[]
+  giveawayWins         GiveawayWinner[]
 
   @@map("users")
 }
@@ -97,14 +98,58 @@ enum ChallengeStatus {
 }
 
 model Giveaway {
-  id        String   @id @default(cuid())
-  winnerId  String   @map("winner_id")
-  winner    User     @relation(fields: [winnerId], references: [id])
-  amount    Decimal  @db.Decimal(18, 6)
-  reason    String?
-  pool      Int
-  createdAt DateTime @default(now()) @map("created_at")
+  id              String          @id @default(cuid())
+  title           String
+  prizePool       Decimal         @db.Decimal(18, 6)
+  winnerCount     Int             @map("winner_count")
+  distribution    Distribution    @default(EQUAL)
+  status          GiveawayStatus  @default(ACTIVE)
+  
+  createdBy       String          @map("created_by")
+  creator         User            @relation("giveawayCreator", fields: [createdBy], references: [id])
+  
+  endsAt          DateTime        @map("ends_at")
+  completedAt     DateTime?       @map("completed_at")
+  
+  participants    GiveawayEntry[]
+  winners         GiveawayWinner[]
+  
+  createdAt       DateTime        @default(now()) @map("created_at")
 
-  @@index([winnerId])
   @@map("giveaways")
+}
+
+model GiveawayEntry {
+  id          String    @id @default(cuid())
+  giveawayId  String    @map("giveaway_id")
+  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  joinedAt    DateTime  @default(now()) @map("joined_at")
+  
+  @@unique([giveawayId, userId])
+  @@map("giveaway_entries")
+}
+
+model GiveawayWinner {
+  id          String    @id @default(cuid())
+  giveawayId  String    @map("giveaway_id")
+  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  place       Int
+  amount      Decimal   @db.Decimal(18, 6)
+
+  @@map("giveaway_winners")
+}
+
+enum Distribution {
+  EQUAL
+  WEIGHTED
+}
+
+enum GiveawayStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }

@@ -15,6 +15,7 @@ export default function WalletPage() {
   const [txLoading, setTxLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [networkTotal, setNetworkTotal] = useState<string>('0');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -25,8 +26,16 @@ export default function WalletPage() {
   useEffect(() => {
     if (user) {
       fetchTransactions();
+      fetchNetworkStats();
     }
   }, [user, page]);
+
+  async function fetchNetworkStats() {
+    try {
+      const data = await api.mining.stats();
+      setNetworkTotal(data.networkTotal || '0');
+    } catch {}
+  }
 
   async function fetchTransactions() {
     setTxLoading(true);
@@ -102,7 +111,7 @@ export default function WalletPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="glass-card-static p-5">
             <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Status</p>
             <p className="text-st-emerald font-semibold">● Online</p>
@@ -114,6 +123,11 @@ export default function WalletPage() {
           <div className="glass-card-static p-5">
             <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Účet vytvořen</p>
             <p className="text-text-primary font-semibold text-sm">{new Date(user.createdAt).toLocaleDateString('cs-CZ')}</p>
+          </div>
+          <div className="glass-card-static p-5 border-st-gold/20 glow-gold relative overflow-hidden group">
+            <div className="absolute inset-0 bg-st-gold opacity-0 group-hover:opacity-5 transition-opacity" />
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">ST-Points v Oběhu</p>
+            <p className="text-st-gold font-mono font-bold text-lg">{parseFloat(networkTotal).toFixed(2)} ST</p>
           </div>
         </div>
 

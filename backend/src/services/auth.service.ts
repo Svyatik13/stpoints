@@ -8,12 +8,11 @@ const SALT_ROUNDS = 12;
 
 export interface RegisterInput {
   username: string;
-  email: string;
   password: string;
 }
 
 export interface LoginInput {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -25,18 +24,10 @@ export interface AuthTokens {
 export async function registerUser(input: RegisterInput): Promise<{ user: any; tokens: AuthTokens }> {
   // Check for existing user
   const existing = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { email: input.email.toLowerCase() },
-        { username: input.username },
-      ],
-    },
+    where: { username: input.username },
   });
 
   if (existing) {
-    if (existing.email === input.email.toLowerCase()) {
-      throw new AppError('Tento email je již registrován.', 409);
-    }
     throw new AppError('Toto uživatelské jméno je obsazené.', 409);
   }
 
@@ -50,13 +41,11 @@ export async function registerUser(input: RegisterInput): Promise<{ user: any; t
   const user = await prisma.user.create({
     data: {
       username: input.username,
-      email: input.email.toLowerCase(),
       passwordHash,
     },
     select: {
       id: true,
       username: true,
-      email: true,
       balance: true,
       role: true,
       createdAt: true,
@@ -76,11 +65,10 @@ export async function registerUser(input: RegisterInput): Promise<{ user: any; t
 
 export async function loginUser(input: LoginInput): Promise<{ user: any; tokens: AuthTokens }> {
   const user = await prisma.user.findUnique({
-    where: { email: input.email.toLowerCase() },
+    where: { username: input.username },
     select: {
       id: true,
       username: true,
-      email: true,
       passwordHash: true,
       balance: true,
       role: true,
@@ -150,7 +138,6 @@ export async function getCurrentUser(userId: string) {
     select: {
       id: true,
       username: true,
-      email: true,
       balance: true,
       role: true,
       createdAt: true,

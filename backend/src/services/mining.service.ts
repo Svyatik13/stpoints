@@ -199,18 +199,20 @@ export async function submitSolution(
 }
 
 export async function getMiningStats(userId: string) {
-  const [totalChallenges, solvedChallenges, totalReward] = await Promise.all([
+  const [totalChallenges, solvedChallenges, totalReward, networkTotal] = await Promise.all([
     prisma.miningChallenge.count({ where: { userId } }),
     prisma.miningChallenge.count({ where: { userId, status: 'SOLVED' } }),
     prisma.transaction.aggregate({
       where: { receiverId: userId, type: 'MINING_REWARD' },
       _sum: { amount: true },
     }),
+    prisma.user.aggregate({ _sum: { balance: true } }),
   ]);
 
   return {
     totalChallenges,
     solvedChallenges,
     totalReward: totalReward._sum.amount?.toString() ?? '0',
+    networkTotal: networkTotal._sum.balance?.toString() ?? '0',
   };
 }

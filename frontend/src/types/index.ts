@@ -1,7 +1,6 @@
 export interface User {
   id: string;
   username: string;
-  email: string;
   balance: string;
   role: 'USER' | 'ADMIN';
   createdAt: string;
@@ -63,11 +62,23 @@ export interface TerminalAccess {
 
 export interface Giveaway {
   id: string;
-  amount: string;
-  reason: string | null;
-  pool: number;
+  title: string;
+  prizePool: string;
+  winnerCount: number;
+  distribution: 'EQUAL' | 'WEIGHTED';
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  endsAt: string;
+  completedAt: string | null;
   createdAt: string;
-  winner: { username: string };
+  participantCount: number;
+  hasJoined: boolean;
+  winners: {
+    userId: string;
+    username: string;
+    place: number;
+    amount: string;
+  }[];
+  creator?: { username: string };
 }
 
 export interface PaginatedResponse<T> {

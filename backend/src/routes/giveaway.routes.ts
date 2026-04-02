@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import * as giveawayController from '../controllers/giveaway.controller';
-import { authMiddleware, adminMiddleware } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
-// Public: view recent giveaways
-router.get('/recent', giveawayController.getRecentGiveaways);
+// Public/Auth routes
+router.use(authMiddleware);
 
-// Admin only: manually trigger a giveaway
-router.post('/trigger', authMiddleware, adminMiddleware, giveawayController.triggerGiveaway);
+router.get('/', giveawayController.getGiveaways);
+router.post('/join', giveawayController.joinGiveaway);
 
 export default router;

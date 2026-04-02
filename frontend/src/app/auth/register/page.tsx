@@ -9,7 +9,6 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,7 +30,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await register(username, email, password);
+      await register(username, password);
       router.push('/wallet');
     } catch (err: any) {
       setError(err.message || 'Registrace se nezdařila.');
@@ -82,20 +81,7 @@ export default function RegisterPage() {
             <p className="text-text-muted text-xs mt-1">Pouze písmena, čísla a podtržítka (3–20 znaků)</p>
           </div>
 
-          <div>
-            <label htmlFor="reg-email" className="block text-sm font-medium text-text-secondary mb-2">
-              Email
-            </label>
-            <input
-              id="reg-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="glass-input"
-              placeholder="vas@email.cz"
-              required
-            />
-          </div>
+
 
           <div>
             <label htmlFor="reg-password" className="block text-sm font-medium text-text-secondary mb-2">

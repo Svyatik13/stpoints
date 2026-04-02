@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       router.push('/wallet');
     } catch (err: any) {
       setError(err.message || 'Přihlášení se nezdařilo.');
@@ -52,16 +52,16 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
-              Email
+            <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-2">
+              Uživatelské jméno
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="glass-input"
-              placeholder="vas@email.cz"
+              placeholder="vas_nickname"
               required
             />
           </div>
