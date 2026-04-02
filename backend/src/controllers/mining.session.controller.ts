@@ -4,7 +4,7 @@ import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
-const ST_PER_SECOND = 0.00005;    // 0.18 ST per hour base rate
+const ST_PER_SECOND = 0.000333;   // ~0.005 ST per 15 seconds, ~1.2 ST/hour
 
 export async function startMiningSession(req: Request, res: Response, next: NextFunction) {
   try {

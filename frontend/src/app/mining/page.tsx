@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 
-const ST_PER_SECOND = 0.00005;
+const ST_PER_SECOND = 0.000333; // ~0.005 ST per 15s
 
 function formatTime(sec: number) {
   const m = Math.floor(sec / 60).toString().padStart(2, '0');
@@ -261,7 +261,7 @@ export default function MiningPage() {
           <span className="text-2xl">ℹ️</span>
           <div className="text-sm text-text-secondary space-y-1">
             <p><strong className="text-text-primary">Jak těžba funguje:</strong> Spusť těžbu a nechej ji běžet jak dlouho chceš. Po zastavení dostaneš odměnu podle doby těžby.</p>
-            <p>Sazba: <span className="text-st-cyan font-mono">~0.18 ST/hod</span> (s náhodnou odchylkou ±15 %). Žádný časový limit.</p>
+            <p>Sazba: <span className="text-st-cyan font-mono">~1.2 ST/hod</span> (s náhodnou odchylkou ±15 %). Žádný časový limit.</p>
           </div>
         </div>
       </div>
