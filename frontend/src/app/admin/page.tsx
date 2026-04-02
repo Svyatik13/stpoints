@@ -51,6 +51,7 @@ export default function AdminPage() {
   const [newCase, setNewCase] = useState({ name: '', description: '', price: '10', isDaily: false });
   const [editingCase, setEditingCase] = useState<any | null>(null);
   const [newItem, setNewItem] = useState<Record<string, { type: string; label: string; amount: string; weight: string }>>({});
+  const [editingItem, setEditingItem] = useState<Record<string, { label: string; amount: string; weight: string }>>({});
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'ADMIN')) {
@@ -657,86 +658,124 @@ export default function AdminPage() {
 
                     {/* Items list */}
                     <div>
-                      <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
-                        Předměty ({c.items.length}) — Vyšší váha = větší šance
-                      </p>
+                      {/* Total % indicator */}
+                      {(() => {
+                        const totalS = c.items.reduce((s: number, i: any) => s + i.weight, 0);
+                        const diff = Math.abs(totalS - 100);
+                        const col = diff < 1 ? '#10b981' : diff < 15 ? '#f59e0b' : '#ef4444';
+                        return (
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">
+                              Předměty ({c.items.length})
+                            </p>
+                            <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full" style={{ color: col, background: `${col}18` }}>
+                              {diff < 1 ? '✓ Součet = 100 %' : `Součet = ${totalS} % (musí být 100)`}
+                            </span>
+                          </div>
+                        );
+                      })()}
                       <div className="space-y-2">
                         {c.items.map((item: any) => {
                           const totalWeight = c.items.reduce((s: number, i: any) => s + i.weight, 0);
                           const pct = totalWeight > 0 ? ((item.weight / totalWeight) * 100).toFixed(1) : '0';
                           const isMythic = item.type === 'MYTHIC_PASS';
-                          return (
-                            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
-                              <span className={`text-xs font-bold w-16 text-right font-mono ${isMythic ? 'text-yellow-400' : 'text-st-cyan'}`}>{pct}%</span>
+                          const isEd = !!editingItem[item.id];
+                          return isEd ? (
+                            /* ── Inline edit ── */
+                            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-st-cyan-dim border border-st-cyan/25 flex-wrap">
+                              <input className="glass-input text-xs flex-1 min-w-[110px]" placeholder="Popis"
+                                value={editingItem[item.id]?.label ?? item.label}
+                                onChange={e => setEditingItem(p => ({...p, [item.id]: {...p[item.id], label: e.target.value}}))} />
+                              <input className="glass-input text-xs w-24" placeholder="Množství ST" type="number"
+                                value={editingItem[item.id]?.amount ?? (item.amount || '')}
+                                onChange={e => setEditingItem(p => ({...p, [item.id]: {...p[item.id], amount: e.target.value}}))} />
+                              <div className="flex items-center gap-1">
+                                <input className="glass-input text-xs w-20" placeholder="Šance" type="number" min="0" max="100" step="0.1"
+                                  value={editingItem[item.id]?.weight ?? String(item.weight)}
+                                  onChange={e => setEditingItem(p => ({...p, [item.id]: {...p[item.id], weight: e.target.value}}))} />
+                                <span className="text-text-muted text-xs">%</span>
+                              </div>
+                              <div className="flex gap-1.5">
+                                <button disabled={actionLoading}
+                                  onClick={async () => {
+                                    const ei = editingItem[item.id]; if (!ei) return;
+                                    setActionLoading(true);
+                                    try {
+                                      await api.admin.updateCaseItem(item.id, { label: ei.label ?? item.label, amount: ei.amount || null, weight: Math.round(parseFloat(ei.weight ?? String(item.weight))) });
+                                      setEditingItem(p => { const n = {...p}; delete n[item.id]; return n; });
+                                      loadCases(); showMessage('success', 'Předmět upraven.');
+                                    } catch (err: any) { showMessage('error', err.message); }
+                                    setActionLoading(false);
+                                  }}
+                                  className="px-2.5 py-1.5 text-xs rounded-lg bg-st-emerald-dim text-st-emerald font-semibold disabled:opacity-40">💾</button>
+                                <button onClick={() => setEditingItem(p => { const n = {...p}; delete n[item.id]; return n; })}
+                                  className="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-text-muted">✕</button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* ── Normal row ── */
+                            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 group/item">
+                              <div className="relative w-16 h-6 rounded-md overflow-hidden bg-white/5 flex-shrink-0">
+                                <div className="absolute inset-y-0 left-0 rounded-md"
+                                  style={{ width: `${Math.min(parseFloat(pct), 100)}%`, background: isMythic ? '#ffd700' : '#06b6d4', opacity: 0.4 }} />
+                                <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold font-mono ${isMythic ? 'text-yellow-400' : 'text-st-cyan'}`}>{pct}%</span>
+                              </div>
                               <div className="flex-1 text-sm font-medium">{isMythic ? '🌈' : '💰'} {item.label}</div>
-                              <div className="text-text-muted text-xs font-mono">váha: {item.weight}</div>
-                              <div className="text-text-muted text-xs">{item.amount ? `${item.amount} ST` : item.type === 'MYTHIC_PASS' ? 'Pass' : '—'}</div>
-                              <button
-                                onClick={async () => {
-                                  if (!window.confirm(`Smazat "${item.label}"?`)) return;
-                                  try { await api.admin.deleteCaseItem(item.id); loadCases(); }
-                                  catch (err: any) { showMessage('error', err.message); }
-                                }}
-                                className="text-st-red text-xs px-2 py-1 rounded-lg bg-st-red-dim hover:bg-st-red/20 flex-shrink-0"
-                              >✕</button>
+                              <div className="text-text-muted text-xs">{item.amount ? `${parseFloat(item.amount).toFixed(0)} ST` : isMythic ? 'Pass' : '—'}</div>
+                              <div className="flex gap-1.5 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                <button onClick={() => setEditingItem(p => ({...p, [item.id]: { label: item.label, amount: item.amount || '', weight: String(item.weight) }}))}
+                                  className="px-2 py-1 text-xs rounded-lg bg-st-cyan-dim text-st-cyan">✏️</button>
+                                <button onClick={async () => {
+                                    if (!window.confirm(`Smazat "${item.label}"?`)) return;
+                                    try { await api.admin.deleteCaseItem(item.id); loadCases(); }
+                                    catch (err: any) { showMessage('error', err.message); }
+                                  }}
+                                  className="px-2 py-1 text-xs rounded-lg bg-st-red-dim text-st-red">✕</button>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
 
                       {/* Add new item */}
-                      <div className="mt-3 p-3 rounded-xl border border-dashed border-white/10 space-y-2">
+                      <div className="mt-3 p-4 rounded-xl border border-dashed border-white/10 space-y-3">
                         <p className="text-xs text-text-muted font-semibold">+ Přidat předmět</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          <select
-                            className="glass-input text-xs"
-                            value={newItem[c.id]?.type || 'ST_REWARD'}
-                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {label:'',amount:'',weight:'10'}), type: e.target.value}}))}
-                          >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <select className="glass-input text-xs" value={newItem[c.id]?.type || 'ST_REWARD'}
+                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {label:'',amount:'',weight:''}), type: e.target.value}}))}>
                             <option value="ST_REWARD">💰 ST odměna</option>
                             <option value="MYTHIC_PASS">🌈 Mythic Pass</option>
                           </select>
-                          <input
-                            className="glass-input text-xs"
-                            placeholder="Popis (např. 15 ST)"
+                          <input className="glass-input text-xs" placeholder="Popis (např. 15 ST)"
                             value={newItem[c.id]?.label || ''}
-                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',amount:'',weight:'10'}), label: e.target.value}}))}
-                          />
-                          <input
-                            className="glass-input text-xs"
-                            placeholder="Množství ST (prázdné = Pass)"
-                            type="number"
+                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',amount:'',weight:''}), label: e.target.value}}))} />
+                          <input className="glass-input text-xs" placeholder="Množství v ST (u Mythic prázdné)" type="number"
                             value={newItem[c.id]?.amount || ''}
-                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',weight:'10'}), amount: e.target.value}}))}
-                          />
-                          <input
-                            className="glass-input text-xs"
-                            placeholder="Váha (1–10000)"
-                            type="number"
-                            value={newItem[c.id]?.weight || ''}
-                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',amount:''}), weight: e.target.value}}))}
-                          />
+                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',weight:''}), amount: e.target.value}}))} />
+                          <div className="flex items-center gap-2">
+                            <input className="glass-input text-xs flex-1" placeholder="Šance % (např. 25)" type="number" min="0" max="100" step="0.1"
+                              value={newItem[c.id]?.weight || ''}
+                              onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',amount:''}), weight: e.target.value}}))} />
+                            <span className="text-text-muted text-xs whitespace-nowrap">%</span>
+                          </div>
                         </div>
-                        <button
-                          onClick={async () => {
+                        {(() => {
+                          const used = c.items.reduce((s: number, i: any) => s + i.weight, 0);
+                          const rem = +(100 - used).toFixed(1);
+                          return rem > 0.1 ? <p className="text-[11px] text-text-muted">💡 Zbývá přidělit <span className="text-st-cyan font-mono font-bold">{rem} %</span></p> : null;
+                        })()}
+                        <button onClick={async () => {
                             const ni = newItem[c.id];
-                            if (!ni?.label || !ni?.weight) { showMessage('error', 'Vyplňte popis a váhu.'); return; }
+                            if (!ni?.label || !ni?.weight) { showMessage('error', 'Vyplňte popis a šanci.'); return; }
                             setActionLoading(true);
                             try {
-                              await api.admin.addCaseItem(c.id, {
-                                type: ni.type || 'ST_REWARD',
-                                label: ni.label,
-                                amount: ni.amount || null,
-                                weight: parseInt(ni.weight),
-                              });
+                              await api.admin.addCaseItem(c.id, { type: ni.type || 'ST_REWARD', label: ni.label, amount: ni.amount || null, weight: Math.round(parseFloat(ni.weight)) });
                               setNewItem(p => ({...p, [c.id]: {type:'ST_REWARD',label:'',amount:'',weight:''}}));
-                              loadCases();
-                              showMessage('success', 'Předmět přidán!');
+                              loadCases(); showMessage('success', 'Předmět přidán!');
                             } catch (err: any) { showMessage('error', err.message); }
                             setActionLoading(false);
                           }}
-                          disabled={actionLoading}
-                          className="btn-primary text-xs px-4 disabled:opacity-50"
+                          disabled={actionLoading} className="btn-primary text-xs px-4 disabled:opacity-50"
                         >+ Přidat předmět</button>
                       </div>
                     </div>
