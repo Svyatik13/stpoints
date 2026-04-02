@@ -204,3 +204,34 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
   }
 }
 
+// ── Teachers (ST-ROOM) ──
+export async function getTeachersAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const teachers = await prisma.teacher.findMany({ orderBy: { name: 'asc' } });
+    res.json({ teachers });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function addTeacher(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { name } = z.object({ name: z.string().min(2).max(50) }).parse(req.body);
+    const teacher = await prisma.teacher.create({ data: { name } });
+    logger.info(`ADMIN: Nový učitel přidán: ${name}`);
+    res.json({ success: true, teacher });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function toggleTeacherActive(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { teacherId } = z.object({ teacherId: z.string() }).parse(req.body);
+    const teacher = await prisma.teacher.findUniqueOrThrow({ where: { id: teacherId } });
+    await prisma.teacher.update({ where: { id: teacherId }, data: { isActive: !teacher.isActive } });
+    res.json({ success: true, isActive: !teacher.isActive });
+  } catch (error) {
+    next(error);
+  }
+}

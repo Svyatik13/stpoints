@@ -31,7 +31,7 @@ interface AdminUser {
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<'dashboard' | 'users' | 'giveaway'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'giveaway' | 'teachers'>('dashboard');
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSearch, setUserSearch] = useState('');
@@ -43,6 +43,8 @@ export default function AdminPage() {
   const [giveawayResult, setGiveawayResult] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [newTeacherName, setNewTeacherName] = useState('');
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'ADMIN')) {
@@ -65,12 +67,20 @@ export default function AdminPage() {
     } catch {}
   }, [userPage, userSearch]);
 
+  const loadTeachers = useCallback(async () => {
+    try {
+      const data = await api.admin.teachers();
+      setTeachers(data.teachers);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (user?.role === 'ADMIN') {
       loadStats();
       loadUsers();
+      loadTeachers();
     }
-  }, [user, loadStats, loadUsers]);
+  }, [user, loadStats, loadUsers, loadTeachers]);
 
   function showMessage(type: 'success' | 'error', text: string) {
     setMessage({ type, text });
@@ -175,6 +185,7 @@ export default function AdminPage() {
     { id: 'dashboard' as const, label: '📊 Dashboard', },
     { id: 'users' as const, label: '👥 Uživatelé', },
     { id: 'giveaway' as const, label: '🎁 Giveaway', },
+    { id: 'teachers' as const, label: '🧑‍🏫 Učitelé', },
   ];
 
   return (
@@ -419,6 +430,67 @@ export default function AdminPage() {
               <p className="text-text-secondary text-sm">
                 Nový ST-Drop se objeví na hlavní stránce /giveaways. Uživatelé musí přijít a ručně se přihlásit tlačítkem "Připojit se" (a musí být aktivní v posledních 24 hodinách). Jakmile odpočet vyprší, systém minutu po skončení automaticky rozlosuje výherce. Výsledky se ukážou v historii obou stran.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ TEACHERS TAB ═══ */}
+        {tab === 'teachers' && (
+          <div className="space-y-4">
+            <div className="glass-card p-6">
+              <h2 className="text-xl font-bold mb-4">🧑‍🏫 Správa Učitelů ST-ROOM</h2>
+              <div className="flex gap-3 mb-6">
+                <input
+                  type="text"
+                  placeholder="Jméno nového učitele..."
+                  value={newTeacherName}
+                  onChange={e => setNewTeacherName(e.target.value)}
+                  className="glass-input flex-1"
+                />
+                <button
+                  onClick={async () => {
+                    if (!newTeacherName.trim()) return;
+                    setActionLoading(true);
+                    try {
+                      await api.admin.addTeacher({ name: newTeacherName.trim() });
+                      showMessage('success', `Učitel ${newTeacherName} přidán!`);
+                      setNewTeacherName('');
+                      loadTeachers();
+                    } catch (err: any) { showMessage('error', err.message); }
+                    setActionLoading(false);
+                  }}
+                  disabled={actionLoading || !newTeacherName.trim()}
+                  className="btn-primary px-5 disabled:opacity-50"
+                >
+                  + Přidat
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {teachers.map(t => (
+                  <div key={t.id} className={`glass-card-static p-4 rounded-xl flex items-center justify-between gap-3 ${!t.isActive ? 'opacity-40' : ''}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-st-cyan-dim flex items-center justify-center text-st-cyan font-bold text-sm">
+                        {t.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{t.name}</p>
+                        <p className="text-text-muted text-xs">{t.isActive ? 'Aktivní' : 'Skrytý'}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await api.admin.toggleTeacher({ teacherId: t.id });
+                          loadTeachers();
+                        } catch (err: any) { showMessage('error', err.message); }
+                      }}
+                      className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-colors ${t.isActive ? 'bg-st-red-dim text-st-red hover:bg-st-red/20' : 'bg-st-emerald-dim text-st-emerald hover:bg-st-emerald/20'}`}
+                    >
+                      {t.isActive ? '🙈 Skrýt' : '👁️ Zobrazit'}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

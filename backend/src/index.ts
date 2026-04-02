@@ -13,7 +13,7 @@ import authRoutes from './routes/auth.routes';
 import miningRoutes from './routes/mining.routes';
 import walletRoutes from './routes/wallet.routes';
 import giveawayRoutes from './routes/giveaway.routes';
-import terminalRoutes from './routes/terminal.routes';
+import stroomRoutes from './routes/stroom.routes';
 import adminRoutes from './routes/admin.routes';
 
 const app = express();
@@ -50,7 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/mining', miningRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/giveaway', giveawayRoutes);
-app.use('/api/terminal', terminalRoutes);
+app.use('/api/st-room', stroomRoutes);
 app.use('/api/admin', adminRoutes);
 
 // ── 404 ──
@@ -62,7 +62,7 @@ app.use((_req, res) => {
 app.use(errorHandler);
 
 // ── Start Server ──
-app.listen(env.port, () => {
+app.listen(env.port, async () => {
   logger.success(`
   ╔══════════════════════════════════════════╗
   ║    ⚡ ZČU CENTRAL NODE — ST-Points ⚡    ║
@@ -76,6 +76,27 @@ app.listen(env.port, () => {
 
   // Start giveaway cron
   startGiveawayCron();
+
+  // Seed default teachers if none exist
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    const count = await prisma.teacher.count();
+    if (count === 0) {
+      logger.info('Seeding default ST-ROOM teachers...');
+      const defaultTeachers = [
+        'K Vlna', 'P. Lukešová', 'E. Šplíchalová', 'J. Ježík', 
+        'P. Sobotka', 'N. Skálová', 'J. Anderle', 'L. Zavadilová', 
+        'V. Kolář', 'S. Smitka', 'K. Bartáková', 'M. Skřivanová', 'V. Burešová'
+      ];
+      await prisma.teacher.createMany({
+        data: defaultTeachers.map(name => ({ name }))
+      });
+      logger.success('✅ Teachers seeded successfully.');
+    }
+  } catch (err) {
+    logger.error('Failed to seed teachers: ' + (err as Error).message);
+  }
 });
 
 export default app;

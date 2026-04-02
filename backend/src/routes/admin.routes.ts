@@ -23,4 +23,9 @@ router.post('/giveaway/draw', giveawayController.forceDraw);
 // Delete User
 router.delete('/user/:userId', adminController.deleteUser);
 
+// ST-ROOM Teachers
+router.get('/teachers', adminController.getTeachersAdmin);
+router.post('/teachers', adminController.addTeacher);
+router.post('/teachers/toggle', adminController.toggleTeacherActive);
+
 export default router;

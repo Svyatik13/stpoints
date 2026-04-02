@@ -1,12 +1,12 @@
 export const APP_NAME = 'ST-Points';
 export const APP_DOMAIN = 'stpoints.fun';
-export const TERMINAL_MIN_BALANCE = 500;
+export const ST_ROOM_COST = 50;
 
 export const NAV_ITEMS = [
   { href: '/wallet', label: 'Peněženka', icon: '💎' },
   { href: '/mining', label: 'Těžba', icon: '⛏️' },
   { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
-  { href: '/terminal', label: 'Terminál', icon: '🔒' },
+  { href: '/st-room', label: 'ST-ROOM', icon: '🔐' },
 ] as const;
 
 export const ADMIN_NAV_ITEMS = [

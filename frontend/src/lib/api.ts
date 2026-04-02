@@ -61,10 +61,11 @@ export const api = {
       request<any>('/mining/stats'),
   },
 
-  // ── Terminal ──
-  terminal: {
-    access: () =>
-      request<any>('/terminal/access'),
+  // ── ST-ROOM ──
+  stRoom: {
+    teachers: () => request<any>('/st-room/teachers'),
+    session: () => request<any>('/st-room/session'),
+    buy: (body: { teacherId: string }) => request<any>('/st-room/buy', { method: 'POST', body }),
   },
 
   // ── Giveaway ──
@@ -93,5 +94,11 @@ export const api = {
       request<any>('/admin/giveaway/create', { method: 'POST', body }),
     drawGiveaway: (body: { giveawayId: string }) =>
       request<any>('/admin/giveaway/draw', { method: 'POST', body }),
+    teachers: () =>
+      request<any>('/admin/teachers'),
+    addTeacher: (body: { name: string }) =>
+      request<any>('/admin/teachers', { method: 'POST', body }),
+    toggleTeacher: (body: { teacherId: string }) =>
+      request<any>('/admin/teachers/toggle', { method: 'POST', body }),
   },
 };
