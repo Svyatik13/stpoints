@@ -249,3 +249,89 @@ export async function setTeacherRarity(req: Request, res: Response, next: NextFu
     next(error);
   }
 }
+
+// ── Cases (Admin) ──
+export async function getCasesAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const cases = await prisma.case.findMany({
+      orderBy: { sortOrder: 'asc' },
+      include: { items: { orderBy: { weight: 'desc' } }, _count: { select: { openings: true } } },
+    });
+    res.json({ cases });
+  } catch (error) { next(error); }
+}
+
+export async function createCase(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = z.object({
+      name: z.string().min(1).max(80),
+      description: z.string().optional(),
+      price: z.string(),
+      isDaily: z.boolean().optional().default(false),
+    }).parse(req.body);
+    const maxOrder = await prisma.case.count();
+    const newCase = await prisma.case.create({ data: { ...data, sortOrder: maxOrder } });
+    logger.info(`ADMIN: Case created: ${data.name}`);
+    res.json({ success: true, case: newCase });
+  } catch (error) { next(error); }
+}
+
+export async function updateCase(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { caseId } = req.params;
+    const data = z.object({
+      name: z.string().min(1).max(80).optional(),
+      description: z.string().optional(),
+      price: z.string().optional(),
+      isDaily: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+    }).parse(req.body);
+    const updated = await prisma.case.update({ where: { id: caseId }, data });
+    res.json({ success: true, case: updated });
+  } catch (error) { next(error); }
+}
+
+export async function deleteCase(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { caseId } = req.params;
+    await prisma.case.delete({ where: { id: caseId } });
+    logger.info(`ADMIN: Case deleted: ${caseId}`);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
+export async function addCaseItem(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { caseId } = req.params;
+    const data = z.object({
+      type: z.enum(['ST_REWARD', 'MYTHIC_PASS']),
+      label: z.string().min(1).max(50),
+      amount: z.string().optional().nullable(),
+      weight: z.number().int().min(1).max(10000),
+    }).parse(req.body);
+    const item = await prisma.caseItem.create({ data: { caseId, ...data } });
+    res.json({ success: true, item });
+  } catch (error) { next(error); }
+}
+
+export async function updateCaseItem(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { itemId } = req.params;
+    const data = z.object({
+      label: z.string().min(1).max(50).optional(),
+      type: z.enum(['ST_REWARD', 'MYTHIC_PASS']).optional(),
+      amount: z.string().optional().nullable(),
+      weight: z.number().int().min(1).max(10000).optional(),
+    }).parse(req.body);
+    const item = await prisma.caseItem.update({ where: { id: itemId }, data });
+    res.json({ success: true, item });
+  } catch (error) { next(error); }
+}
+
+export async function deleteCaseItem(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { itemId } = req.params;
+    await prisma.caseItem.delete({ where: { id: itemId } });
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}

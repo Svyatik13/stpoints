@@ -31,7 +31,7 @@ interface AdminUser {
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<'dashboard' | 'users' | 'giveaway' | 'teachers'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'giveaway' | 'teachers' | 'cases'>('dashboard');
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSearch, setUserSearch] = useState('');
@@ -45,6 +45,12 @@ export default function AdminPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [newTeacherName, setNewTeacherName] = useState('');
+  // Cases state
+  const [cases, setCases] = useState<any[]>([]);
+  const [expandedCase, setExpandedCase] = useState<string | null>(null);
+  const [newCase, setNewCase] = useState({ name: '', description: '', price: '10', isDaily: false });
+  const [editingCase, setEditingCase] = useState<any | null>(null);
+  const [newItem, setNewItem] = useState<Record<string, { type: string; label: string; amount: string; weight: string }>>({});
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'ADMIN')) {
@@ -74,13 +80,21 @@ export default function AdminPage() {
     } catch {}
   }, []);
 
+  const loadCases = useCallback(async () => {
+    try {
+      const data = await api.admin.getCases();
+      setCases(data.cases || []);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (user?.role === 'ADMIN') {
       loadStats();
       loadUsers();
       loadTeachers();
+      loadCases();
     }
-  }, [user, loadStats, loadUsers, loadTeachers]);
+  }, [user, loadStats, loadUsers, loadTeachers, loadCases]);
 
   function showMessage(type: 'success' | 'error', text: string) {
     setMessage({ type, text });
@@ -186,6 +200,7 @@ export default function AdminPage() {
     { id: 'users' as const, label: '👥 Uživatelé', },
     { id: 'giveaway' as const, label: '🎁 Giveaway', },
     { id: 'teachers' as const, label: '🧑‍🏫 Učitelé', },
+    { id: 'cases' as const, label: '📦 Cases', },
   ];
 
   return (
@@ -517,6 +532,225 @@ export default function AdminPage() {
                 })}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ═══ CASES TAB ═══ */}
+        {tab === 'cases' && (
+          <div className="space-y-4">
+            {/* Create new case */}
+            <div className="glass-card p-5">
+              <h3 className="font-bold mb-4 text-lg">➕ Přidat nový Case</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <input className="glass-input text-sm" placeholder="Název (např. Premium Case)" value={newCase.name} onChange={e => setNewCase(p => ({...p, name: e.target.value}))} />
+                <input className="glass-input text-sm" placeholder="Cena v ST (0 = zdarma)" type="number" value={newCase.price} onChange={e => setNewCase(p => ({...p, price: e.target.value}))} />
+              </div>
+              <input className="glass-input text-sm w-full mb-3" placeholder="Popis (volitelný)" value={newCase.description} onChange={e => setNewCase(p => ({...p, description: e.target.value}))} />
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                  <input type="checkbox" checked={newCase.isDaily} onChange={e => setNewCase(p => ({...p, isDaily: e.target.checked}))} className="w-4 h-4" />
+                  Denní Case (zdarma 1× za den)
+                </label>
+                <button
+                  onClick={async () => {
+                    if (!newCase.name.trim()) return;
+                    setActionLoading(true);
+                    try {
+                      await api.admin.createCase({ name: newCase.name, description: newCase.description, price: newCase.price, isDaily: newCase.isDaily });
+                      showMessage('success', `Case "${newCase.name}" přidán!`);
+                      setNewCase({ name: '', description: '', price: '10', isDaily: false });
+                      loadCases();
+                    } catch (err: any) { showMessage('error', err.message); }
+                    setActionLoading(false);
+                  }}
+                  disabled={actionLoading || !newCase.name.trim()}
+                  className="btn-primary px-5 text-sm disabled:opacity-50 ml-auto"
+                >
+                  + Přidat Case
+                </button>
+              </div>
+            </div>
+
+            {/* Cases list */}
+            {cases.map(c => (
+              <div key={c.id} className="glass-card-static rounded-xl overflow-hidden">
+                {/* Case header */}
+                <div
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.03] transition-colors"
+                  onClick={() => setExpandedCase(expandedCase === c.id ? null : c.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📦</span>
+                    <div>
+                      <p className="font-semibold text-sm">{c.name}</p>
+                      <p className="text-text-muted text-xs mt-0.5">
+                        {c.isDaily ? '🎁 Denní' : `💰 ${parseFloat(c.price).toFixed(0)} ST`}
+                        {' · '}{c.items.length} předmětů
+                        {' · '}{c._count?.openings ?? 0} otevření
+                        {c.isActive ? '' : ' · ⚫ Skrytý'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.isActive ? 'bg-st-emerald-dim text-st-emerald' : 'bg-gray-500/20 text-gray-400'}`}>
+                      {c.isActive ? 'Aktivní' : 'Skrytý'}
+                    </span>
+                    <span className="text-text-muted text-sm">{expandedCase === c.id ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+
+                {/* Expanded case editor */}
+                {expandedCase === c.id && (
+                  <div className="border-t border-white/5 p-5 space-y-5">
+                    {/* Edit case fields */}
+                    {editingCase?.id === c.id ? (
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-text-muted uppercase tracking-wider">Upravit Case</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <input className="glass-input text-sm" placeholder="Název" value={editingCase.name} onChange={e => setEditingCase((p: any) => ({...p, name: e.target.value}))} />
+                          <input className="glass-input text-sm" placeholder="Cena ST" type="number" value={editingCase.price} onChange={e => setEditingCase((p: any) => ({...p, price: e.target.value}))} />
+                        </div>
+                        <input className="glass-input text-sm w-full" placeholder="Popis" value={editingCase.description || ''} onChange={e => setEditingCase((p: any) => ({...p, description: e.target.value}))} />
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <label className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" checked={editingCase.isDaily} onChange={e => setEditingCase((p: any) => ({...p, isDaily: e.target.checked}))} className="w-4 h-4" />
+                            Denní Case
+                          </label>
+                          <label className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" checked={editingCase.isActive} onChange={e => setEditingCase((p: any) => ({...p, isActive: e.target.checked}))} className="w-4 h-4" />
+                            Aktivní (viditelný)
+                          </label>
+                          <div className="ml-auto flex gap-2">
+                            <button onClick={() => setEditingCase(null)} className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-text-muted">Zrušit</button>
+                            <button
+                              onClick={async () => {
+                                setActionLoading(true);
+                                try {
+                                  await api.admin.updateCase(c.id, { name: editingCase.name, description: editingCase.description, price: editingCase.price, isDaily: editingCase.isDaily, isActive: editingCase.isActive });
+                                  showMessage('success', 'Case upraven.');
+                                  setEditingCase(null);
+                                  loadCases();
+                                } catch (err: any) { showMessage('error', err.message); }
+                                setActionLoading(false);
+                              }}
+                              className="px-3 py-1.5 text-xs rounded-lg bg-st-cyan-dim text-st-cyan font-semibold"
+                            >💾 Uložit</button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <p className="text-text-muted text-xs">{c.description || 'Bez popisu'}</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingCase({...c})} className="px-3 py-1.5 text-xs rounded-lg bg-st-cyan-dim text-st-cyan font-semibold">✏️ Upravit</button>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(`Smazat case "${c.name}" a všechny jeho předměty?`)) return;
+                              try { await api.admin.deleteCase(c.id); loadCases(); showMessage('success', 'Case smazán.'); }
+                              catch (err: any) { showMessage('error', err.message); }
+                            }}
+                            className="px-3 py-1.5 text-xs rounded-lg bg-st-red-dim text-st-red font-semibold"
+                          >🗑️</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Items list */}
+                    <div>
+                      <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
+                        Předměty ({c.items.length}) — Vyšší váha = větší šance
+                      </p>
+                      <div className="space-y-2">
+                        {c.items.map((item: any) => {
+                          const totalWeight = c.items.reduce((s: number, i: any) => s + i.weight, 0);
+                          const pct = totalWeight > 0 ? ((item.weight / totalWeight) * 100).toFixed(1) : '0';
+                          const isMythic = item.type === 'MYTHIC_PASS';
+                          return (
+                            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                              <span className={`text-xs font-bold w-16 text-right font-mono ${isMythic ? 'text-yellow-400' : 'text-st-cyan'}`}>{pct}%</span>
+                              <div className="flex-1 text-sm font-medium">{isMythic ? '🌈' : '💰'} {item.label}</div>
+                              <div className="text-text-muted text-xs font-mono">váha: {item.weight}</div>
+                              <div className="text-text-muted text-xs">{item.amount ? `${item.amount} ST` : item.type === 'MYTHIC_PASS' ? 'Pass' : '—'}</div>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(`Smazat "${item.label}"?`)) return;
+                                  try { await api.admin.deleteCaseItem(item.id); loadCases(); }
+                                  catch (err: any) { showMessage('error', err.message); }
+                                }}
+                                className="text-st-red text-xs px-2 py-1 rounded-lg bg-st-red-dim hover:bg-st-red/20 flex-shrink-0"
+                              >✕</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Add new item */}
+                      <div className="mt-3 p-3 rounded-xl border border-dashed border-white/10 space-y-2">
+                        <p className="text-xs text-text-muted font-semibold">+ Přidat předmět</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <select
+                            className="glass-input text-xs"
+                            value={newItem[c.id]?.type || 'ST_REWARD'}
+                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {label:'',amount:'',weight:'10'}), type: e.target.value}}))}
+                          >
+                            <option value="ST_REWARD">💰 ST odměna</option>
+                            <option value="MYTHIC_PASS">🌈 Mythic Pass</option>
+                          </select>
+                          <input
+                            className="glass-input text-xs"
+                            placeholder="Popis (např. 15 ST)"
+                            value={newItem[c.id]?.label || ''}
+                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',amount:'',weight:'10'}), label: e.target.value}}))}
+                          />
+                          <input
+                            className="glass-input text-xs"
+                            placeholder="Množství ST (prázdné = Pass)"
+                            type="number"
+                            value={newItem[c.id]?.amount || ''}
+                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',weight:'10'}), amount: e.target.value}}))}
+                          />
+                          <input
+                            className="glass-input text-xs"
+                            placeholder="Váha (1–10000)"
+                            type="number"
+                            value={newItem[c.id]?.weight || ''}
+                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',amount:''}), weight: e.target.value}}))}
+                          />
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const ni = newItem[c.id];
+                            if (!ni?.label || !ni?.weight) { showMessage('error', 'Vyplňte popis a váhu.'); return; }
+                            setActionLoading(true);
+                            try {
+                              await api.admin.addCaseItem(c.id, {
+                                type: ni.type || 'ST_REWARD',
+                                label: ni.label,
+                                amount: ni.amount || null,
+                                weight: parseInt(ni.weight),
+                              });
+                              setNewItem(p => ({...p, [c.id]: {type:'ST_REWARD',label:'',amount:'',weight:''}}));
+                              loadCases();
+                              showMessage('success', 'Předmět přidán!');
+                            } catch (err: any) { showMessage('error', err.message); }
+                            setActionLoading(false);
+                          }}
+                          disabled={actionLoading}
+                          className="btn-primary text-xs px-4 disabled:opacity-50"
+                        >+ Přidat předmět</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {cases.length === 0 && (
+              <div className="text-center py-12 text-text-muted">
+                <p className="text-4xl mb-3">📦</p>
+                <p>Žádné cases. Přidejte první výše.</p>
+              </div>
+            )}
           </div>
         )}
 

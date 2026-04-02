@@ -29,4 +29,13 @@ router.post('/teachers', adminController.addTeacher);
 router.post('/teachers/toggle', adminController.toggleTeacherActive);
 router.post('/teachers/rarity', adminController.setTeacherRarity);
 
+// Cases
+router.get('/cases', adminController.getCasesAdmin);
+router.post('/cases', adminController.createCase);
+router.put('/cases/:caseId', adminController.updateCase);
+router.delete('/cases/:caseId', adminController.deleteCase);
+router.post('/cases/:caseId/items', adminController.addCaseItem);
+router.put('/cases/items/:itemId', adminController.updateCaseItem);
+router.delete('/cases/items/:itemId', adminController.deleteCaseItem);
+
 export default router;

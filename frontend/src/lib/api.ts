@@ -112,5 +112,19 @@ export const api = {
       request<any>('/admin/teachers/toggle', { method: 'POST', body }),
     setTeacherRarity: (body: { teacherId: string; rarity: string }) =>
       request<any>('/admin/teachers/rarity', { method: 'POST', body }),
+    // Cases
+    getCases: () => request<any>('/admin/cases'),
+    createCase: (body: { name: string; description?: string; price: string; isDaily?: boolean }) =>
+      request<any>('/admin/cases', { method: 'POST', body }),
+    updateCase: (caseId: string, body: { name?: string; description?: string; price?: string; isDaily?: boolean; isActive?: boolean }) =>
+      request<any>(`/admin/cases/${caseId}`, { method: 'PUT', body }),
+    deleteCase: (caseId: string) =>
+      request<any>(`/admin/cases/${caseId}`, { method: 'DELETE' }),
+    addCaseItem: (caseId: string, body: { type: string; label: string; amount?: string | null; weight: number }) =>
+      request<any>(`/admin/cases/${caseId}/items`, { method: 'POST', body }),
+    updateCaseItem: (itemId: string, body: { label?: string; type?: string; amount?: string | null; weight?: number }) =>
+      request<any>(`/admin/cases/items/${itemId}`, { method: 'PUT', body }),
+    deleteCaseItem: (itemId: string) =>
+      request<any>(`/admin/cases/items/${itemId}`, { method: 'DELETE' }),
   },
 };
