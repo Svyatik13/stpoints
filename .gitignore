@@ -15,6 +15,10 @@ build/
 .next/
 out/
 
+# Deploy (allow built frontend)
+!deploy/www/
+deploy/www/.DS_Store
+
 # IDE
 .vscode/
 .idea/

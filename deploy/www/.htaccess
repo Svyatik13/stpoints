@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# Proxy /api requests to Node.js backend
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^api/(.*)$ http://127.0.0.1:4000/api/$1 [P,L]
+
+# SPA fallback — serve index.html for client-side routes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /index.html [L]
