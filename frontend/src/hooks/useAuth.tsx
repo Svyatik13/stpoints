@@ -29,21 +29,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const isLoggedOut = typeof window !== 'undefined' && localStorage.getItem('stpoints_logged_out') === 'true';
+    if (isLoggedOut) {
+      setLoading(false);
+      return;
+    }
     refreshUser().finally(() => setLoading(false));
   }, [refreshUser]);
 
   const login = async (username: string, password: string) => {
     const { user } = await api.auth.login({ username, password });
+    localStorage.removeItem('stpoints_logged_out');
     setUser(user);
   };
 
   const register = async (username: string, password: string, passCode: string) => {
     const { user } = await api.auth.register({ username, password, passCode });
+    localStorage.removeItem('stpoints_logged_out');
     setUser(user);
   };
 
   const logout = async () => {
     await api.auth.logout();
+    localStorage.setItem('stpoints_logged_out', 'true');
     setUser(null);
   };
 

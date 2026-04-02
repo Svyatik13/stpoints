@@ -139,8 +139,9 @@ body {
 
 .glass-card {
   background: var(--color-glass-bg);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  transform: translateZ(0);
   border: 1px solid var(--color-glass-border);
   border-radius: 16px;
   box-shadow:
@@ -159,8 +160,9 @@ body {
 
 .glass-card-static {
   background: var(--color-glass-bg);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  transform: translateZ(0);
   border: 1px solid var(--color-glass-border);
   border-radius: 16px;
   box-shadow:
@@ -170,7 +172,7 @@ body {
 
 .glass-input {
   background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: 12px;
   color: var(--color-text-primary);
@@ -519,8 +521,9 @@ body {
 
 .mining-hero {
   background: var(--color-glass-bg);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  transform: translateZ(0);
   border: 1px solid var(--color-glass-border);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
