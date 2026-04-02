@@ -55,7 +55,7 @@ export default function HomePage() {
           </div>
           <div className="w-px h-8 bg-glass-border" />
           <div className="text-center">
-            <div className="text-st-gold font-mono font-bold text-lg">0.001</div>
+            <div className="text-st-gold font-mono font-bold text-lg">0.0001</div>
             <div className="text-text-muted text-xs">ST / 10k hashů</div>
           </div>
           <div className="w-px h-8 bg-glass-border" />

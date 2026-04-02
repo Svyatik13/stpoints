@@ -305,7 +305,7 @@ export default function MiningPage() {
             </div>
             <div className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full bg-st-gold-dim text-st-gold flex items-center justify-center text-xs font-bold shrink-0">3</span>
-              <p>Řešení se odešle na server k ověření → odměna <span className="text-st-gold font-mono font-semibold">0.001 ST</span> / 10k hashů</p>
+              <p>Řešení se odešle na server k ověření → odměna <span className="text-st-gold font-mono font-semibold">0.0001 ST</span> / 10k hashů</p>
             </div>
             <div className="mt-3 p-3 rounded-xl bg-st-purple-dim/50 border border-st-purple/10">
               <p className="text-xs text-st-purple">

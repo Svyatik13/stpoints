@@ -26,12 +26,7 @@ export async function submitSolution(req: Request, res: Response, next: NextFunc
       validated.nonce,
       validated.hashesComputed
     );
-    res.json({
-      success: true,
-      reward: result.reward,
-      newBalance: result.newBalance,
-      message: `Úspěšná těžba! Odměna: ${result.reward} ST`,
-    });
+    res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Neplatná data odeslání.' });

@@ -15,7 +15,7 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRY: z.string().default('7d'),
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
   MINING_DIFFICULTY: z.string().default('5'),
-  MINING_REWARD_PER_10K: z.string().default('0.001'),
+  MINING_REWARD_PER_10K: z.string().default('0.0001'),
   MINING_CHALLENGE_EXPIRY_MINUTES: z.string().default('10'),
   MINING_MAX_HASH_RATE: z.string().default('500000'),
   GIVEAWAY_CRON: z.string().default('0 */6 * * *'),

@@ -16,7 +16,7 @@ export async function createChallenge(userId: string) {
     data: { status: 'EXPIRED' },
   });
 
-  // Check if user already has an active challenge
+  // Check if user already has an active challenge (prevents multi-tab)
   const existing = await prisma.miningChallenge.findFirst({
     where: {
       userId,
@@ -26,6 +26,13 @@ export async function createChallenge(userId: string) {
   });
 
   if (existing) {
+    // Check if it was issued recently (within 5 seconds) — likely multi-tab
+    const age = Date.now() - existing.issuedAt.getTime();
+    if (age < 5000) {
+      throw new AppError('Těžba již probíhá. Nelze těžit ve více oknech současně.', 429);
+    }
+
+    // Return existing challenge
     return {
       challengeId: existing.id,
       prefix: existing.prefix,
@@ -95,15 +102,8 @@ export async function submitSolution(
   // 2. Recompute hash server-side
   const hash = sha256(challenge.prefix + nonce.toString());
 
-  // 3. Verify difficulty
-  if (hash >= challenge.target) {
-    await prisma.miningChallenge.update({
-      where: { id: challengeId },
-      data: { status: 'INVALID' },
-    });
-    logger.mining(`INVALID: Hash nesplňuje obtížnost. User: ${userId}, Challenge: ${challengeId}`);
-    throw new AppError('Hash nesplňuje požadovanou obtížnost.', 400);
-  }
+  // 3. Check if solution meets difficulty (full solve vs partial)
+  const isFullSolve = hash < challenge.target;
 
   // 4. Timing plausibility check
   const elapsedMs = Date.now() - challenge.issuedAt.getTime();
@@ -119,11 +119,23 @@ export async function submitSolution(
     throw new AppError('Nereálná rychlost výpočtu. Podezření na podvod.', 400);
   }
 
-  // 5. Calculate reward: 0.001 per 10,000 hashes
-  const rewardMultiplier = Math.floor(hashesComputed / 10000);
-  const reward = new Decimal(env.mining.rewardPer10k).mul(Math.max(rewardMultiplier, 1));
+  // 5. Minimum work required
+  if (hashesComputed < 1000) {
+    await prisma.miningChallenge.update({
+      where: { id: challengeId },
+      data: { status: 'INVALID' },
+    });
+    throw new AppError('Nedostatečný počet hashů. Minimum je 1000.', 400);
+  }
 
-  // 6. Atomic transaction
+  // 6. Calculate reward
+  // Full solve: full reward based on hashes
+  // Partial (stopped early): 50% reward for hashes computed
+  const rewardMultiplier = Math.floor(hashesComputed / 10000);
+  const baseReward = new Decimal(env.mining.rewardPer10k).mul(Math.max(rewardMultiplier, 1));
+  const reward = isFullSolve ? baseReward : baseReward.mul(new Decimal('0.5'));
+
+  // 7. Atomic transaction
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
     const currentBalance = new Decimal(user.balance.toString());
@@ -146,17 +158,20 @@ export async function submitSolution(
         receiverId: userId,
         balanceBefore: currentBalance,
         balanceAfter: newBalance,
-        description: `Těžba: ${hashesComputed.toLocaleString('cs-CZ')} hashů zpracováno`,
+        description: isFullSolve
+          ? `Těžba (blok vyřešen): ${hashesComputed.toLocaleString('cs-CZ')} hashů`
+          : `Těžba (částečná): ${hashesComputed.toLocaleString('cs-CZ')} hashů`,
         metadata: {
           challengeId,
           nonce: nonce.toString(),
           hash,
           difficulty: challenge.difficulty,
+          fullSolve: isFullSolve,
         },
       },
     });
 
-    // Mark challenge as solved
+    // Mark challenge as solved (or partial)
     await tx.miningChallenge.update({
       where: { id: challengeId },
       data: {
@@ -172,9 +187,15 @@ export async function submitSolution(
     return { reward: reward.toString(), newBalance: newBalance.toString() };
   });
 
-  logger.mining(`SOLVED: User ${userId} odtěžil ${result.reward} ST (${hashesComputed} hashů)`);
+  logger.mining(`${isFullSolve ? 'SOLVED' : 'PARTIAL'}: User ${userId} odtěžil ${result.reward} ST (${hashesComputed} hashů)`);
 
-  return result;
+  return {
+    ...result,
+    success: true,
+    message: isFullSolve
+      ? `Blok úspěšně vyřešen! ${hashesComputed.toLocaleString('cs-CZ')} hashů zpracováno.`
+      : `Částečná odměna za ${hashesComputed.toLocaleString('cs-CZ')} hashů.`,
+  };
 }
 
 export async function getMiningStats(userId: string) {
