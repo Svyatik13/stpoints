@@ -52,6 +52,7 @@ export async function getAllUsers(req: Request, res: Response, next: NextFunctio
 // ── System Stats ──
 export async function getSystemStats(req: Request, res: Response, next: NextFunction) {
   try {
+    const nonAdmin = { role: { not: 'ADMIN' as const } };
     const [
       totalUsers,
       activeUsers,
@@ -61,10 +62,15 @@ export async function getSystemStats(req: Request, res: Response, next: NextFunc
       giveawayCount,
       recentTransactions,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { lastActiveAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } }),
-      prisma.user.aggregate({ _sum: { balance: true } }),
-      prisma.transaction.aggregate({ where: { type: 'MINING_REWARD' }, _sum: { amount: true } }),
+      prisma.user.count({ where: nonAdmin }),
+      prisma.user.count({ where: { ...nonAdmin, lastActiveAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } }),
+      // Balance: sum only non-admin users
+      prisma.user.aggregate({ where: nonAdmin, _sum: { balance: true } }),
+      // Mining: only transactions where receiver is not admin
+      prisma.transaction.aggregate({
+        where: { type: 'MINING_REWARD', receiver: nonAdmin },
+        _sum: { amount: true },
+      }),
       prisma.transaction.aggregate({ where: { type: 'GIVEAWAY' }, _sum: { amount: true } }),
       prisma.giveaway.count(),
       prisma.transaction.count({ where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } }),

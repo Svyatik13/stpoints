@@ -206,7 +206,7 @@ export async function getMiningStats(userId: string) {
       where: { receiverId: userId, type: 'MINING_REWARD' },
       _sum: { amount: true },
     }),
-    prisma.user.aggregate({ _sum: { balance: true } }),
+    prisma.user.aggregate({ where: { role: { not: 'ADMIN' } }, _sum: { balance: true } }),
   ]);
 
   return {
