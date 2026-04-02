@@ -18,9 +18,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-st-cyan to-st-purple flex items-center justify-center text-black font-bold text-xl animate-pulse">
-          ST
-        </div>
+        <img src="/logo.png" alt="ST-Points Logo" className="w-16 h-16 object-contain animate-pulse drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
       </div>
     );
   }
@@ -29,9 +27,7 @@ export default function HomePage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="text-center max-w-2xl animate-fade-up">
         {/* Logo */}
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-st-cyan to-st-purple flex items-center justify-center text-black font-black text-3xl mx-auto mb-8 shadow-2xl glow-cyan">
-          ST
-        </div>
+        <img src="/logo.png" alt="ST-Points Logo" className="w-24 h-24 object-contain mx-auto mb-8 drop-shadow-[0_0_20px_rgba(6,182,212,0.8)]" />
 
         <h1 className="text-5xl sm:text-6xl font-black tracking-tight mb-4">
           <span className="bg-gradient-to-r from-st-cyan via-white to-st-purple bg-clip-text text-transparent">

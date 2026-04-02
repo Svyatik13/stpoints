@@ -16,9 +16,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <Link href="/wallet" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-st-cyan to-st-purple flex items-center justify-center text-black font-bold text-sm shadow-lg group-hover:shadow-st-cyan/30 transition-shadow">
-            ST
-          </div>
+          <img src="/logo.png" alt="ST-Points Logo" className="w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(6,182,212,0.5)] group-hover:drop-shadow-[0_0_12px_rgba(6,182,212,0.8)] transition-all" />
           <span className="font-bold text-lg tracking-tight text-text-primary">
             ST-Points
           </span>

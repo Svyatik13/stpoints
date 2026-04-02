@@ -47,9 +47,7 @@ export default function RegisterPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-st-cyan to-st-purple flex items-center justify-center text-black font-bold text-xl mx-auto mb-4 shadow-lg">
-              ST
-            </div>
+            <img src="/logo.png" alt="ST-Points Logo" className="w-16 h-16 object-contain mx-auto mb-4 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
           </Link>
           <h1 className="text-2xl font-bold text-text-primary">Registrace</h1>
           <p className="text-text-secondary text-sm mt-1">Vytvořte si účet v systému ST-Points</p>
