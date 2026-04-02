@@ -100,5 +100,7 @@ export const api = {
       request<any>('/admin/teachers', { method: 'POST', body }),
     toggleTeacher: (body: { teacherId: string }) =>
       request<any>('/admin/teachers/toggle', { method: 'POST', body }),
+    setTeacherRarity: (body: { teacherId: string; rarity: string }) =>
+      request<any>('/admin/teachers/rarity', { method: 'POST', body }),
   },
 };

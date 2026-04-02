@@ -466,30 +466,55 @@ export default function AdminPage() {
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {teachers.map(t => (
-                  <div key={t.id} className={`glass-card-static p-4 rounded-xl flex items-center justify-between gap-3 ${!t.isActive ? 'opacity-40' : ''}`}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-st-cyan-dim flex items-center justify-center text-st-cyan font-bold text-sm">
-                        {t.name.charAt(0)}
+                {teachers.map(t => {
+                  const rarityColors: Record<string, string> = {
+                    COMMON: 'text-gray-400', RARE: 'text-st-emerald', EPIC: 'text-st-cyan', LEGENDARY: 'text-st-purple', MYTHIC: 'text-yellow-400'
+                  };
+                  const rarityCosts: Record<string, number> = { COMMON: 50, RARE: 65, EPIC: 75, LEGENDARY: 85, MYTHIC: 0 };
+                  return (
+                    <div key={t.id} className={`glass-card-static p-4 rounded-xl space-y-3 ${!t.isActive ? 'opacity-40' : ''}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-st-cyan-dim flex items-center justify-center text-st-cyan font-bold text-xs">
+                            {t.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{t.name}</p>
+                            <p className={`text-xs font-bold ${rarityColors[t.rarity] || 'text-gray-400'}`}>
+                              {t.rarity} {t.rarity !== 'MYTHIC' ? `— ${rarityCosts[t.rarity]} ST` : '— Pass Only'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try { await api.admin.toggleTeacher({ teacherId: t.id }); loadTeachers(); }
+                            catch (err: any) { showMessage('error', err.message); }
+                          }}
+                          className={`px-2 py-1 text-[10px] rounded-lg font-semibold transition-colors ${t.isActive ? 'bg-st-red-dim text-st-red' : 'bg-st-emerald-dim text-st-emerald'}`}
+                        >
+                          {t.isActive ? '🙈' : '👁️'}
+                        </button>
                       </div>
-                      <div>
-                        <p className="font-semibold text-sm">{t.name}</p>
-                        <p className="text-text-muted text-xs">{t.isActive ? 'Aktivní' : 'Skrytý'}</p>
-                      </div>
+                      <select
+                        value={t.rarity || 'COMMON'}
+                        onChange={async (e) => {
+                          try {
+                            await api.admin.setTeacherRarity({ teacherId: t.id, rarity: e.target.value });
+                            showMessage('success', `${t.name} → ${e.target.value}`);
+                            loadTeachers();
+                          } catch (err: any) { showMessage('error', err.message); }
+                        }}
+                        className="glass-input text-xs w-full"
+                      >
+                        <option value="COMMON">⬜ Common — 50 ST</option>
+                        <option value="RARE">🟩 Rare — 65 ST</option>
+                        <option value="EPIC">🟦 Epic — 75 ST</option>
+                        <option value="LEGENDARY">🟪 Legendary — 85 ST</option>
+                        <option value="MYTHIC">🌈 Mythic — Pass Only</option>
+                      </select>
                     </div>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await api.admin.toggleTeacher({ teacherId: t.id });
-                          loadTeachers();
-                        } catch (err: any) { showMessage('error', err.message); }
-                      }}
-                      className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-colors ${t.isActive ? 'bg-st-red-dim text-st-red hover:bg-st-red/20' : 'bg-st-emerald-dim text-st-emerald hover:bg-st-emerald/20'}`}
-                    >
-                      {t.isActive ? '🙈 Skrýt' : '👁️ Zobrazit'}
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

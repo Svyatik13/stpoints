@@ -235,3 +235,17 @@ export async function toggleTeacherActive(req: Request, res: Response, next: Nex
     next(error);
   }
 }
+
+export async function setTeacherRarity(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { teacherId, rarity } = z.object({
+      teacherId: z.string(),
+      rarity: z.enum(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC']),
+    }).parse(req.body);
+    await prisma.teacher.update({ where: { id: teacherId }, data: { rarity } });
+    logger.info(`ADMIN: Teacher ${teacherId} rarity set to ${rarity}`);
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+}

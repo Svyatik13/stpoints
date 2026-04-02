@@ -27,5 +27,6 @@ router.delete('/user/:userId', adminController.deleteUser);
 router.get('/teachers', adminController.getTeachersAdmin);
 router.post('/teachers', adminController.addTeacher);
 router.post('/teachers/toggle', adminController.toggleTeacherActive);
+router.post('/teachers/rarity', adminController.setTeacherRarity);
 
 export default router;

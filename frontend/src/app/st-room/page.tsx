@@ -1,15 +1,78 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 
+// ─── Rarity Config ─────────────────────────────────────────────────────────
+const RARITY_CONFIG: Record<string, {
+  label: string;
+  cost: number;
+  color: string;
+  textColor: string;
+  borderColor: string;
+  glowColor: string;
+  badgeBg: string;
+  isMythic?: boolean;
+}> = {
+  COMMON: {
+    label: 'Common',
+    cost: 50,
+    color: '#9ca3af',
+    textColor: 'text-gray-400',
+    borderColor: 'border-gray-500/30',
+    glowColor: 'rgba(156,163,175,0.2)',
+    badgeBg: 'bg-gray-500/20 text-gray-400',
+  },
+  RARE: {
+    label: 'Rare',
+    cost: 65,
+    color: '#10b981',
+    textColor: 'text-st-emerald',
+    borderColor: 'border-st-emerald/30',
+    glowColor: 'rgba(16,185,129,0.2)',
+    badgeBg: 'bg-st-emerald-dim text-st-emerald',
+  },
+  EPIC: {
+    label: 'Epic',
+    cost: 75,
+    color: '#06b6d4',
+    textColor: 'text-st-cyan',
+    borderColor: 'border-st-cyan/30',
+    glowColor: 'rgba(6,182,212,0.2)',
+    badgeBg: 'bg-st-cyan-dim text-st-cyan',
+  },
+  LEGENDARY: {
+    label: 'Legendary',
+    cost: 85,
+    color: '#a855f7',
+    textColor: 'text-st-purple',
+    borderColor: 'border-st-purple/30',
+    glowColor: 'rgba(168,85,247,0.25)',
+    badgeBg: 'bg-st-purple-dim text-st-purple',
+  },
+  MYTHIC: {
+    label: 'Mythic',
+    cost: 0,
+    color: 'rainbow',
+    textColor: 'text-transparent bg-clip-text',
+    borderColor: 'border-transparent',
+    glowColor: 'rgba(255,200,0,0.25)',
+    badgeBg: 'bg-gradient-to-r from-pink-500/20 to-yellow-500/20',
+    isMythic: true,
+  },
+};
+
+const RARITY_ORDER = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
+
 interface Teacher {
   id: string;
   name: string;
+  rarity: string;
   isActive: boolean;
+  cost: number;
 }
 
 interface Session {
@@ -19,29 +82,25 @@ interface Session {
   teacher: Teacher;
 }
 
-const TOTAL_SECONDS = 10 * 60; // 10 minutes
-
+// ─── Floating Logos ─────────────────────────────────────────────────────────
 function FloatingLogos() {
-  const logos = Array.from({ length: 12 });
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-      {logos.map((_, i) => {
-        const size = 80 + Math.random() * 120;
-        const delay = i * 1.5;
-        const duration = 18 + (i % 5) * 4;
-        const left = (i * 8.5) % 100;
-        const rotate = (i % 2 === 0 ? 1 : -1) * (10 + (i % 4) * 8);
+      {Array.from({ length: 14 }).map((_, i) => {
+        const size = 70 + (i % 5) * 30;
+        const delay = i * 1.8;
+        const duration = 16 + (i % 6) * 4;
+        const left = (i * 7.3) % 100;
         return (
           <div
             key={i}
-            className="absolute opacity-[0.05] select-none"
+            className="absolute select-none"
             style={{
-              width: size,
-              height: size,
+              width: size, height: size,
               left: `${left}%`,
-              bottom: '-150px',
-              animation: `floatUp ${duration}s ${delay}s linear infinite`,
-              transform: `rotate(${rotate}deg)`,
+              bottom: '-180px',
+              opacity: 0,
+              animation: `stRoomFloat ${duration}s ${delay}s linear infinite`,
             }}
           >
             <img src="/logo.png" alt="" className="w-full h-full object-contain" />
@@ -49,35 +108,59 @@ function FloatingLogos() {
         );
       })}
       <style jsx global>{`
-        @keyframes floatUp {
-          0% { transform: translateY(0) rotate(0deg); opacity: 0.04; }
-          10% { opacity: 0.07; }
-          90% { opacity: 0.04; }
-          100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
+        @keyframes stRoomFloat {
+          0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 0; }
+          8%   { opacity: 0.06; }
+          92%  { opacity: 0.05; }
+          100% { transform: translateY(-115vh) rotate(270deg) scale(0.7); opacity: 0; }
+        }
+        @keyframes rainbowText {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes rainbowBorder {
+          0%   { border-color: #ff6b6b; box-shadow: 0 0 20px rgba(255,107,107,0.3); }
+          17%  { border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+          33%  { border-color: #51cf66; box-shadow: 0 0 20px rgba(81,207,102,0.3); }
+          50%  { border-color: #339af0; box-shadow: 0 0 20px rgba(51,154,240,0.3); }
+          67%  { border-color: #cc5de8; box-shadow: 0 0 20px rgba(204,93,232,0.3); }
+          83%  { border-color: #ff6b6b; box-shadow: 0 0 20px rgba(255,107,107,0.3); }
+          100% { border-color: #ff6b6b; box-shadow: 0 0 20px rgba(255,107,107,0.3); }
+        }
+        .mythic-border { animation: rainbowBorder 3s linear infinite; border-width: 1px; border-style: solid; }
+        .mythic-text {
+          background: linear-gradient(90deg, #ff6b6b, #ffd700, #51cf66, #339af0, #cc5de8, #ff6b6b);
+          background-size: 300% 300%;
+          animation: rainbowText 3s ease infinite;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        .mythic-badge {
+          background: linear-gradient(90deg, rgba(255,107,107,0.2), rgba(255,215,0,0.2), rgba(81,207,102,0.2), rgba(51,154,240,0.2), rgba(204,93,232,0.2));
+          background-size: 300%;
+          animation: rainbowText 3s ease infinite;
         }
       `}</style>
     </div>
   );
 }
 
+// ─── Countdown ──────────────────────────────────────────────────────────────
+const TOTAL_SECONDS = 10 * 60;
 function Countdown({ expiresAt }: { expiresAt: string }) {
   const [secondsLeft, setSecondsLeft] = useState(0);
-
   useEffect(() => {
-    const calc = () => {
-      const diff = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
-      setSecondsLeft(diff);
-    };
+    const calc = () => setSecondsLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)));
     calc();
     const t = setInterval(calc, 1000);
     return () => clearInterval(t);
   }, [expiresAt]);
-
   const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
   const secs = (secondsLeft % 60).toString().padStart(2, '0');
   const pct = (secondsLeft / TOTAL_SECONDS) * 100;
   const isWarning = secondsLeft < 60;
-
   return (
     <div className="text-center">
       <p className="text-text-muted text-xs uppercase tracking-widest mb-2">Zbývající čas přístupu</p>
@@ -86,25 +169,75 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
         {mins}:{secs}
       </div>
       <div className="mt-4 max-w-xs mx-auto">
-        <div className="h-1 rounded-full bg-white/10 overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-1000 ${isWarning ? 'bg-st-red' : 'bg-st-cyan'}`}
-            style={{ width: `${pct}%` }}
-          />
+        <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-1000 ${isWarning ? 'bg-st-red' : 'bg-st-cyan'}`}
+            style={{ width: `${pct}%` }} />
         </div>
       </div>
     </div>
   );
 }
 
+// ─── Teacher Card ────────────────────────────────────────────────────────────
+function TeacherCard({ teacher, onBuy, disabled }: { teacher: Teacher; onBuy: (t: Teacher) => void; disabled: boolean }) {
+  const rc = RARITY_CONFIG[teacher.rarity] || RARITY_CONFIG.COMMON;
+  const isMythic = teacher.rarity === 'MYTHIC';
+
+  return (
+    <button
+      onClick={() => onBuy(teacher)}
+      disabled={disabled}
+      className={`relative group text-left rounded-2xl p-5 transition-all w-full disabled:cursor-not-allowed glass-card-static ${!isMythic ? `border ${rc.borderColor} hover:bg-white/[0.06]` : 'mythic-border'}`}
+      style={!isMythic ? {
+        boxShadow: `0 0 0px 0px ${rc.glowColor}`,
+        transition: 'box-shadow 0.3s ease',
+      } : {}}
+      onMouseEnter={e => { if (!isMythic) (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 20px 4px ${rc.glowColor}`; }}
+      onMouseLeave={e => { if (!isMythic) (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 0px 0px ${rc.glowColor}`; }}
+    >
+      {/* Rarity badge */}
+      <div className="flex items-start justify-between mb-3">
+        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${isMythic ? 'mythic-badge' : rc.badgeBg}`}>
+          {isMythic ? <span className="mythic-text">{rc.label}</span> : rc.label}
+        </span>
+        <span className="text-xs font-bold font-mono">
+          {isMythic ? <span className="mythic-text">Pass Only</span> : <span style={{ color: rc.color }}>{rc.cost} ST</span>}
+        </span>
+      </div>
+
+      {/* Avatar + Name */}
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${isMythic ? 'mythic-badge' : rc.badgeBg}`}>
+          <span className={isMythic ? 'mythic-text' : rc.textColor}>{teacher.name.charAt(0)}</span>
+        </div>
+        <div>
+          <p className={`font-semibold text-sm ${isMythic ? '' : ''}`}>
+            {isMythic ? <span className="mythic-text">{teacher.name}</span> : teacher.name}
+          </p>
+          <p className="text-text-muted text-xs">FAV ZČU</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-3 text-xs" style={{ color: rc.isMythic ? undefined : rc.color }}>
+        {isMythic
+          ? <span className="mythic-text">🎲 Jen přes speciální Pass z Case</span>
+          : `10 min přístup — ${rc.cost} ST`}
+      </div>
+    </button>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 export default function StRoomPage() {
   const { user, loading: authLoading, refreshUser } = useAuth();
   const router = useRouter();
-
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  const [passCode, setPassCode] = useState('');
+  const [redeemTeacherId, setRedeemTeacherId] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
 
@@ -120,23 +253,19 @@ export default function StRoomPage() {
         api.stRoom.teachers(),
         api.stRoom.session(),
       ]);
-      setTeachers(teacherRes.teachers || []);
-      if (sessionRes.hasActiveSession) {
-        setSession(sessionRes.session);
-        setSessionExpired(false);
-      } else {
-        setSession(null);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoadingData(false);
-    }
+      // Sort by rarity order
+      const sorted = (teacherRes.teachers || []).sort((a: Teacher, b: Teacher) =>
+        RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity)
+      );
+      setTeachers(sorted);
+      if (sessionRes.hasActiveSession) { setSession(sessionRes.session); setSessionExpired(false); }
+      else setSession(null);
+    } catch { /* silent */ }
+    finally { setLoadingData(false); }
   }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Auto-expire check
   useEffect(() => {
     if (!session) return;
     const ms = new Date(session.expiresAt).getTime() - Date.now();
@@ -151,22 +280,26 @@ export default function StRoomPage() {
   }
 
   async function handleBuy(teacher: Teacher) {
-    if (!window.confirm(`Zaplatit 50 ST za 10-minutový přístup ke: ${teacher.name}?`)) return;
+    if (teacher.rarity === 'MYTHIC') {
+      showMsg('error', 'Mythic učitel vyžaduje speciální Pass. Nelze zakoupit za ST.');
+      return;
+    }
+    if (!window.confirm(`Zaplatit ${teacher.cost} ST za 10-minutový přístup ke: ${teacher.name}?`)) return;
     setBuying(teacher.id);
     try {
       const res = await api.stRoom.buy({ teacherId: teacher.id });
       setSession(res.session);
       setSessionExpired(false);
       showMsg('success', `Přístup aktivován! Místnost s učitelem: ${teacher.name}`);
-      if (refreshUser) refreshUser();
-    } catch (err: any) {
-      showMsg('error', err.message || 'Chyba při nákupu přístupu.');
-    } finally {
-      setBuying(null);
-    }
+      refreshUser();
+    } catch (err: any) { showMsg('error', err.message || 'Chyba při nákupu.'); }
+    finally { setBuying(null); }
   }
 
   if (!user) return null;
+
+  const balance = parseFloat(user.balance || '0');
+  const rc = session ? (RARITY_CONFIG[session.teacher.rarity] || RARITY_CONFIG.COMMON) : null;
 
   return (
     <AppShell>
@@ -174,23 +307,20 @@ export default function StRoomPage() {
       <div className="relative z-10 space-y-6 animate-fade-up">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-st-cyan"
-              style={{ textShadow: '0 0 20px rgba(6,182,212,0.4)' }}>
+            <h1 className="text-3xl font-bold tracking-tight text-st-cyan" style={{ textShadow: '0 0 20px rgba(6,182,212,0.4)' }}>
               🔐 ST-ROOM
             </h1>
-            <p className="text-text-secondary text-sm mt-1">
-              Prémiový přístup k výukové místnosti — 50 ST / 10 minut
-            </p>
+            <p className="text-text-secondary text-sm mt-1">Prémiový přístup k výukové místnosti</p>
           </div>
           <div className="glass-card-static px-4 py-2 text-center">
             <p className="text-text-muted text-xs">Váš zůstatek</p>
-            <p className="text-st-cyan font-mono font-bold">{parseFloat(user.balance || '0').toFixed(4)} ST</p>
+            <p className="text-st-cyan font-mono font-bold">{balance.toFixed(4)} ST</p>
           </div>
         </div>
 
-        {/* Message Toast */}
+        {/* Toast */}
         {message && (
           <div className={`glass-card-static p-4 animate-fade-up border ${message.type === 'success' ? 'border-st-emerald/30' : 'border-st-red/30'}`}>
             <p className={`text-sm font-medium ${message.type === 'success' ? 'text-st-emerald' : 'text-st-red'}`}>
@@ -207,41 +337,43 @@ export default function StRoomPage() {
         ) : session ? (
           /* ── ACTIVE SESSION ── */
           <div className="space-y-6">
-            {/* Countdown Card */}
-            <div className="glass-card p-8 text-center relative overflow-hidden"
-              style={{ boxShadow: '0 0 40px rgba(6,182,212,0.15), 0 0 80px rgba(6,182,212,0.05)' }}>
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ background: 'radial-gradient(ellipse at center, rgba(6,182,212,0.05) 0%, transparent 70%)' }} />
-              
+            <div
+              className={`glass-card p-8 text-center relative overflow-hidden ${session.teacher.rarity === 'MYTHIC' ? 'mythic-border' : `border ${rc?.borderColor}`}`}
+              style={session.teacher.rarity !== 'MYTHIC' ? { boxShadow: `0 0 50px ${rc?.glowColor}` } : {}}
+            >
+              <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at center, ${rc?.glowColor} 0%, transparent 70%)` }} />
               <div className="mb-6">
                 <span className="text-4xl">🔓</span>
                 <h2 className="text-xl font-bold text-st-emerald mt-2">PŘÍSTUP AKTIVNÍ</h2>
                 <p className="text-text-secondary text-sm mt-1">
-                  Místnost s učitelem: <span className="text-st-cyan font-bold">{session.teacher.name}</span>
+                  Místnost s: {session.teacher.rarity === 'MYTHIC'
+                    ? <span className="mythic-text font-bold">{session.teacher.name}</span>
+                    : <span className="font-bold" style={{ color: rc?.color }}>{session.teacher.name}</span>}
                 </p>
+                <span className={`inline-block mt-2 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${session.teacher.rarity === 'MYTHIC' ? 'mythic-badge' : rc?.badgeBg}`}>
+                  {session.teacher.rarity === 'MYTHIC' ? <span className="mythic-text">{rc?.label}</span> : rc?.label}
+                </span>
               </div>
-
               <Countdown expiresAt={session.expiresAt} />
             </div>
 
-            {/* Room Content */}
-            <div className="glass-card p-8 relative overflow-hidden">
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ background: 'radial-gradient(ellipse at top left, rgba(139,92,246,0.06) 0%, transparent 60%)' }} />
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                <span>📋</span> ST-ROOM Konzole
-              </h3>
+            {/* Room content */}
+            <div className="glass-card p-8">
+              <h3 className="text-lg font-bold mb-6 flex items-center gap-2"><span>📋</span> ST-ROOM Konzole</h3>
               <div className="font-mono text-sm space-y-2 bg-black/30 rounded-xl p-6 border border-white/5">
                 <p className="text-st-emerald">{'>'} Inicializace zabezpečeného kanálu...</p>
                 <p className="text-text-secondary">{'>'} Uživatel: <span className="text-st-gold">{user.username}</span></p>
                 <p className="text-text-secondary">{'>'} Oprávnění: <span className="text-st-emerald">OVĚŘENO</span></p>
-                <p className="text-text-secondary">{'>'} Místnost: <span className="text-st-cyan">{session.teacher.name}</span></p>
+                <p className="text-text-secondary">{'>'} Místnost:&nbsp;
+                  {session.teacher.rarity === 'MYTHIC'
+                    ? <span className="mythic-text">{session.teacher.name}</span>
+                    : <span style={{ color: rc?.color }}>{session.teacher.name}</span>}
+                </p>
                 <p className="text-text-secondary">{'>'} Datum: <span className="text-text-muted">{new Date().toLocaleString('cs-CZ')}</span></p>
-                <p className="text-text-secondary">{'>'} Expires: <span className="text-text-muted">{new Date(session.expiresAt).toLocaleTimeString('cs-CZ')}</span></p>
+                <p className="text-text-secondary">{'>'} Expiruje: <span className="text-text-muted">{new Date(session.expiresAt).toLocaleTimeString('cs-CZ')}</span></p>
                 <br />
-                <p className="text-st-purple animate-pulse">{'>'} Kanál aktivní. Připraveno.</p>
+                <p className="text-st-purple animate-pulse">{'>'} Kanál aktivní. Systém připraven.</p>
               </div>
-
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                   { icon: '📅', label: 'Konzultační hodiny', desc: 'Po domluvě přes IS/STAG' },
@@ -266,54 +398,102 @@ export default function StRoomPage() {
               </div>
             )}
 
+            {/* Legend */}
+            <div className="glass-card-static p-4 flex flex-wrap gap-3 items-center">
+              <span className="text-text-muted text-xs mr-1">Rarity:</span>
+              {RARITY_ORDER.map(r => {
+                const c = RARITY_CONFIG[r];
+                return (
+                  <span key={r} className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${r === 'MYTHIC' ? 'mythic-badge' : c.badgeBg}`}>
+                    {r === 'MYTHIC' ? <span className="mythic-text">{c.label} (Pass)</span> : `${c.label} – ${c.cost} ST`}
+                  </span>
+                );
+              })}
+            </div>
+
             <div className="glass-card p-6">
               <h2 className="text-xl font-bold mb-2">Vyberte učitele</h2>
               <p className="text-text-secondary text-sm mb-6">
-                Po výběru bude strženo <span className="text-st-gold font-bold">50 ST</span> a získáte <span className="text-st-cyan font-bold">10 minut</span> přístupu do ST-ROOM.
+                Cena závisí na raritě učitele. Mythic učitelé vyžadují speciální <span className="mythic-text font-bold">Pass z Case</span>.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {teachers.map((teacher) => (
-                  <button
-                    key={teacher.id}
-                    onClick={() => handleBuy(teacher)}
-                    disabled={!!buying || parseFloat(user.balance || '0') < 50}
-                    className="relative group glass-card-static p-5 text-left rounded-2xl border border-glass-border hover:border-st-cyan/40 hover:bg-white/[0.06] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ background: 'radial-gradient(ellipse at top left, rgba(6,182,212,0.08) 0%, transparent 60%)' }} />
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-st-cyan-dim flex items-center justify-center text-st-cyan font-bold text-sm flex-shrink-0">
-                        {teacher.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{teacher.name}</p>
-                        <p className="text-text-muted text-xs">FAV ZČU</p>
-                      </div>
+              {/* Group by rarity */}
+              {RARITY_ORDER.map(rarity => {
+                const group = teachers.filter(t => t.rarity === rarity);
+                if (group.length === 0) return null;
+                const rc2 = RARITY_CONFIG[rarity];
+                return (
+                  <div key={rarity} className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-px flex-1 bg-glass-border" />
+                      <span className={`text-[11px] font-bold uppercase tracking-widest ${rarity === 'MYTHIC' ? 'mythic-text' : rc2.textColor}`}>
+                        {rc2.label}
+                      </span>
+                      <div className="h-px flex-1 bg-glass-border" />
                     </div>
-                    {buying === teacher.id && (
-                      <div className="absolute inset-0 rounded-2xl flex items-center justify-center bg-black/50">
-                        <span className="text-st-cyan text-sm animate-pulse">⏳ Zpracování...</span>
-                      </div>
-                    )}
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs text-text-muted">10 min přístup</span>
-                      <span className="text-xs font-bold text-st-gold">50 ST</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {group.map(teacher => (
+                        <TeacherCard
+                          key={teacher.id}
+                          teacher={teacher}
+                          onBuy={handleBuy}
+                          disabled={!!buying || (teacher.rarity !== 'MYTHIC' && balance < teacher.cost)}
+                        />
+                      ))}
                     </div>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                );
+              })}
 
-              {parseFloat(user.balance || '0') < 50 && (
-                <div className="mt-6 p-4 rounded-xl bg-st-red-dim border border-st-red/20 text-center">
-                  <p className="text-st-red text-sm font-medium">
-                    ❌ Nedostatečný zůstatek. Potřebujete alespoň 50 ST.
-                  </p>
-                  <button onClick={() => router.push('/mining')} className="btn-primary mt-3 text-sm">
-                    ⛏️ Jít Těžit
-                  </button>
+              {balance < 50 && (
+                <div className="mt-4 p-4 rounded-xl bg-st-red-dim border border-st-red/20 text-center">
+                  <p className="text-st-red text-sm font-medium">❌ Nedostatečný zůstatek. Potřebujete alespoň 50 ST.</p>
+                  <button onClick={() => router.push('/mining')} className="btn-primary mt-3 text-sm">⛏️ Jít Těžit</button>
                 </div>
               )}
+            </div>
+
+            {/* Pass Redemption */}
+            <div className="glass-card p-6 relative overflow-hidden">
+              <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at top right, rgba(255,107,107,0.06) 0%, transparent 60%)' }} />
+              <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
+                🎲 <span className="mythic-text">Mythic Pass</span>
+              </h3>
+              <p className="text-text-secondary text-sm mb-4">
+                Máte Mythic Pass z Case? Vyberte učitele a uplatněte ho zde.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select
+                  value={redeemTeacherId}
+                  onChange={e => setRedeemTeacherId(e.target.value)}
+                  className="glass-input flex-1"
+                >
+                  <option value="">Vyberte Mythic učitele...</option>
+                  {teachers.filter(t => t.rarity === 'MYTHIC').map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="Kód Passu..."
+                  value={passCode}
+                  onChange={e => setPassCode(e.target.value)}
+                  className="glass-input flex-1"
+                />
+                <button
+                  onClick={() => showMsg('error', 'Pass systém bude dostupný brzy — sledujte Case sekci!')}
+                  disabled={!redeemTeacherId || !passCode}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  style={{
+                    background: 'linear-gradient(90deg, rgba(255,107,107,0.3), rgba(255,215,0,0.3), rgba(204,93,232,0.3))',
+                    border: '1px solid rgba(255,215,0,0.3)',
+                    color: '#ffd700',
+                  }}
+                >
+                  🎲 Uplatnit
+                </button>
+              </div>
+              <p className="text-text-muted text-xs mt-3">Pass systém přijde s aktualizací Case — brzy!</p>
             </div>
           </div>
         )}

@@ -68,14 +68,23 @@ enum TransactionType {
 }
 
 model Teacher {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String         @id @default(cuid())
+  name      String         @unique
+  rarity    TeacherRarity  @default(COMMON)
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
 
   stRoomSessions StRoomSession[]
 
   @@map("teachers")
+}
+
+enum TeacherRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
 }
 
 model StRoomSession {
