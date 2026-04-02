@@ -40,6 +40,7 @@ cp -f "$REPO_DIR/backend/tsconfig.json" "$BACKEND_DIR/"
 cd "$BACKEND_DIR"
 npm install --production=false >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
+npx prisma db push --accept-data-loss >> "$LOG" 2>&1
 
 # Restart backend
 bash "$HOME/start_backend.sh"
