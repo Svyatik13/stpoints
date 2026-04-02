@@ -38,4 +38,8 @@ router.post('/cases/:caseId/items', adminController.addCaseItem);
 router.put('/cases/items/:itemId', adminController.updateCaseItem);
 router.delete('/cases/items/:itemId', adminController.deleteCaseItem);
 
+// Pass Code
+router.get('/passcode', adminController.getPassCode);
+router.post('/passcode/regenerate', adminController.regeneratePassCode);
+
 export default router;

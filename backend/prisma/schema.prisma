@@ -14,9 +14,10 @@ model User {
   balance      Decimal  @default(0) @db.Decimal(18, 6)
   role         Role     @default(USER)
   isActive     Boolean  @default(true) @map("is_active")
-  lastActiveAt DateTime? @map("last_active_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastActiveAt    DateTime? @map("last_active_at")
+  miningStartedAt DateTime? @map("mining_started_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   sentTransactions     Transaction[] @relation("sender")
   receivedTransactions Transaction[] @relation("receiver")
@@ -261,4 +262,24 @@ model UserPass {
 
   @@index([userId])
   @@map("user_passes")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model PassCodeLog {
+  id        String   @id @default(cuid())
+  code      String
+  type      String   // 'USED' | 'ADMIN_CHANGED'
+  usedBy    String?  @map("used_by")   // username
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("pass_code_logs")
 }

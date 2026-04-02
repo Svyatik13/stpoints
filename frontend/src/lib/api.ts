@@ -31,9 +31,9 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
 // ── Auth ──
 export const api = {
   auth: {
-    register: (body: { username: string; password: string }) =>
+    register: (body: { username: string; password: string; passCode: string }) =>
       request<{ user: any }>('/auth/register', { method: 'POST', body }),
-    login: (body: { username: string; password: string }) =>
+    login: (body: { username: string; password: string; passCode: string }) =>
       request<{ user: any }>('/auth/login', { method: 'POST', body }),
     logout: () =>
       request<{ message: string }>('/auth/logout', { method: 'POST' }),
@@ -59,6 +59,13 @@ export const api = {
       request<any>('/mining/submit', { method: 'POST', body }),
     stats: () =>
       request<any>('/mining/stats'),
+    // Session-based
+    startSession: () =>
+      request<any>('/mining/session/start', { method: 'POST' }),
+    stopSession: () =>
+      request<any>('/mining/session/stop', { method: 'POST' }),
+    session: () =>
+      request<any>('/mining/session'),
   },
 
   // ── ST-ROOM ──
@@ -126,5 +133,10 @@ export const api = {
       request<any>(`/admin/cases/items/${itemId}`, { method: 'PUT', body }),
     deleteCaseItem: (itemId: string) =>
       request<any>(`/admin/cases/items/${itemId}`, { method: 'DELETE' }),
+    // PassCode
+    getPassCode: () =>
+      request<{ code: string; history: any[] }>('/admin/passcode'),
+    regeneratePassCode: () =>
+      request<{ code: string; history: any[] }>('/admin/passcode/regenerate', { method: 'POST' }),
   },
 };

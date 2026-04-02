@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passCode, setPassCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +33,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await register(username, password);
+      await register(username, password, passCode);
       router.push('/wallet');
     } catch (err: any) {
       setError(err.message || 'Registrace se nezdařila.');
@@ -150,6 +151,24 @@ export default function RegisterPage() {
                 )}
               </button>
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="reg-pass-code" className="block text-sm font-medium text-text-secondary mb-2">
+              🔐 Přístupový kód
+            </label>
+            <input
+              id="reg-pass-code"
+              type="text"
+              value={passCode}
+              onChange={(e) => setPassCode(e.target.value.toUpperCase())}
+              className="glass-input tracking-widest font-mono text-center text-lg"
+              placeholder="XXXXXX"
+              maxLength={6}
+              required
+              autoComplete="off"
+            />
+            <p className="text-text-muted text-xs mt-1">Denní přístupový kód — bez něj nelze vytvořit účet</p>
           </div>
 
           <button
