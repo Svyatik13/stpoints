@@ -15,9 +15,7 @@ NEW_HEAD=$(git rev-parse HEAD)
 if [ -f "$MARKER" ] && [ "$(cat $MARKER)" = "$NEW_HEAD" ]; then
   # No changes — just ensure backend is alive
   if ! pgrep -f "tsx src/index.ts" > /dev/null 2>&1; then
-    cd "$BACKEND_DIR"
-    nohup npx tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
-    echo "$(date) — Backend restarted (PID: $!)" >> "$LOG"
+    bash "$HOME/start_backend.sh"
   fi
   exit 0
 fi
@@ -44,10 +42,7 @@ npm install --production=false >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 
 # Restart backend
-pkill -f "tsx src/index.ts" 2>/dev/null
-sleep 2
-nohup npx tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
-echo "$(date) — Backend started (PID: $!)" >> "$LOG"
+bash "$HOME/start_backend.sh"
 
 # Mark as deployed
 echo "$NEW_HEAD" > "$MARKER"
