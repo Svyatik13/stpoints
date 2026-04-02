@@ -20,7 +20,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navbar />
-      <main className={user ? 'pt-24 md:pt-16 pb-8 px-4 sm:px-6' : ''}>
+      <main className={user ? 'pt-28 md:pt-20 pb-8 px-4 sm:px-6' : ''}>
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
