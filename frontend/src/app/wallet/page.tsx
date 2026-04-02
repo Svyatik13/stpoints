@@ -88,26 +88,6 @@ export default function WalletPage() {
               </p>
             </div>
           </div>
-
-          {/* Balance bar visual */}
-          <div className="mt-6">
-            <div className="flex justify-between text-xs text-text-muted mb-1">
-              <span>0 ST</span>
-              <span>500 ST (ST-RM Access)</span>
-            </div>
-            <div className="mining-progress-bar">
-              <div
-                className="mining-progress-fill"
-                style={{ width: `${Math.min((balance / 500) * 100, 100)}%` }}
-              />
-            </div>
-            <p className="text-text-muted text-xs mt-1">
-              {balance >= 500
-                ? '✅ Přístup k ST-RM Terminálu odemčen'
-                : `${(500 - balance).toFixed(6)} ST do odemčení ST-RM Terminálu`
-              }
-            </p>
-          </div>
         </div>
 
         {/* Quick Stats */}

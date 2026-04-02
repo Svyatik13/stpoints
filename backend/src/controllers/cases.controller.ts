@@ -64,7 +64,11 @@ export async function openCase(req: Request, res: Response, next: NextFunction) 
       let rewardAmount: Decimal | null = null;
 
       if (wonItem.type === 'ST_REWARD' && wonItem.amount) {
-        rewardAmount = new Decimal(wonItem.amount.toString());
+        const baseAmount = new Decimal(wonItem.amount.toString());
+        // Random variance: 0.68 – 1.05 range, biased toward lower (house edge)
+        // Mean factor ≈ 0.865 → player nets less on average than the label suggests
+        const varianceFactor = new Decimal(0.68 + Math.random() * 0.37);
+        rewardAmount = baseAmount.mul(varianceFactor).toDecimalPlaces(4);
         newBalance = newBalance.add(rewardAmount);
       } else if (wonItem.type === 'MYTHIC_PASS') {
         // Grant a pass
