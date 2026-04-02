@@ -73,6 +73,7 @@ export async function loginUser(input: LoginInput): Promise<{ user: any; tokens:
       balance: true,
       role: true,
       isActive: true,
+      createdAt: true,
     },
   });
 

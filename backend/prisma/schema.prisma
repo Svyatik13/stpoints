@@ -25,6 +25,8 @@ model User {
   giveawayEntries      GiveawayEntry[]
   giveawayWins         GiveawayWinner[]
   stRoomSessions       StRoomSession[]
+  caseOpenings         CaseOpening[]
+  userPasses           UserPass[]
 
   @@map("users")
 }
@@ -65,6 +67,7 @@ enum TransactionType {
   TRANSFER
   SYSTEM_DEBIT
   ST_ROOM_ACCESS
+  CASE_OPENING
 }
 
 model Teacher {
@@ -191,4 +194,71 @@ enum GiveawayStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+// ── Cases ────────────────────────────────────────────────────────────────────
+
+enum CaseItemType {
+  ST_REWARD
+  MYTHIC_PASS
+}
+
+model Case {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal  @default(0) @db.Decimal(18, 6)
+  isDaily     Boolean  @default(false) @map("is_daily")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  items    CaseItem[]
+  openings CaseOpening[]
+
+  @@map("cases")
+}
+
+model CaseItem {
+  id     String       @id @default(cuid())
+  caseId String       @map("case_id")
+  case   Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  type   CaseItemType
+  label  String
+  amount Decimal?     @db.Decimal(18, 6)
+  weight Int
+
+  openings CaseOpening[]
+
+  @@map("case_items")
+}
+
+model CaseOpening {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseId       String   @map("case_id")
+  case         Case     @relation(fields: [caseId], references: [id])
+  itemId       String   @map("item_id")
+  item         CaseItem @relation(fields: [itemId], references: [id])
+  costPaid     Decimal  @db.Decimal(18, 6) @map("cost_paid")
+  rewardAmount Decimal? @db.Decimal(18, 6) @map("reward_amount")
+  rewardType   String   @map("reward_type")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([caseId])
+  @@map("case_openings")
+}
+
+model UserPass {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isUsed      Boolean   @default(false) @map("is_used")
+  usedAt      DateTime? @map("used_at")
+  obtainedAt  DateTime  @default(now()) @map("obtained_at")
+
+  @@index([userId])
+  @@map("user_passes")
 }

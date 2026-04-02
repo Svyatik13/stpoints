@@ -66,6 +66,16 @@ export const api = {
     teachers: () => request<any>('/st-room/teachers'),
     session: () => request<any>('/st-room/session'),
     buy: (body: { teacherId: string }) => request<any>('/st-room/buy', { method: 'POST', body }),
+    redeemPass: (body: { teacherId: string }) => request<any>('/st-room/redeem-pass', { method: 'POST', body }),
+    earlyExit: () => request<any>('/st-room/early-exit', { method: 'POST', body: {} }),
+  },
+
+  // ── Cases ──
+  cases: {
+    list: () => request<any>('/cases'),
+    open: (body: { caseId: string }) => request<any>('/cases/open', { method: 'POST', body }),
+    dailyStatus: () => request<any>('/cases/daily-status'),
+    passes: () => request<any>('/cases/passes'),
   },
 
   // ── Giveaway ──

@@ -62,7 +62,7 @@ export async function getTransactionHistory(userId: string, page: number = 1, li
       amount: tx.amount.toString(),
       balanceBefore: tx.balanceBefore.toString(),
       balanceAfter: tx.balanceAfter.toString(),
-      isIncoming: tx.receiverId === userId,
+      isIncoming: parseFloat(tx.balanceAfter.toString()) > parseFloat(tx.balanceBefore.toString()),
     })),
     pagination: {
       page,

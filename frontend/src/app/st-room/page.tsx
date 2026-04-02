@@ -236,8 +236,10 @@ export default function StRoomPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  const [earlyExiting, setEarlyExiting] = useState(false);
   const [passCode, setPassCode] = useState('');
   const [redeemTeacherId, setRedeemTeacherId] = useState('');
+  const [myPassCount, setMyPassCount] = useState(0);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
 
@@ -260,6 +262,12 @@ export default function StRoomPage() {
       setTeachers(sorted);
       if (sessionRes.hasActiveSession) { setSession(sessionRes.session); setSessionExpired(false); }
       else setSession(null);
+
+      // Load pass count
+      try {
+        const passRes = await api.cases.passes();
+        setMyPassCount(passRes.count ?? 0);
+      } catch {}
     } catch { /* silent */ }
     finally { setLoadingData(false); }
   }, [user]);
@@ -294,6 +302,32 @@ export default function StRoomPage() {
       refreshUser();
     } catch (err: any) { showMsg('error', err.message || 'Chyba při nákupu.'); }
     finally { setBuying(null); }
+  }
+
+  async function handleEarlyExit() {
+    if (!window.confirm('Opustit ST-ROOM předčasně? Bude strženo 5 ST.')) return;
+    setEarlyExiting(true);
+    try {
+      await api.stRoom.earlyExit();
+      setSession(null);
+      setSessionExpired(false);
+      showMsg('success', 'Opustili jste ST-ROOM. Strženo 5 ST.');
+      refreshUser();
+    } catch (err: any) { showMsg('error', err.message || 'Chyba při odchodu.'); }
+    finally { setEarlyExiting(false); }
+  }
+
+  async function handleRedeemPass() {
+    if (!redeemTeacherId) return;
+    if (!window.confirm('Uplatnit Mythic Pass pro vybraného učitele?')) return;
+    try {
+      const res = await api.stRoom.redeemPass({ teacherId: redeemTeacherId });
+      setSession(res.session);
+      setSessionExpired(false);
+      setMyPassCount(c => Math.max(0, c - 1));
+      showMsg('success', 'Mythic Pass uplatněn! Přístup aktivován.');
+      refreshUser();
+    } catch (err: any) { showMsg('error', err.message || 'Chyba při uplatnění passu.'); }
   }
 
   if (!user) return null;
@@ -355,6 +389,17 @@ export default function StRoomPage() {
                 </span>
               </div>
               <Countdown expiresAt={session.expiresAt} />
+
+              {/* Early exit button */}
+              <div className="mt-8 border-t border-white/5 pt-6">
+                <button
+                  onClick={handleEarlyExit}
+                  disabled={earlyExiting}
+                  className="mx-auto flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-40 bg-st-red-dim border border-st-red/20 text-st-red hover:bg-st-red/20"
+                >
+                  {earlyExiting ? '⏳ Odcházím...' : '🚪 Odejít dříve (−5 ST)'}
+                </button>
+              </div>
             </div>
 
             {/* Room content */}
@@ -458,31 +503,30 @@ export default function StRoomPage() {
               <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at top right, rgba(255,107,107,0.06) 0%, transparent 60%)' }} />
               <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
                 🎲 <span className="mythic-text">Mythic Pass</span>
+                {myPassCount > 0 && (
+                  <span className="ml-2 text-xs font-bold bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{myPassCount}× dostupný</span>
+                )}
               </h3>
               <p className="text-text-secondary text-sm mb-4">
-                Máte Mythic Pass z Case? Vyberte učitele a uplatněte ho zde.
+                {myPassCount > 0
+                  ? 'Máte Mythic Pass! Vyberte učitele a uplatněte ho.'
+                  : 'Získejte Mythic Pass otevřením case v sekci Cases.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <select
                   value={redeemTeacherId}
                   onChange={e => setRedeemTeacherId(e.target.value)}
                   className="glass-input flex-1"
+                  disabled={myPassCount === 0}
                 >
                   <option value="">Vyberte Mythic učitele...</option>
                   {teachers.filter(t => t.rarity === 'MYTHIC').map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
-                <input
-                  type="text"
-                  placeholder="Kód Passu..."
-                  value={passCode}
-                  onChange={e => setPassCode(e.target.value)}
-                  className="glass-input flex-1"
-                />
                 <button
-                  onClick={() => showMsg('error', 'Pass systém bude dostupný brzy — sledujte Case sekci!')}
-                  disabled={!redeemTeacherId || !passCode}
+                  onClick={handleRedeemPass}
+                  disabled={!redeemTeacherId || myPassCount === 0}
                   className="px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   style={{
                     background: 'linear-gradient(90deg, rgba(255,107,107,0.3), rgba(255,215,0,0.3), rgba(204,93,232,0.3))',
@@ -490,10 +534,17 @@ export default function StRoomPage() {
                     color: '#ffd700',
                   }}
                 >
-                  🎲 Uplatnit
+                  🌈 Uplatnit Pass
                 </button>
               </div>
-              <p className="text-text-muted text-xs mt-3">Pass systém přijde s aktualizací Case — brzy!</p>
+              {myPassCount === 0 && (
+                <button
+                  onClick={() => router.push('/cases')}
+                  className="mt-3 text-xs text-st-cyan hover:underline"
+                >
+                  📦 Jít na Cases →
+                </button>
+              )}
             </div>
           </div>
         )}
