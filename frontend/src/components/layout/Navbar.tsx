@@ -97,7 +97,7 @@ export default function Navbar() {
               </div>
 
               <Link
-                href="/profile"
+                href={`/u/${user.username}`}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-white/[0.06] transition-colors"
               >
                 <span>👤</span> {t.nav.profile}

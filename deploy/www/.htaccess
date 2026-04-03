@@ -1,8 +1,14 @@
 RewriteEngine On
 
-# Proxy /api/* through PHP (works without mod_proxy)
+# Proxy /api/* through PHP
 RewriteCond %{REQUEST_URI} ^/api/
 RewriteRule ^(.*)$ /api.php [L,QSA]
+
+# Fix dynamic Next.js App Router for /u/[handle]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} ^/u/
+RewriteRule ^u/(.*)$ /u/index/index.html [L]
 
 # SPA fallback — serve index.html for client-side routes
 RewriteCond %{REQUEST_FILENAME} !-f

@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 
+import { useToast } from '@/components/ui/Toast';
+
 export default function ProfilePageClient({ handle }: { handle: string }) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!handle) return;
@@ -22,6 +25,7 @@ export default function ProfilePageClient({ handle }: { handle: string }) {
 
   const copyShare = () => {
     navigator.clipboard?.writeText(shareUrl);
+    toast('success', 'Odkaz byl zkopírován do schránky.');
   };
 
   return (
@@ -48,6 +52,12 @@ export default function ProfilePageClient({ handle }: { handle: string }) {
               <div className="absolute inset-0 bg-gradient-to-br from-st-purple/10 via-transparent to-st-cyan/10 pointer-events-none" />
 
               <div className="relative z-10">
+                <div className="absolute top-4 right-4 z-20">
+                  <button onClick={copyShare} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-glass-border tooltip-trigger" title="Sdílet profil">
+                    <span className="text-xl">📤</span>
+                  </button>
+                </div>
+
                 {/* Avatar */}
                 <div className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl font-bold" style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.3), rgba(6,182,212,0.3))', border: '2px solid rgba(168,85,247,0.4)' }}>
                   {profile.username[0].toUpperCase()}
