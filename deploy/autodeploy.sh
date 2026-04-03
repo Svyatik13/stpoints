@@ -74,28 +74,29 @@ PID_FILE="\$HOME/backend.pid"
 LOG_FILE="\$HOME/deploy.log"
 
 echo "\$(date) — TOTAL PURGE: Releasing Port 4000..." >> "\$LOG_FILE"
-# Triple-kill any node usage
+# 1. Total User Purge: Kill every node process owned by this user
 pkill -u "\$USER" -9 node > /dev/null 2>&1
 pkill -u "\$USER" -9 tsx > /dev/null 2>&1
-if [ -f "\$PID_FILE" ]; then
-  OLD_PID=\$(cat "\$PID_FILE")
-  kill -9 "\$OLD_PID" > /dev/null 2>&1
-  rm -f "\$PID_FILE"
-fi
+
+# 2. Cleanup PID file
+if [ -f "\$PID_FILE" ]; then rm -f "\$PID_FILE"; fi
 
 echo "\$(date) — Waiting for port release..." >> "\$LOG_FILE"
 sleep 10
 
-# Link .env
+# 3. Link .env
 cp "\$HOME/.env" "\$REPO_DIR/backend/.env"
 sync
 
-# Start with local tsx
+# 4. ENFORCE PRODUCTION MODE
+export NODE_ENV=production
+
+# 5. Start with local tsx
 cd "\$REPO_DIR/backend"
 nohup ./node_modules/.bin/tsx src/index.ts >> "\$HOME/backend.log" 2>&1 &
 NEW_PID=\$!
 echo "\$NEW_PID" > "\$PID_FILE"
-echo "\$(date) — ST-Points Backend RESTARTED on PID \$NEW_PID" >> "\$LOG_FILE"
+echo "\$(date) — ST-Points Backend PURGED & RESTARTED in PRODUCTION on PID \$NEW_PID" >> "\$LOG_FILE"
 EOF
 chmod +x "$HOME/start_backend.sh"
 
