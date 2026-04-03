@@ -35,13 +35,19 @@ app.set('trust proxy', 1);
 // ── Security ──
 app.use(helmet());
 
-// Dynamic CORS to support both stpoints.fun and www.stpoints.fun
-const allowedOrigins = [env.frontendUrl, 'https://stpoints.fun', 'https://www.stpoints.fun'];
+// SUPER-DASHBOARD CORS: Force trust for production domain
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || (typeof origin === 'string' && origin.endsWith('stpoints.fun'))) {
+    // In production, we trust anything from our domain. If origin is missing (same-origin), we allow it.
+    const isProd = env.nodeEnv === 'production';
+    if (!origin) return callback(null, true);
+    
+    const isAllowed = origin === env.frontendUrl || origin.includes('stpoints.fun') || !isProd;
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
+      console.warn(`[CORS Blocked] Origin: ${origin}`);
       callback(new Error('Přístup zamítnut (CORS)'));
     }
   },
