@@ -60,6 +60,13 @@ cat <<EOF > "$HOME/start_backend.sh"
 #!/bin/bash
 pkill -f 'tsx src/index.ts'
 sleep 2
+
+# Ensure .env is linked into the backend folder before starting
+if [ -f "$HOME/.env" ]; then
+  cp "$HOME/.env" "$REPO_DIR/backend/.env"
+  echo "Environment variables linked into backend." >> "$LOG"
+fi
+
 cd "$REPO_DIR/backend"
 # Use the local tsx from node_modules for speed and space
 nohup ./node_modules/.bin/tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
@@ -69,6 +76,9 @@ chmod +x "$HOME/start_backend.sh"
 
 # 6. Deploy Backend
 cd "$REPO_DIR/backend"
+# Ensure the .env is present even during the install/generate phase
+if [ -f "$HOME/.env" ]; then cp "$HOME/.env" .env; fi
+
 npm install --no-audit --no-fund >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 npx prisma db push --accept-data-loss >> "$LOG" 2>&1

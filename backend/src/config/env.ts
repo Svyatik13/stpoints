@@ -1,11 +1,8 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 
-// Load .env from multiple possible locations (Home, Repo Root, Backend Root)
-dotenv.config({ path: '../../../../.env' }); // Home root (ApexNodes /var/www/...)
-dotenv.config({ path: '../../../.env' });    // Repo root
-dotenv.config({ path: '../../.env' });       // Backend root
-dotenv.config();                             // Local current dir
+// Load .env from current directory (synced by deploy script)
+dotenv.config();
 
 const envSchema = z.object({
   PORT: z.string().default('4000'),
