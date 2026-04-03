@@ -4,8 +4,9 @@ REPO_DIR="$HOME/stpoints-repo"
 WEB_ROOT="$HOME/www/stpoints.fun"
 LOG="$HOME/deploy.log"
 MARKER="$HOME/.deployed_head"
+BACKEND_BIN="$REPO_DIR/backend/node_modules/.bin/tsx"
 
-# 1. Lock & Root Disk Cleanup
+# 1. Lock check
 if [ -f "$HOME/.deploy_in_progress" ]; then
   if test "$(find "$HOME/.deploy_in_progress" -mmin +20)"; then
     rm -f "$HOME/.deploy_in_progress"
@@ -16,18 +17,29 @@ fi
 touch "$HOME/.deploy_in_progress"
 trap 'rm -f "$HOME/.deploy_in_progress"' EXIT
 
-# Panic Disk Cleanup (Ensure we have space to start)
-rm -rf "$REPO_DIR/frontend/node_modules" "$REPO_DIR/frontend/.next"
-rm -rf "$HOME/backend" # Permanent removal of the duplicate directory
-npm cache clean --force >> "$LOG" 2>&1
-
-# Pull latest once
+# Pull latest
 cd "$REPO_DIR"
 git pull origin main >> "$LOG" 2>&1
 NEW_HEAD=$(git rev-parse HEAD)
 
-# 2. Deploy frontend (FLASH-BUILD)
+# 2. Smart Version Check
+if [ -f "$MARKER" ] && [ "$(cat $MARKER)" = "$NEW_HEAD" ]; then
+  # No code changes. Just make sure backend is alive.
+  if ! pgrep -f "tsx src/index.ts" > /dev/null 2>&1; then
+    echo "$(date) — Backend was down, restarting..." >> "$LOG"
+    bash "$HOME/start_backend.sh" >> "$LOG" 2>&1
+  fi
+  exit 0
+fi
+
+echo "$(date) — New version detected: $NEW_HEAD. Starting FULL deploy..." >> "$LOG"
+
+# 3. Disk Maintenance
+npm cache clean --force >> "$LOG" 2>&1
+
+# 4. Deploy Frontend (FLASH-BUILD)
 cd "$REPO_DIR/frontend"
+rm -rf node_modules .next
 npm install --no-audit --no-fund --omit=optional >> "$LOG" 2>&1
 npm run build >> "$LOG" 2>&1
 
@@ -40,29 +52,30 @@ else
   echo "$(date) — Frontend build FAILED ❌" >> "$LOG"
 fi
 
-# IMMEDIATE CLEANUP: Destroy dependencies to free space for backend
+# Cleanup frontend clutter
 rm -rf node_modules .next
 
-# 3. Update Startup Script (Inject repo-pointing script)
+# 5. Inject/Update Startup Script
 cat <<EOF > "$HOME/start_backend.sh"
 #!/bin/bash
 pkill -f 'tsx src/index.ts'
 sleep 2
 cd "$REPO_DIR/backend"
-nohup npx tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
-echo "Backend started from repository folder."
+# Use the local tsx from node_modules for speed and space
+nohup ./node_modules/.bin/tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
+echo "ST-Points Backend Started."
 EOF
 chmod +x "$HOME/start_backend.sh"
 
-# 4. Deploy Backend (In Repo)
+# 6. Deploy Backend
 cd "$REPO_DIR/backend"
 npm install --no-audit --no-fund >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 npx prisma db push --accept-data-loss >> "$LOG" 2>&1
 
-# Restart backend using the injected helper
+# Restart
 bash "$HOME/start_backend.sh" >> "$LOG" 2>&1
 
-# Mark as deployed
+# Finalize
 echo "$NEW_HEAD" > "$MARKER"
-echo "$(date) — FINAL Single-Instance Deploy complete ✅" >> "$LOG"
+echo "$(date) — FINAL Deploy complete ✅" >> "$LOG"
