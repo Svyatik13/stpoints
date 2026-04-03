@@ -151,12 +151,17 @@ export default function WalletPage() {
         </div>
 
         {/* Balance Card */}
-        <div className="glass-card p-8 glow-cyan">
+        <div className="glass-card p-6 sm:p-8 glow-cyan">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <p className="text-text-secondary text-sm uppercase tracking-wider mb-2">
-                {t.wallet.balance}
-              </p>
+              <div className="flex items-center gap-3 mb-1">
+                <p className="text-text-secondary text-sm uppercase tracking-wider">{t.wallet.balance}</p>
+                {price && (
+                  <span className="text-xs font-mono text-st-gold bg-st-gold/10 px-2 py-0.5 rounded-full">
+                    ${price.price} <span className={parseFloat(price.change24h) >= 0 ? 'text-st-emerald' : 'text-st-red'}>{parseFloat(price.change24h) >= 0 ? '▲' : '▼'}{price.change24h}%</span>
+                  </span>
+                )}
+              </div>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl sm:text-5xl font-black font-mono text-st-cyan text-glow-cyan">
                   {balance.toFixed(6)}
@@ -169,32 +174,16 @@ export default function WalletPage() {
                   className="mt-2 flex items-center gap-2 text-xs text-text-muted hover:text-text-primary transition-colors font-mono"
                   title={walletAddress}
                 >
-                  <span className="text-text-secondary">📋</span>
-                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                  📋 {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
                 </button>
               )}
             </div>
-            <div className="flex flex-col items-end gap-3">
-              <div className="flex gap-2 mb-1">
-                <div className="badge badge-cyan">ZČU Central Node</div>
-                <div className="badge badge-purple font-mono">ID: {walletId ?? user.id.slice(0, 5).toUpperCase()}</div>
-              </div>
-              {price && (
-                <div className="text-right">
-                  <p className="text-xs text-text-muted uppercase tracking-wider">ST/USD</p>
-                  <p className="text-lg font-bold font-mono text-st-gold">${price.price}</p>
-                  <p className={`text-xs font-mono ${parseFloat(price.change24h) >= 0 ? 'text-st-emerald' : 'text-st-red'}`}>
-                    {parseFloat(price.change24h) >= 0 ? '▲' : '▼'} {price.change24h}%
-                  </p>
-                </div>
-              )}
-              <button
-                onClick={() => setShowTransfer(true)}
-                className="btn-primary text-sm px-5 py-2"
-              >
-                📤 {t.wallet.transfer}
-              </button>
-            </div>
+            <button
+              onClick={() => setShowTransfer(true)}
+              className="btn-primary text-sm px-5 py-2"
+            >
+              📤 {t.wallet.transfer}
+            </button>
           </div>
         </div>
 
@@ -271,28 +260,13 @@ export default function WalletPage() {
           document.body
         )}
 
-        {/* Market Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Market Cap</p>
-            <p className="text-st-gold font-mono font-bold text-lg">${price?.marketCap || '–'}</p>
-          </div>
-          <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.inCirculation}</p>
-            <p className="text-st-cyan font-mono font-bold text-lg">{parseFloat(networkTotal).toFixed(2)} ST</p>
-          </div>
-          <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">24h Volume</p>
-            <p className="text-text-primary font-mono font-bold text-lg">{price?.volume24h ?? '–'} txs</p>
-          </div>
-          <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Holders</p>
-            <p className="text-st-purple font-mono font-bold text-lg">{price?.holders ?? '–'}</p>
-          </div>
-          <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Gas Fee</p>
-            <p className="text-st-emerald font-mono font-bold text-lg">2%</p>
-          </div>
+        {/* Network Bar */}
+        <div className="glass-card-static px-5 py-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xs">
+          <span className="text-text-muted">MCap <span className="font-mono text-st-gold font-semibold">${price?.marketCap || '–'}</span></span>
+          <span className="text-text-muted">Supply <span className="font-mono text-st-cyan font-semibold">{parseFloat(networkTotal).toFixed(2)} ST</span></span>
+          <span className="text-text-muted">24h Vol <span className="font-mono text-text-primary font-semibold">{price?.volume24h ?? '–'} txs</span></span>
+          <span className="text-text-muted">Holders <span className="font-mono text-st-purple font-semibold">{price?.holders ?? '–'}</span></span>
+          <span className="text-text-muted">Gas <span className="font-mono text-st-emerald font-semibold">2%</span></span>
         </div>
 
         {/* Transaction History */}
