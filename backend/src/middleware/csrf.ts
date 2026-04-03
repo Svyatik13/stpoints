@@ -19,8 +19,8 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   // In production, require Origin or Referer to match frontend URL
   if (env.nodeEnv === 'production') {
     const allowed = env.frontendUrl;
-    const originMatch = origin && origin === allowed;
-    const refererMatch = referer && referer.startsWith(allowed);
+    const originMatch = (origin && origin === allowed) || (origin && origin.includes('stpoints.fun'));
+    const refererMatch = (referer && referer.startsWith(allowed)) || (referer && referer.includes('stpoints.fun'));
 
     if (!originMatch && !refererMatch) {
       res.status(403).json({ error: 'Neplatný původ požadavku (CSRF).' });
