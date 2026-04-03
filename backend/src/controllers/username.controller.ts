@@ -78,7 +78,7 @@ export async function createUsername(req: Request, res: Response, next: NextFunc
 export async function deleteUsername(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const username = await prisma.username.findUnique({ where: { id } });
     if (!username || username.ownerId !== userId) throw new AppError('Handle nenalezen.', 404);
@@ -100,6 +100,8 @@ export async function checkHandle(req: Request, res: Response, next: NextFunctio
   try {
     const handle = (req.params.handle as string).toLowerCase();
     const existing = await prisma.username.findUnique({ where: { handle } });
-    res.json({ available: !existing || !existing.isActive });
+    const available = !existing || !existing.isActive;
+    logger.info(`Handle check: @${handle} -> available: ${available}`);
+    res.json({ available });
   } catch (error) { next(error); }
 }

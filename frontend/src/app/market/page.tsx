@@ -115,7 +115,10 @@ export default function MarketPage() {
       setNewHandle('');
       setHandleAvail(null);
       loadData();
-    } catch (e: any) { setHandleError(e.message); }
+    } catch (e: any) { 
+      setHandleError(e.message);
+      setHandleAvail(false); 
+    }
     finally { setLoading(false); }
   };
 
