@@ -1,8 +1,18 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
-// Load .env from current directory (synced by deploy script)
-dotenv.config();
+// Find the best .env file
+const homeEnv = path.join(process.env.HOME || '/var/www/spl124343/data', '.env');
+const repoEnv = path.join(process.env.HOME || '/var/www/spl124343/data', 'stpoints-repo', '.env');
+const localEnv = path.join(process.cwd(), '.env');
+
+if (fs.existsSync(homeEnv)) dotenv.config({ path: homeEnv });
+else if (fs.existsSync(repoEnv)) dotenv.config({ path: repoEnv });
+else dotenv.config({ path: localEnv });
+
+dotenv.config(); // Fallback to process.env
 
 const envSchema = z.object({
   PORT: z.string().default('4000'),

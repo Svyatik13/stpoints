@@ -61,14 +61,15 @@ cat <<EOF > "$HOME/start_backend.sh"
 pkill -f 'tsx src/index.ts'
 sleep 2
 
-# Ensure .env is linked into the backend folder before starting
+# Ensure .env is linked and FLUSHED to disk
 if [ -f "$HOME/.env" ]; then
   cp "$HOME/.env" "$REPO_DIR/backend/.env"
-  echo "Environment variables linked into backend." >> "$LOG"
+  sync
+  echo "Environment variables linked and synced." >> "$LOG"
 fi
 
 cd "$REPO_DIR/backend"
-# Use the local tsx from node_modules for speed and space
+# Use the local tsx from node_modules
 nohup ./node_modules/.bin/tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
 echo "ST-Points Backend Started."
 EOF
