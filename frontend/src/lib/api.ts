@@ -6,7 +6,9 @@ interface ApiOptions {
   headers?: Record<string, string>;
 }
 
-async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+let isRefreshing = false;
+
+async function rawRequest<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, headers = {} } = options;
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -26,6 +28,30 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
   }
 
   return data;
+}
+
+async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+  try {
+    return await rawRequest<T>(endpoint, options);
+  } catch (error: any) {
+    // If 401 and not already refreshing, try to refresh tokens and retry once
+    if (
+      error?.message?.includes('Neplatný nebo vypršelý token') &&
+      !isRefreshing &&
+      endpoint !== '/auth/refresh' &&
+      endpoint !== '/auth/login' &&
+      endpoint !== '/auth/register'
+    ) {
+      isRefreshing = true;
+      try {
+        await rawRequest('/auth/refresh', { method: 'POST' });
+        return await rawRequest<T>(endpoint, options);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    throw error;
+  }
 }
 
 // ── Auth ──

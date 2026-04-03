@@ -23,7 +23,7 @@ export interface AuthTokens {
 
 export async function registerUser(input: RegisterInput): Promise<{ user: any; tokens: AuthTokens }> {
   // Check for existing user
-  const existing = await prisma.user.findFirst({
+  const existing = await prisma.user.findUnique({
     where: { username: input.username },
   });
 

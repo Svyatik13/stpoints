@@ -9,7 +9,7 @@ export interface User {
 
 export interface Transaction {
   id: string;
-  type: 'MINING_REWARD' | 'GIVEAWAY' | 'ADMIN_GRANT' | 'TRANSFER' | 'SYSTEM_DEBIT';
+  type: 'MINING_REWARD' | 'GIVEAWAY' | 'ADMIN_GRANT' | 'TRANSFER' | 'SYSTEM_DEBIT' | 'ST_ROOM_ACCESS' | 'CASE_OPENING';
   amount: string;
   description: string | null;
   balanceBefore: string;
