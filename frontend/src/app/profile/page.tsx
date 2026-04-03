@@ -167,12 +167,12 @@ export default function ProfilePage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <div className="flex-1 bg-white/5 rounded-xl px-4 py-3 border border-glass-border overflow-hidden">
                     <code className="text-sm font-mono text-st-cyan whitespace-nowrap block overflow-x-auto">
-                      {typeof window !== 'undefined' ? `${window.location.origin}/auth/register?ref=${user.username}` : `https://stpoints.fun/auth/register?ref=${user.username}`}
+                      {typeof window !== 'undefined' ? `${window.location.origin}/invite/${user.username}` : `https://stpoints.fun/invite/${user.username}`}
                     </code>
                   </div>
                   <button 
                     onClick={() => {
-                      const url = `${window.location.origin}/auth/register?ref=${user.username}`;
+                      const url = `${window.location.origin}/invite/${user.username}`;
                       navigator.clipboard.writeText(url);
                     }} 
                     className="btn-secondary whitespace-nowrap flex items-center justify-center gap-2"
