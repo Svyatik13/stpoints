@@ -66,7 +66,7 @@ export const api = {
   // ── Wallet ──
   wallet: {
     balance: () =>
-      request<{ balance: string }>('/wallet/balance'),
+      request<{ balance: string; walletId: string | null }>('/wallet/balance'),
     transactions: (page: number = 1, limit: number = 20) =>
       request<any>(`/wallet/transactions?page=${page}&limit=${limit}`),
     price: () =>
@@ -75,6 +75,8 @@ export const api = {
       request<{ amount: string; fee: string; total: string }>(`/wallet/transfer/fee?amount=${amount}`),
     transfer: (body: { recipient: string; amount: string; note?: string }) =>
       request<{ amount: string; fee: string; totalCost: string; newBalance: string; recipient: string }>('/wallet/transfer', { method: 'POST', body }),
+    send: (body: { toWalletId: string; amount: string }) =>
+      request<{ success: boolean; message: string }>('/wallet/send', { method: 'POST', body }),
   },
 
   // ── Leaderboard ──
@@ -190,4 +192,33 @@ export const api = {
     regeneratePassCode: () =>
       request<{ code: string; history: any[] }>('/admin/passcode/regenerate', { method: 'POST' }),
   },
+  // ── Usernames ──
+  usernames: {
+    me: () => request<{ usernames: any[] }>('/usernames/me'),
+    create: (body: { handle: string }) => request<{ username: any }>('/usernames', { method: 'POST', body }),
+    delete: (id: string) => request<{ success: boolean }>(`/usernames/${id}`, { method: 'DELETE' }),
+    check: (handle: string) => request<{ available: boolean }>(`/usernames/check/${handle}`),
+  },
+
+  // ── Market ──
+  market: {
+    list: (type?: string) => request<{ listings: any[] }>(`/market${type ? `?type=${type}` : ''}`),
+    my: () => request<{ listings: any[] }>('/market/my'),
+    create: (body: { type: string; price: string; passId?: string; usernameId?: string }) =>
+      request<{ listing: any }>('/market', { method: 'POST', body }),
+    buy: (id: string) => request<{ listing: any; message: string }>(`/market/${id}/buy`, { method: 'POST' }),
+    cancel: (id: string) => request<{ success: boolean }>(`/market/${id}`, { method: 'DELETE' }),
+  },
+
+  // ── Public Profiles ──
+  users: {
+    profile: (handle: string) => request<{ profile: any }>(`/users/profile/${handle}`),
+  },
+
+  // ── Terminal ──
+  terminal: {
+    access: () => request<any>('/terminal/access'),
+    command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
+  },
 };
+

@@ -21,6 +21,7 @@ export default function WalletPage() {
   const [networkTotal, setNetworkTotal] = useState<string>('0');
   const [price, setPrice] = useState<{ price: string; change24h: string; marketCap: string; volume24h: number; holders: number } | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>('');
+  const [walletId, setWalletId] = useState<string | null>(null);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferRecipient, setTransferRecipient] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -51,8 +52,16 @@ export default function WalletPage() {
     if (user) {
       fetchTransactions();
       fetchNetworkStats();
+      fetchWalletId();
     }
   }, [user, page]);
+
+  async function fetchWalletId() {
+    try {
+      const data = await api.wallet.balance();
+      if (data.walletId) setWalletId(data.walletId);
+    } catch {}
+  }
 
   async function fetchNetworkStats() {
     try {
@@ -166,6 +175,10 @@ export default function WalletPage() {
               )}
             </div>
             <div className="flex flex-col items-end gap-3">
+              <div className="flex gap-2 mb-1">
+                <div className="badge badge-cyan">ZČU Central Node</div>
+                <div className="badge badge-purple font-mono">ID: {walletId ?? user.id.slice(0, 5).toUpperCase()}</div>
+              </div>
               {price && (
                 <div className="text-right">
                   <p className="text-xs text-text-muted uppercase tracking-wider">ST/USD</p>
@@ -198,7 +211,7 @@ export default function WalletPage() {
                     value={transferRecipient}
                     onChange={e => setTransferRecipient(e.target.value)}
                     className="glass-input"
-                    placeholder={t.auth.username}
+                    placeholder="Username nebo Wallet ID"
                   />
                 </div>
                 <div>

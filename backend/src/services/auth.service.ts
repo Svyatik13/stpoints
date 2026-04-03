@@ -39,16 +39,29 @@ export async function registerUser(input: RegisterInput): Promise<{ user: any; t
 
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
 
+  // Generate unique 5-char wallet ID
+  const alphabet = 'ABCDEFGHJKLMNPQRTUVWXY23456789';
+  let walletId: string = '';
+  let attempts = 0;
+  while (attempts < 20) {
+    walletId = Array.from({ length: 5 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+    const taken = await prisma.user.findUnique({ where: { walletId } });
+    if (!taken) break;
+    attempts++;
+  }
+
   const user = await prisma.user.create({
     data: {
       username: input.username,
       passwordHash,
+      walletId,
     },
     select: {
       id: true,
       username: true,
       balance: true,
       role: true,
+      walletId: true,
       createdAt: true,
     },
   });

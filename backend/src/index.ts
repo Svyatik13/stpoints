@@ -20,6 +20,10 @@ import casesRoutes from './routes/cases.routes';
 import adminRoutes from './routes/admin.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import profileRoutes from './routes/profile.routes';
+import usernameRoutes from './routes/username.routes';
+import marketRoutes from './routes/market.routes';
+import usersRoutes from './routes/users.routes';
+import { processPendingPayouts } from './controllers/market.controller';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -63,6 +67,9 @@ app.use('/api/cases', casesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/usernames', usernameRoutes);
+app.use('/api/market', marketRoutes);
+app.use('/api/users', usersRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {
@@ -90,6 +97,10 @@ app.listen(env.port, async () => {
 
   // Seed default data if empty
   await seedDefaults();
+
+  // Market payout job: process 2h delayed ST transfers every 5 min
+  setInterval(processPendingPayouts, 5 * 60 * 1000);
+  processPendingPayouts(); // run immediately on startup
 });
 
 export default app;

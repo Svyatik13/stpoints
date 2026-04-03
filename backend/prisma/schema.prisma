@@ -14,6 +14,7 @@ model User {
   balance      Decimal  @default(0) @db.Decimal(18, 6)
   role         Role     @default(USER)
   isActive     Boolean  @default(true) @map("is_active")
+  walletId     String?  @unique @map("wallet_id") // 5-char readable wallet ID
   lastActiveAt    DateTime? @map("last_active_at")
   miningStartedAt DateTime? @map("mining_started_at")
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -28,6 +29,9 @@ model User {
   stRoomSessions       StRoomSession[]
   caseOpenings         CaseOpening[]
   userPasses           UserPass[]
+  usernames            Username[]
+  marketListingsSold   MarketListing[] @relation("marketSeller")
+  marketListingsBought MarketListing[] @relation("marketBuyer")
 
   @@map("users")
 }
@@ -69,6 +73,9 @@ enum TransactionType {
   SYSTEM_DEBIT
   ST_ROOM_ACCESS
   CASE_OPENING
+  MARKET_SALE      // seller receives ST from market (delayed)
+  MARKET_PURCHASE  // buyer pays ST on market
+  HANDLE_CREATE    // user pays to register a username handle
 }
 
 model Teacher {
@@ -282,4 +289,63 @@ model PassCodeLog {
 
   @@index([createdAt])
   @@map("pass_code_logs")
+}
+
+// ── Usernames ────────────────────────────────────────────────────────────────
+
+model Username {
+  id           String    @id @default(cuid())
+  handle       String    @unique // e.g. "vial", "svt"
+  ownerId      String    @map("owner_id")
+  owner        User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  canSellAt    DateTime  @map("can_sell_at")  // purchasedAt + 24h
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  listing      MarketListing? @relation("listingUsername")
+
+  @@index([ownerId])
+  @@index([handle])
+  @@map("usernames")
+}
+
+// ── Market ─────────────────────────────────────────────────────────────────
+
+enum ListingType {
+  MYTHIC_PASS
+  USERNAME
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+model MarketListing {
+  id           String        @id @default(cuid())
+  type         ListingType
+  price        Decimal       @db.Decimal(18, 6)
+  status       ListingStatus @default(ACTIVE)
+
+  sellerId     String        @map("seller_id")
+  seller       User          @relation("marketSeller", fields: [sellerId], references: [id])
+
+  // What is for sale
+  passId       String?       @map("pass_id")        // UserPass id
+  usernameId   String?       @unique @map("username_id")  // Username id
+  username     Username?     @relation("listingUsername", fields: [usernameId], references: [id])
+
+  // Purchase
+  buyerId      String?       @map("buyer_id")
+  buyer        User?         @relation("marketBuyer", fields: [buyerId], references: [id])
+  soldAt       DateTime?     @map("sold_at")
+  stDueAt      DateTime?     @map("st_due_at")  // when to pay seller (soldAt + 2h)
+  stPaidAt     DateTime?     @map("st_paid_at") // null = pending payout
+
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  @@index([status, type])
+  @@index([stDueAt, stPaidAt])
+  @@map("market_listings")
 }

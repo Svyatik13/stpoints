@@ -7,6 +7,7 @@ export const NAV_ITEMS = [
   { href: '/mining', label: 'Těžba', icon: '⛏️' },
   { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
   { href: '/cases', label: 'Cases', icon: '📦' },
+  { href: '/market', label: 'Tržiště', icon: '🏪' },
   { href: '/st-room', label: 'ST-ROOM', icon: '🔐' },
 ] as const;
 
@@ -22,6 +23,9 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   SYSTEM_DEBIT: 'Systém',
   ST_ROOM_ACCESS: 'ST-ROOM',
   CASE_OPENING: 'Case',
+  MARKET_SALE: 'Tržiště',
+  MARKET_PURCHASE: 'Tržiště',
+  HANDLE_CREATE: 'Handle',
 };
 
 export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
@@ -32,4 +36,7 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
   SYSTEM_DEBIT: 'badge-red',
   ST_ROOM_ACCESS: 'badge-purple',
   CASE_OPENING: 'badge-gold',
+  MARKET_SALE: 'badge-emerald',
+  MARKET_PURCHASE: 'badge-red',
+  HANDLE_CREATE: 'badge-cyan',
 };

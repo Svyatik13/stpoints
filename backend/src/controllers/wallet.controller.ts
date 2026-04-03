@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { Decimal } from '@prisma/client/runtime/library';
 import * as walletService from '../services/wallet.service';
 import prisma from '../config/database';
+import { AppError } from '../middleware/errorHandler';
 
 export async function getBalance(req: Request, res: Response, next: NextFunction) {
   try {
@@ -60,4 +63,45 @@ export async function getPrice(_req: Request, res: Response, next: NextFunction)
   } catch (error) {
     next(error);
   }
+}
+
+export async function sendST(req: Request, res: Response, next: NextFunction) {
+  try {
+    const senderId = req.user!.userId;
+    const { toWalletId, amount } = z.object({
+      toWalletId: z.string().length(5, 'Wallet ID musí mít přesně 5 znaků.').toUpperCase(),
+      amount: z.string().refine(v => parseFloat(v) > 0, 'Částka musí být kladná'),
+    }).parse(req.body);
+
+    const amountDecimal = new Decimal(amount);
+
+    await prisma.$transaction(async (tx: any) => {
+      const sender = await tx.user.findUniqueOrThrow({ where: { id: senderId }, select: { balance: true, walletId: true } });
+      if (sender.walletId?.toUpperCase() === toWalletId.toUpperCase()) throw new AppError('Nemůžete poslat ST sami sobě.', 400);
+
+      const recipient = await tx.user.findUnique({ where: { walletId: toWalletId.toUpperCase() } });
+      if (!recipient) throw new AppError(`Wallet ID "${toWalletId}" nebylo nalezeno.`, 404);
+
+      const senderBalance = new Decimal(sender.balance.toString());
+      if (senderBalance.lt(amountDecimal)) throw new AppError('Nedostatečný zůstatek.', 403);
+
+      const recipientBalance = new Decimal(recipient.balance.toString());
+
+      await tx.user.update({ where: { id: senderId }, data: { balance: { decrement: amountDecimal } } });
+      await tx.user.update({ where: { id: recipient.id }, data: { balance: { increment: amountDecimal } } });
+      await tx.transaction.create({
+        data: {
+          type: 'TRANSFER',
+          amount: amountDecimal,
+          description: `Převod → ${recipient.username} (${toWalletId})`,
+          senderId,
+          receiverId: recipient.id,
+          balanceBefore: senderBalance,
+          balanceAfter: senderBalance.sub(amountDecimal),
+        },
+      });
+    });
+
+    res.json({ success: true, message: 'ST odeslány úspěšně.' });
+  } catch (error) { next(error); }
 }
