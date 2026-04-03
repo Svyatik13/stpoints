@@ -33,11 +33,9 @@ fi
 
 if [ -f "$MARKER" ] && [ "$(cat $MARKER)" = "$NEW_HEAD" ]; then
   if [ "$BACKEND_RUNNING" -eq 1 ]; then
-    # All good — no changes and backend is alive
     exit 0
   else
-    # Backend is dead, restart it
-    echo "$(date) — Backend PID $PID dead, restarting..." >> "$LOG"
+    echo "$(date) — Backend dead, starting..." >> "$LOG"
     bash "$HOME/start_backend.sh" >> "$LOG" 2>&1
     exit 0
   fi
@@ -63,49 +61,67 @@ else
   echo "$(date) — Frontend build FAILED ❌" >> "$LOG"
 fi
 
-# Cleanup frontend clutter
+# Cleanup
 rm -rf node_modules .next
 
 # 5. Inject/Update Startup Script
 cat <<EOF > "$HOME/start_backend.sh"
 #!/bin/bash
 PID_FILE="\$HOME/backend.pid"
-# AGGRESSIVE KILL
+
+echo "Attempting to clear port 4000..."
+# 1. Kill by PID file
 if [ -f "\$PID_FILE" ]; then
   PID=\$(cat "\$PID_FILE")
   kill -9 "\$PID" > /dev/null 2>&1
   rm -f "\$PID_FILE"
 fi
 
-# FALLBACK KILL (Wait for port release)
-pkill -9 -f "tsx src/index.ts" > /dev/null 2>&1
-sleep 5
+# 2. Kill by port (High precision)
+/usr/sbin/fuser -k 4000/tcp > /dev/null 2>&1
+lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
 
-# Ensure .env is linked and FLUSHED to disk
-if [ -f "\$HOME/.env" ]; then
-  cp "\$HOME/.env" "\$REPO_DIR/backend/.env"
-  sync
-fi
+# 3. Kill by name search
+pkill -9 -f "index.ts" > /dev/null 2>&1
+pkill -9 -f "tsx" > /dev/null 2>&1
+
+# Wait for port release
+MAX_RETRIES=5
+COUNT=0
+while netstat -tln | grep -q :4000; do
+  if [ \$COUNT -ge \$MAX_RETRIES ]; then
+    echo "Could not clear port 4000 after 15s. Aborting."
+    exit 1
+  fi
+  echo "Port 4000 still busy... waiting..."
+  sleep 3
+  /usr/sbin/fuser -k 4000/tcp > /dev/null 2>&1
+  lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
+  COUNT=\$((COUNT+1))
+done
+
+# Link .env
+cp "\$HOME/.env" "\$REPO_DIR/backend/.env"
+sync
 
 cd "\$REPO_DIR/backend"
-# Start with local tsx and capture PID
 nohup ./node_modules/.bin/tsx src/index.ts >> "\$HOME/backend.log" 2>&1 &
 NEW_PID=\$!
 echo "\$NEW_PID" > "\$PID_FILE"
-echo "\$(date) — ST-Points Backend NUCLEAR RESTART with PID \$NEW_PID" >> "\$LOG"
+echo "\$(date) — ST-Points Backend STARTED on PID \$NEW_PID"
 EOF
 chmod +x "$HOME/start_backend.sh"
 
 # 6. Deploy Backend
 cd "$REPO_DIR/backend"
-# Ensure the .env is present even during the install/generate phase
 if [ -f "$HOME/.env" ]; then cp "$HOME/.env" .env; fi
 
 npm install --no-audit --no-fund >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 npx prisma db push --accept-data-loss >> "$LOG" 2>&1
 
-# Restart
+# Final Sync & Kickstart
+sync
 bash "$HOME/start_backend.sh" >> "$LOG" 2>&1
 
 # Finalize
