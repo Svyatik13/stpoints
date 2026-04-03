@@ -10,7 +10,7 @@ import { useI18n } from '@/lib/i18n';
 export default function Navbar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const { locale, setLocale } = useI18n();
+  const { locale, t, setLocale } = useI18n();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +92,7 @@ export default function Navbar() {
             <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-glass-border bg-[#0c1222] shadow-2xl py-2 animate-fade-up z-[60]">
               {/* Balance (mobile) */}
               <div className="sm:hidden px-4 py-2 border-b border-glass-border/50 mb-1">
-                <p className="text-xs text-text-muted">Zůstatek</p>
+                <p className="text-xs text-text-muted">{t.wallet.balance}</p>
                 <p className="text-sm font-mono font-bold text-st-cyan">{parseFloat(user.balance).toFixed(6)} ST</p>
               </div>
 
@@ -100,13 +100,13 @@ export default function Navbar() {
                 href="/profile"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-white/[0.06] transition-colors"
               >
-                <span>👤</span> Profil
+                <span>👤</span> {t.nav.profile}
               </Link>
               <Link
                 href="/leaderboard"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-white/[0.06] transition-colors"
               >
-                <span>🏆</span> Žebříček
+                <span>🏆</span> {t.nav.leaderboard}
               </Link>
 
               <div className="border-t border-glass-border/50 my-1" />
@@ -128,7 +128,7 @@ export default function Navbar() {
                 onClick={() => { setDropdownOpen(false); logout(); }}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-st-red hover:bg-st-red-dim/30 transition-colors w-full text-left"
               >
-                <span>🚪</span> Odhlásit se
+                <span>🚪</span> {t.nav.logout}
               </button>
             </div>
           )}

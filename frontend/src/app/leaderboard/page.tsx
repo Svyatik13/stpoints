@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
+import { useI18n } from '@/lib/i18n';
 
 interface LeaderboardEntry {
   rank: number;
@@ -19,6 +20,7 @@ export default function LeaderboardPage() {
   const [tab, setTab] = useState<'balance' | 'mining'>('balance');
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/auth/login');
@@ -45,14 +47,14 @@ export default function LeaderboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">🏆 Žebříček</h1>
+            <h1 className="text-3xl font-bold tracking-tight">🏆 {t.leaderboard.title}</h1>
             <p className="text-text-secondary text-sm mt-1">
-              Kdo je na tom nejlépe v síti ST-Points?
+              {t.leaderboard.subtitle}
             </p>
           </div>
           {myRank > 0 && (
             <div className="glass-card-static px-4 py-2 text-center">
-              <p className="text-text-muted text-xs">Vaše pozice</p>
+              <p className="text-text-muted text-xs">{t.leaderboard.yourRank}</p>
               <p className="text-st-gold font-mono font-bold text-lg">#{myRank}</p>
             </div>
           )}
@@ -68,7 +70,7 @@ export default function LeaderboardPage() {
                 : 'bg-white/[0.04] text-text-secondary hover:bg-white/[0.08] border border-transparent'
             }`}
           >
-            💎 Nejbohatší
+            💎 {t.leaderboard.richest}
           </button>
           <button
             onClick={() => setTab('mining')}
@@ -78,7 +80,7 @@ export default function LeaderboardPage() {
                 : 'bg-white/[0.04] text-text-secondary hover:bg-white/[0.08] border border-transparent'
             }`}
           >
-            ⛏️ Top Těžaři
+            ⛏️ {t.leaderboard.topMiners}
           </button>
         </div>
 
@@ -93,7 +95,7 @@ export default function LeaderboardPage() {
           ) : entries.length === 0 ? (
             <div className="text-center py-16 text-text-muted">
               <span className="text-4xl block mb-3">🏆</span>
-              <p>Žebříček je prázdný.</p>
+              <p>{t.leaderboard.empty}</p>
             </div>
           ) : (
             <div>
@@ -145,7 +147,7 @@ export default function LeaderboardPage() {
                           {e.username.charAt(0).toUpperCase()}
                         </div>
                         <span className={`font-semibold text-sm ${isMe ? 'text-st-cyan' : 'text-text-primary'}`}>
-                          {e.username} {isMe && <span className="text-xs text-text-muted">(vy)</span>}
+                          {e.username} {isMe && <span className="text-xs text-text-muted">{t.leaderboard.you}</span>}
                         </span>
                       </div>
                       <span className="font-mono font-semibold text-sm" style={{ color: tab === 'balance' ? '#00e8ff' : '#a855f7' }}>

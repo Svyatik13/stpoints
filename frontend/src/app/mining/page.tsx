@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
+import { useI18n } from '@/lib/i18n';
 
 const ST_PER_SECOND = 0.008333; // 0.5 ST/min
 
@@ -25,6 +26,7 @@ export default function MiningPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
+  const { t } = useI18n();
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -154,13 +156,13 @@ export default function MiningPage() {
             <div className="mt-6 mb-2">
               <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest ${isMining ? 'bg-st-emerald-dim text-st-emerald' : 'bg-white/[0.06] text-text-secondary'}`}>
                 <span className={`w-2 h-2 rounded-full ${isMining ? 'bg-st-emerald animate-pulse' : 'bg-text-muted'}`} />
-                {isMining ? 'Probíhá těžba' : 'Neaktivní'}
+                {isMining ? t.mining.active : t.mining.inactive}
               </div>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mt-3">ZČU Těžební Uzel</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mt-3">{t.mining.title}</h1>
             <p className="text-text-secondary text-sm mt-2 max-w-md">
-              {isMining ? 'Těžba probíhá — zastavte kdykoli tlačítkem níže' : 'Spusťte těžbu a nechte ji běžet. Zastavte až budete chtít.'}
+              {isMining ? t.mining.descriptionActive : t.mining.descriptionInactive}
             </p>
 
             {/* Live stats during mining */}
@@ -168,12 +170,12 @@ export default function MiningPage() {
               <div className="flex flex-wrap items-center justify-center gap-8 mt-6 mb-2">
                 <div className="text-center">
                   <p className="text-3xl md:text-4xl font-bold font-mono text-st-cyan text-glow-cyan">{formatTime(elapsedSeconds)}</p>
-                  <p className="text-[10px] uppercase tracking-widest text-text-muted mt-1">Čas těžby</p>
+                  <p className="text-[10px] uppercase tracking-widest text-text-muted mt-1">{t.mining.elapsed}</p>
                 </div>
                 <div className="w-px h-10 bg-glass-border hidden sm:block" />
                 <div className="text-center">
                   <p className="text-3xl md:text-4xl font-bold font-mono text-st-gold text-glow-gold">~{estimatedReward.toFixed(4)}</p>
-                  <p className="text-[10px] uppercase tracking-widest text-text-muted mt-1">Odhadovaná ST</p>
+                  <p className="text-[10px] uppercase tracking-widest text-text-muted mt-1">{t.mining.estimated}</p>
                 </div>
               </div>
             )}
@@ -191,11 +193,11 @@ export default function MiningPage() {
             >
               <span className="relative z-10 flex items-center gap-2">
                 {loading ? (
-                  <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> Zpracování...</>
+                  <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> {t.common.loading}</>
                 ) : isMining ? (
-                  <><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> Zastavit a získat ST</>
+                  <><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> {t.mining.stop}</>
                 ) : (
-                  <><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg> Zahájit Těžbu</>
+                  <><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg> {t.mining.start}</>
                 )}
               </span>
             </button>
@@ -208,8 +210,8 @@ export default function MiningPage() {
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl bg-st-gold-dim">💰</div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold">Těžba dokončena!</h3>
-                <p className="text-text-secondary text-sm">Těžil jsi {Math.floor(result.elapsedSeconds / 60)}m {result.elapsedSeconds % 60}s</p>
+                <h3 className="text-lg font-bold">{t.mining.completed}</h3>
+                <p className="text-text-secondary text-sm">{t.mining.minedFor} {Math.floor(result.elapsedSeconds / 60)}m {result.elapsedSeconds % 60}s</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold font-mono text-st-gold text-glow-gold">+{parseFloat(result.reward).toFixed(6)}</p>
@@ -234,21 +236,21 @@ export default function MiningPage() {
           <div className="glass-card-static p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-st-cyan-dim flex items-center justify-center text-lg">🎯</div>
-              <p className="text-text-muted text-xs uppercase tracking-wider">Celkem Sessions</p>
+              <p className="text-text-muted text-xs uppercase tracking-wider">{t.mining.sessions}</p>
             </div>
             <p className="text-3xl font-bold font-mono">{stats?.totalChallenges ?? '–'}</p>
           </div>
           <div className="glass-card-static p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-st-emerald-dim flex items-center justify-center text-lg">✅</div>
-              <p className="text-text-muted text-xs uppercase tracking-wider">Dokončeno</p>
+              <p className="text-text-muted text-xs uppercase tracking-wider">{t.mining.sessions}</p>
             </div>
             <p className="text-3xl font-bold font-mono text-st-emerald">{stats?.solvedChallenges ?? '–'}</p>
           </div>
           <div className="glass-card-static p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-st-gold-dim flex items-center justify-center text-lg">💎</div>
-              <p className="text-text-muted text-xs uppercase tracking-wider">Celkem Odtěženo</p>
+              <p className="text-text-muted text-xs uppercase tracking-wider">{t.mining.totalMined}</p>
             </div>
             <p className="text-3xl font-bold font-mono text-st-gold">
               {stats ? `${parseFloat(stats.totalReward).toFixed(6)} ST` : '–'}
@@ -260,8 +262,8 @@ export default function MiningPage() {
         <div className="glass-card-static p-5 flex items-start gap-4">
           <span className="text-2xl">ℹ️</span>
           <div className="text-sm text-text-secondary space-y-1">
-            <p><strong className="text-text-primary">Jak těžba funguje:</strong> Spusť těžbu a nechej ji běžet jak dlouho chceš. Po zastavení dostaneš odměnu podle doby těžby.</p>
-            <p>Sazba: <span className="text-st-cyan font-mono">~0.5 ST/min</span> (s náhodnou odchylkou ±15 %). Žádný časový limit.</p>
+            <p><strong className="text-text-primary">{t.mining.howItWorks}</strong> {t.mining.howItWorksDesc}</p>
+            <p>{t.mining.rate} <span className="text-st-cyan font-mono">{t.mining.rateDesc}</span></p>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
+import { useI18n } from '@/lib/i18n';
 
 interface ProfileStats {
   miningSessionsCompleted: number;
@@ -21,6 +22,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t, locale } = useI18n();
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/auth/login');
@@ -53,15 +55,15 @@ export default function ProfilePage() {
               <h1 className="text-3xl font-bold tracking-tight">{user.username}</h1>
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <span className={`badge ${user.role === 'ADMIN' ? 'badge-red' : 'badge-cyan'}`}>
-                  {user.role === 'ADMIN' ? '👑 Administrátor' : '👤 Uživatel'}
+                  {user.role === 'ADMIN' ? t.wallet.roleAdmin : t.wallet.roleUser}
                 </span>
                 <span className="text-text-muted text-xs">
-                  Člen {daysSince} dní • od {memberSince.toLocaleDateString('cs-CZ')}
+                  {t.profile.member} {daysSince} {t.profile.days} • {t.profile.since} {memberSince.toLocaleDateString(locale === 'cs' ? 'cs-CZ' : 'en-US')}
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Zůstatek</p>
+              <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.profile.balance}</p>
               <p className="text-2xl font-black font-mono text-st-cyan text-glow-cyan">
                 {balance.toFixed(6)} ST
               </p>
@@ -82,49 +84,49 @@ export default function ProfilePage() {
               <div className="glass-card-static p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span>⛏️</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Těžební Sessions</span>
+                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.miningSessions}</span>
                 </div>
                 <p className="text-2xl font-bold font-mono text-st-purple">{stats.miningSessionsCompleted}</p>
               </div>
               <div className="glass-card-static p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span>💎</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Celkem Odtěženo</span>
+                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.totalMined}</span>
                 </div>
                 <p className="text-2xl font-bold font-mono text-st-gold">{parseFloat(stats.totalMined).toFixed(4)} ST</p>
               </div>
               <div className="glass-card-static p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span>📤</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Převody Odesláno</span>
+                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.transfersSent}</span>
                 </div>
                 <p className="text-2xl font-bold font-mono">{stats.transfersSent}</p>
               </div>
               <div className="glass-card-static p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span>📥</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Převody Přijato</span>
+                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.transfersReceived}</span>
                 </div>
                 <p className="text-2xl font-bold font-mono">{stats.transfersReceived}</p>
               </div>
               <div className="glass-card-static p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span>🎁</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Giveaway Výhry</span>
+                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.giveawayWins}</span>
                 </div>
                 <p className="text-2xl font-bold font-mono text-st-gold">{stats.giveawayWins}</p>
               </div>
               <div className="glass-card-static p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span>📦</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Cases Otevřeno</span>
+                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.casesOpened}</span>
                 </div>
                 <p className="text-2xl font-bold font-mono">{stats.caseOpenings}</p>
               </div>
               <div className="glass-card-static p-5 col-span-2 border-st-emerald/20 glow-emerald">
                 <div className="flex items-center gap-2 mb-2">
                   <span>📈</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Celkem Vyděláno</span>
+                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.totalEarned}</span>
                 </div>
                 <p className="text-2xl font-bold font-mono text-st-emerald">{parseFloat(stats.totalEarned).toFixed(4)} ST</p>
               </div>
@@ -136,8 +138,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">⛏️</span>
                   <div>
-                    <p className="font-semibold text-sm group-hover:text-st-cyan transition-colors">Jít těžit</p>
-                    <p className="text-text-muted text-xs">Vydělej další ST</p>
+                    <p className="font-semibold text-sm group-hover:text-st-cyan transition-colors">{t.profile.goMining}</p>
+                    <p className="text-text-muted text-xs">{t.profile.earnMore}</p>
                   </div>
                 </div>
               </button>
@@ -145,8 +147,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🏆</span>
                   <div>
-                    <p className="font-semibold text-sm group-hover:text-st-gold transition-colors">Žebříček</p>
-                    <p className="text-text-muted text-xs">Porovnej se s ostatními</p>
+                    <p className="font-semibold text-sm group-hover:text-st-gold transition-colors">{t.profile.viewLeaderboard}</p>
+                    <p className="text-text-muted text-xs">{t.profile.compareOthers}</p>
                   </div>
                 </div>
               </button>
@@ -154,8 +156,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">💎</span>
                   <div>
-                    <p className="font-semibold text-sm group-hover:text-st-cyan transition-colors">Peněženka</p>
-                    <p className="text-text-muted text-xs">Zobraz transakce</p>
+                    <p className="font-semibold text-sm group-hover:text-st-cyan transition-colors">{t.profile.viewWallet}</p>
+                    <p className="text-text-muted text-xs">{t.profile.viewTransactions}</p>
                   </div>
                 </div>
               </button>

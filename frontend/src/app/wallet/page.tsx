@@ -8,6 +8,7 @@ import { Transaction } from '@/types';
 import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPE_COLORS } from '@/lib/constants';
 import AppShell from '@/components/layout/AppShell';
 import { useToast } from '@/components/ui/Toast';
+import { useI18n } from '@/lib/i18n';
 
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
@@ -25,6 +26,7 @@ export default function WalletPage() {
   const [transferFee, setTransferFee] = useState<string | null>(null);
   const [transferTotal, setTransferTotal] = useState<string | null>(null);
   const { toast } = useToast();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -113,8 +115,8 @@ export default function WalletPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">💎 Moje Peněženka</h1>
-            <p className="text-text-secondary text-sm mt-1">Přehled vašeho zůstatku a transakcí</p>
+            <h1 className="text-3xl font-bold tracking-tight">💎 {t.wallet.title}</h1>
+            <p className="text-text-secondary text-sm mt-1">{t.wallet.subtitle}</p>
           </div>
         </div>
 
@@ -123,7 +125,7 @@ export default function WalletPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <p className="text-text-secondary text-sm uppercase tracking-wider mb-2">
-                Aktuální Zůstatek
+                {t.wallet.balance}
               </p>
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl sm:text-5xl font-black font-mono text-st-cyan text-glow-cyan">
@@ -140,7 +142,7 @@ export default function WalletPage() {
                 onClick={() => setShowTransfer(true)}
                 className="btn-primary text-sm px-5 py-2"
               >
-                📤 Převést ST
+                📤 {t.wallet.transfer}
               </button>
             </div>
           </div>
@@ -150,20 +152,20 @@ export default function WalletPage() {
         {showTransfer && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowTransfer(false)}>
             <div className="glass-card w-full max-w-md p-6 animate-fade-up" onClick={e => e.stopPropagation()}>
-              <h2 className="text-xl font-bold mb-4">📤 Převést ST</h2>
+              <h2 className="text-xl font-bold mb-4">📤 {t.wallet.transfer}</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Příjemce</label>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">{t.wallet.transferRecipient}</label>
                   <input
                     type="text"
                     value={transferRecipient}
                     onChange={e => setTransferRecipient(e.target.value)}
                     className="glass-input"
-                    placeholder="Uživatelské jméno"
+                    placeholder={t.auth.username}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Částka (ST)</label>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">{t.wallet.transferAmount}</label>
                   <input
                     type="number"
                     step="0.000001"
@@ -176,7 +178,7 @@ export default function WalletPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Poznámka (volitelné)</label>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">{t.wallet.transferNote}</label>
                   <input
                     type="text"
                     value={transferNote}
@@ -203,14 +205,14 @@ export default function WalletPage() {
 
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setShowTransfer(false)} className="btn-secondary flex-1">
-                    Zrušit
+                    {t.common.cancel}
                   </button>
                   <button
                     onClick={handleTransfer}
                     disabled={transferLoading || !transferRecipient || !transferAmount}
                     className="btn-primary flex-1 disabled:opacity-50"
                   >
-                    {transferLoading ? 'Odesílám...' : 'Odeslat'}
+                    {transferLoading ? t.wallet.transferSending : t.common.send}
                   </button>
                 </div>
               </div>
@@ -221,27 +223,27 @@ export default function WalletPage() {
         {/* Quick Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Status</p>
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.status}</p>
             <p className="text-st-emerald font-semibold">● Online</p>
           </div>
           <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Role</p>
-            <p className="text-text-primary font-semibold">{user.role === 'ADMIN' ? '👑 Administrátor' : '👤 Uživatel'}</p>
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.role}</p>
+            <p className="text-text-primary font-semibold">{user.role === 'ADMIN' ? t.wallet.roleAdmin : t.wallet.roleUser}</p>
           </div>
           <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Účet vytvořen</p>
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.created}</p>
             <p className="text-text-primary font-semibold text-sm">{new Date(user.createdAt).toLocaleDateString('cs-CZ')}</p>
           </div>
           <div className="glass-card-static p-5 border-st-gold/20 glow-gold relative overflow-hidden group">
             <div className="absolute inset-0 bg-st-gold opacity-0 group-hover:opacity-5 transition-opacity" />
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">ST-Points v Oběhu</p>
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.inCirculation}</p>
             <p className="text-st-gold font-mono font-bold text-lg">{parseFloat(networkTotal).toFixed(2)} ST</p>
           </div>
         </div>
 
         {/* Transaction History */}
         <div className="glass-card-static p-6">
-          <h2 className="text-xl font-bold mb-4">📋 Historie Transakcí</h2>
+          <h2 className="text-xl font-bold mb-4">📋 {t.wallet.history}</h2>
 
           {txLoading ? (
             <div className="space-y-3">
@@ -252,8 +254,8 @@ export default function WalletPage() {
           ) : transactions.length === 0 ? (
             <div className="text-center py-12 text-text-muted">
               <p className="text-4xl mb-3">📭</p>
-              <p>Zatím žádné transakce</p>
-              <p className="text-sm">Začněte těžit a získejte ST-Points!</p>
+              <p>{t.wallet.noTransactions}</p>
+              <p className="text-sm">{t.wallet.startMining}</p>
             </div>
           ) : (
             <>
@@ -295,7 +297,7 @@ export default function WalletPage() {
                     disabled={page === 1}
                     className="btn-secondary text-sm px-3 py-1"
                   >
-                    ← Předchozí
+                    {t.wallet.previous}
                   </button>
                   <span className="text-text-secondary text-sm">
                     {page} / {totalPages}
@@ -305,7 +307,7 @@ export default function WalletPage() {
                     disabled={page === totalPages}
                     className="btn-secondary text-sm px-3 py-1"
                   >
-                    Další →
+                    {t.wallet.nextPage}
                   </button>
                 </div>
               )}
