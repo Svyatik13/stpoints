@@ -67,6 +67,9 @@ fi
 echo "$(date) — New commit $NEW_HEAD — FULL deploy..." >> "$LOG"
 
 # 4. Nuclear Disk cleanup
+echo "$(date) — Stopping backend before disk wipe to prevent corruption crashes..." >> "$LOG"
+kill_backend
+
 echo "$(date) — Executing Nuclear Cleanup (saving disk space)..." >> "$LOG"
 rm -rf "$REPO_DIR/frontend/node_modules" "$REPO_DIR/frontend/.next"
 rm -rf "$REPO_DIR/backend/node_modules"
@@ -96,9 +99,7 @@ npm install --no-audit --no-fund >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 npx prisma db push --accept-data-loss >> "$LOG" 2>&1
 
-# 7. Kill old, start new
-kill_backend
-
+# 7. Start new backend
 export NODE_ENV=production
 cd "$REPO_DIR/backend" || exit 1
 nohup ./node_modules/.bin/tsx src/index.ts >> "$HOME/backend.log" 2>&1 &

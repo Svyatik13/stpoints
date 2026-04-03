@@ -16,7 +16,8 @@
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.3.0",
     "framer-motion": "^11.2.6",
-    "canvas-confetti": "^1.9.3"
+    "canvas-confetti": "^1.9.3",
+    "date-fns": "^3.6.0"
   },
   "devDependencies": {
     "typescript": "^5",
