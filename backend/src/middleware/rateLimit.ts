@@ -2,7 +2,7 @@ import rateLimit from 'express-rate-limit';
 
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 500,
   message: { error: 'Příliš mnoho požadavků. Zkuste to za chvíli.' },
   standardHeaders: true,
   legacyHeaders: false,

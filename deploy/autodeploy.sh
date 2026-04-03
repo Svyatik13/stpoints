@@ -11,7 +11,24 @@ cd "$REPO_DIR"
 git pull origin main >> "$LOG" 2>&1
 NEW_HEAD=$(git rev-parse HEAD)
 
-# Check if already deployed this version
+# 1. Lock check
+if [ -f "$HOME/.deploy_in_progress" ]; then
+  # If lock is older than 10 mins, clear it (panic recovery)
+  if test "$(find "$HOME/.deploy_in_progress" -mmin +10)"; then
+    rm -f "$HOME/.deploy_in_progress"
+  else
+    exit 0
+  fi
+fi
+touch "$HOME/.deploy_in_progress"
+trap 'rm -f "$HOME/.deploy_in_progress"' EXIT
+
+# Pull latest
+cd "$REPO_DIR"
+git pull origin main >> "$LOG" 2>&1
+NEW_HEAD=$(git rev-parse HEAD)
+
+# Check if already deployed this version (unless forced)
 if [ -f "$MARKER" ] && [ "$(cat $MARKER)" = "$NEW_HEAD" ]; then
   # No changes — just ensure backend is alive
   if ! pgrep -f "tsx src/index.ts" > /dev/null 2>&1; then
@@ -20,17 +37,24 @@ if [ -f "$MARKER" ] && [ "$(cat $MARKER)" = "$NEW_HEAD" ]; then
   exit 0
 fi
 
-echo "$(date) — Deploying $NEW_HEAD" >> "$LOG"
+echo "$(date) — Deploying $NEW_HEAD (FULL)" >> "$LOG"
 
-# Deploy frontend
-rm -rf "$WEB_ROOT"/*.html "$WEB_ROOT"/*.ico "$WEB_ROOT"/*.svg "$WEB_ROOT"/*.txt
-rm -rf "$WEB_ROOT/_next" "$WEB_ROOT/auth" "$WEB_ROOT/mining" "$WEB_ROOT/wallet" "$WEB_ROOT/terminal" "$WEB_ROOT/worker" "$WEB_ROOT/404" "$WEB_ROOT/_not-found"
-cp -rf "$REPO_DIR/deploy/www/"* "$WEB_ROOT/"
-cp -f "$REPO_DIR/deploy/www/.htaccess" "$WEB_ROOT/.htaccess" 2>/dev/null
-find "$WEB_ROOT" -name '._*' -delete
-echo "$(date) — Frontend deployed" >> "$LOG"
+# 2. Deploy frontend (Build on server)
+cd "$REPO_DIR/frontend"
+npm install >> "$LOG" 2>&1
+npm run build >> "$LOG" 2>&1
 
-# Deploy backend
+if [ -d "out" ]; then
+  rm -rf "$WEB_ROOT"/*
+  cp -rf out/* "$WEB_ROOT/"
+  cp -f "$REPO_DIR/deploy/www/.htaccess" "$WEB_ROOT/.htaccess" 2>/dev/null
+  echo "$(date) — Frontend built and deployed ✅" >> "$LOG"
+else
+  echo "$(date) — Frontend build FAILED ❌" >> "$LOG"
+fi
+
+# 3. Deploy backend
+cd "$REPO_DIR"
 cp -rf "$REPO_DIR/backend/src" "$BACKEND_DIR/"
 cp -rf "$REPO_DIR/backend/prisma" "$BACKEND_DIR/"
 cp -f "$REPO_DIR/backend/package.json" "$BACKEND_DIR/"
@@ -47,4 +71,4 @@ bash "$HOME/start_backend.sh"
 
 # Mark as deployed
 echo "$NEW_HEAD" > "$MARKER"
-echo "$(date) — Deploy complete ✅" >> "$LOG"
+echo "$(date) — FINAL Deploy complete ✅" >> "$LOG"
