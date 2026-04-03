@@ -14,22 +14,9 @@ kill_backend() {
     kill -9 "$(cat "$PID_FILE")" > /dev/null 2>&1
     rm -f "$PID_FILE"
   fi
-  # Kill by lsof just to be universally safe against stuck ports
-  if command -v lsof > /dev/null; then
-    lsof -t -i :4000 2>/dev/null | while read pid; do
-      kill -9 "$pid" > /dev/null 2>&1
-      echo "  Killed port 4000 PID $pid" >> "$LOG"
-    done
-  fi
-  # Kill by process search (ps is ALWAYS available on Linux)
-  ps -u "$USER" -o pid,args 2>/dev/null | grep 'tsx.*index\.ts' | grep -v grep | awk '{print $1}' | while read pid; do
-    kill -9 "$pid" > /dev/null 2>&1
-    echo "  Killed PID $pid" >> "$LOG"
-  done
-  ps -u "$USER" -o pid,args 2>/dev/null | grep 'node.*index\.ts' | grep -v grep | awk '{print $1}' | while read pid; do
-    kill -9 "$pid" > /dev/null 2>&1
-    echo "  Killed PID $pid" >> "$LOG"
-  done
+  # Aggressive pkill for any node/tsx processes owned by the user
+  pkill -9 -u "$USER" -f "tsx" > /dev/null 2>&1
+  pkill -9 -u "$USER" -f "node" > /dev/null 2>&1
   sleep 5
 }
 
