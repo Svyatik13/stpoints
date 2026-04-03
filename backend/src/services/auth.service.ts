@@ -76,58 +76,66 @@ export async function registerUser(input: RegisterInput): Promise<{ user: any; t
       const referrer = await tx.user.findFirst({
         where: {
           OR: [
-            { username: input.ref },
-            { address: input.ref },
+            { username: { equals: input.ref, mode: 'insensitive' } },
+            { address: { equals: input.ref, mode: 'insensitive' } },
           ],
           isActive: true,
         },
         select: { id: true, username: true, balance: true, referralCount: true },
       });
 
-      if (referrer && referrer.id !== newUser.id) {
-        // Link referral
-        await tx.user.update({
-          where: { id: newUser.id },
-          data: { referrerId: referrer.id },
-        });
+      if (referrer) {
+        if (referrer.id === newUser.id) {
+          logger.warn(`Uživatel ${newUser.username} se pokusil pozvat sám sebe.`);
+        } else {
+          // Link referral
+          await tx.user.update({
+            where: { id: newUser.id },
+            data: { referrerId: referrer.id },
+          });
 
-        // Calculate inviter bonus: 20 + (referralCount * 5)
-        const inviterBonus = 20 + (referrer.referralCount * 5);
-        const inviterBalanceBefore = new Decimal(referrer.balance.toString());
-        const inviterBalanceAfter = inviterBalanceBefore.add(inviterBonus);
+          // Calculate inviter bonus: 20 + (referralCount * 5)
+          const inviterBonus = 20 + (referrer.referralCount * 5);
+          const inviterBalanceBefore = new Decimal(referrer.balance.toString());
+          const inviterBalanceAfter = inviterBalanceBefore.add(inviterBonus);
 
-        // Update inviter
-        await tx.user.update({
-          where: { id: referrer.id },
-          data: {
-            balance: { increment: inviterBonus },
-            referralCount: { increment: 1 },
-          },
-        });
+          // Update inviter
+          await tx.user.update({
+            where: { id: referrer.id },
+            data: {
+              balance: { increment: inviterBonus },
+              referralCount: { increment: 1 },
+            },
+          });
 
-        // Log inviter transaction
-        await tx.transaction.create({
-          data: {
-            type: 'REFERRAL_REWARD',
-            amount: new Decimal(inviterBonus),
-            receiverId: referrer.id,
-            balanceBefore: inviterBalanceBefore,
-            balanceAfter: inviterBalanceAfter,
-            description: `Bonus za pozvání: ${newUser.username}`,
-          },
-        });
+          // Log inviter transaction
+          await tx.transaction.create({
+            data: {
+              type: 'REFERRAL_REWARD',
+              amount: new Decimal(inviterBonus),
+              receiverId: referrer.id,
+              balanceBefore: inviterBalanceBefore,
+              balanceAfter: inviterBalanceAfter,
+              description: `Bonus za pozvání: ${newUser.username}`,
+            },
+          });
 
-        // Log invitee transaction (10 ST)
-        await tx.transaction.create({
-          data: {
-            type: 'REFERRAL_REWARD',
-            amount: new Decimal(10),
-            receiverId: newUser.id,
-            balanceBefore: 0,
-            balanceAfter: 10,
-            description: `Vstupní bonus (ref: ${referrer.username})`,
-          },
-        });
+          // Log invitee transaction (10 ST)
+          await tx.transaction.create({
+            data: {
+              type: 'REFERRAL_REWARD',
+              amount: new Decimal(10),
+              receiverId: newUser.id,
+              balanceBefore: new Decimal(0),
+              balanceAfter: new Decimal(10),
+              description: `Vstupní bonus (ref: ${referrer.username})`,
+            },
+          });
+          
+          logger.info(`Referral linked: ${newUser.username} pozván uživatelem ${referrer.username} (Bonus: ${inviterBonus} ST)`);
+        }
+      } else {
+        logger.warn(`Referral kód '${input.ref}' nebyl nalezen pro uživatele ${newUser.username}`);
       }
     }
 
