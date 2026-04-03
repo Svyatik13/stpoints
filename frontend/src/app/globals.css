@@ -314,6 +314,11 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 .animate-fade-up {
   animation: fadeUp 0.5s ease-out forwards;
 }
@@ -576,5 +581,24 @@ body {
 
 @keyframes ring-spin {
   to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════
+   MARQUEE
+   ═══════════════════════════ */
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 50s linear infinite;
+}
+
+.hover\:pause:hover {
+  animation-play-state: paused;
 }
 

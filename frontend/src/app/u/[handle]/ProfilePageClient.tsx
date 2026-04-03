@@ -17,6 +17,10 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [tipAmount, setTipAmount] = useState('1');
+  const [tipMessage, setTipMessage] = useState('');
+  const [tipping, setTipping] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,6 +40,23 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
   const copyShare = () => {
     navigator.clipboard?.writeText(shareUrl);
     toast('success', 'Odkaz byl zkopírován do schránky.');
+  };
+
+  const handleTip = async () => {
+    try {
+      setTipping(true);
+      const res = await api.users.tip(handle, tipAmount, tipMessage);
+      toast('success', res.message);
+      setShowTipModal(false);
+      setTipMessage('');
+      // Refresh profile to see balance update (if it's the current user)
+      const r = await api.users.profile(handle);
+      setProfile(r.profile);
+    } catch (e: any) {
+      toast('error', e.message || 'Chyba při posílání spropitného.');
+    } finally {
+      setTipping(false);
+    }
   };
 
   return (
@@ -80,8 +101,40 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
                   <p className="text-3xl font-bold font-mono text-st-gold">{profile.balance}</p>
                   <p className="text-xs text-text-muted mt-0.5">ST Points</p>
                 </div>
+
+                <div className="mt-6 flex justify-center gap-3">
+                  <button onClick={() => setShowTipModal(true)} className="btn-primary py-2 px-6 flex items-center gap-2 text-sm">
+                    <span>🎁</span> Poslat tip
+                  </button>
+                  <button onClick={copyShare} className="btn-secondary py-2 px-6 flex items-center gap-2 text-sm">
+                    <span>🔗</span> Sdílet
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* Achievements */}
+            {profile.achievements && profile.achievements.length > 0 && (
+              <div className="glass-card-static p-6">
+                <h2 className="font-bold text-text-primary mb-4 flex items-center gap-2">
+                  <span className="text-st-gold">🏆</span> Síň slávy
+                </h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {profile.achievements.map((ua: any) => (
+                    <div key={ua.id} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3 group relative overflow-hidden">
+                      {/* Highlight */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-st-gold/5 transparent pointer-events-none" />
+                      
+                      <span className="text-2xl drop-shadow-[0_0_5px_rgba(251,191,36,0.3)]">{ua.achievement.icon}</span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-text-primary leading-tight truncate">{ua.achievement.label}</p>
+                        <p className="text-[9px] text-text-muted leading-tight mt-0.5">{ua.achievement.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Handles */}
             <div className="glass-card-static p-5">
@@ -114,6 +167,59 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
           </>
         )}
       </div>
+
+      {/* Tip Modal */}
+      {showTipModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowTipModal(false)} />
+          <div className="glass-card-static w-full max-w-sm p-6 relative animate-fade-up">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span>🎁</span> Poslat tip @{handle}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">Částka (ST)</label>
+                <div className="flex gap-2">
+                  {['1', '5', '10', '50'].map(val => (
+                    <button 
+                      key={val} 
+                      onClick={() => setTipAmount(val)} 
+                      className={`flex-1 py-2 text-xs rounded-lg transition-all ${tipAmount === val ? 'bg-st-gold text-black font-bold' : 'bg-white/5 text-text-secondary border border-white/5'}`}
+                    >
+                      {val}
+                    </button>
+                  ))}
+                </div>
+                <input 
+                  type="number" 
+                  value={tipAmount}
+                  onChange={(e) => setTipAmount(e.target.value)}
+                  className="glass-input mt-2 text-center font-mono font-bold text-st-gold"
+                  placeholder="Vlastní částka..."
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">Zpráva (nepovinné)</label>
+                <textarea 
+                  value={tipMessage}
+                  onChange={(e) => setTipMessage(e.target.value)}
+                  className="glass-input h-20 text-sm resize-none"
+                  placeholder="Napište něco hezkého..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowTipModal(false)} className="btn-secondary flex-1 py-3">Zrušit</button>
+                <button onClick={handleTip} disabled={tipping} className="btn-primary flex-1 py-3 text-sm">
+                  {tipping ? 'Posílám...' : `Poslat ${tipAmount} ST`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

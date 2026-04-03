@@ -4,6 +4,7 @@ import { env } from '../config/env';
 import { sha256, generateRandomPrefix, computeTarget } from '../utils/hash';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { checkAndGrantAchievement } from './achievement.service';
 
 export async function createChallenge(userId: string) {
   // Expire any pending challenges for this user
@@ -189,13 +190,18 @@ export async function submitSolution(
 
   logger.mining(`${isFullSolve ? 'SOLVED' : 'PARTIAL'}: User ${userId} odtěžil ${result.reward} ST (${hashesComputed} hashů)`);
 
-  return {
+  const finalResult = {
     ...result,
     success: true,
     message: isFullSolve
       ? `Blok úspěšně vyřešen! ${hashesComputed.toLocaleString('cs-CZ')} hashů zpracováno.`
       : `Částečná odměna za ${hashesComputed.toLocaleString('cs-CZ')} hashů.`,
   };
+
+  // 5. Check achievement (async-safe)
+  checkAndGrantAchievement(userId, 'MINING_NOOKIE').catch(e => logger.error('Achievement error:', e));
+
+  return finalResult;
 }
 
 export async function getMiningStats(userId: string) {

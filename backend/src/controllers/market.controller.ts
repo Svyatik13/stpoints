@@ -4,6 +4,8 @@ import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { placeBidSchema } from '../validators/market.validator';
+import { logActivity } from '../services/activity.service';
 
 const MIN_PRICE = new Decimal('1');
 const MARKET_FEE_RATE = new Decimal('0.05'); // 5% selling fee (burned)
@@ -175,13 +177,13 @@ export async function placeBid(req: Request, res: Response, next: NextFunction) 
   try {
     const bidderId = req.user!.userId;
     const { id } = req.params;
-    const { amount } = z.object({
-      amount: z.string().refine(v => parseFloat(v) > 0, 'Částka musí být kladná'),
-    }).parse(req.body);
-
+    const { amount } = placeBidSchema.parse(req.body);
+    const amountNum = parseFloat(amount);
     const bidAmount = new Decimal(amount);
 
-    const result = await prisma.$transaction(async (tx: any) => {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: bidderId } });
+
+    const { updatedListing, bid } = await prisma.$transaction(async (tx: any) => {
       const listing = await tx.marketListing.findUnique({
         where: { id },
         include: { bids: { orderBy: { amount: 'desc' }, take: 1 }, username: true },
@@ -273,20 +275,30 @@ export async function placeBid(req: Request, res: Response, next: NextFunction) 
         newEndsAt = new Date(Date.now() + FIVE_MINUTES);
       }
 
-      const updated = await tx.marketListing.update({
+      const updatedListing = await tx.marketListing.update({
         where: { id },
         data: {
           currentHighestBid: bidAmount,
           endsAt: newEndsAt,
           buyerId: bidderId, // Track current winner
         },
+        include: { username: true }
       });
 
-      return { updated, bid };
+      return { updatedListing, bid };
     });
 
-    res.json({ message: 'Příhoz úspěšný!', listing: result.updated });
-  } catch (error) { next(error); }
+    // 6. Log activity
+    await logActivity('BID', {
+      username: user.username,
+      amount: amountNum,
+      item: updatedListing.type === 'USERNAME' ? `@${updatedListing.username?.handle}` : 'Mythic Pass',
+    });
+
+    res.json({ message: 'Nabídka potvrzena!', listing: updatedListing });
+  } catch (error) {
+    next(error);
+  }
 }
 
 // DELETE /market/:id — cancel listing

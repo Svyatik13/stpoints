@@ -3,6 +3,8 @@ import prisma from '../utils/prisma';
 import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
 import { logger } from '../utils/logger';
+import { logActivity } from '../services/activity.service';
+import { checkAndGrantAchievement } from '../services/achievement.service';
 
 // e.g., 7 days = 5% APY
 const APY_RATES = {
@@ -103,6 +105,17 @@ export async function createStake(req: Request, res: Response): Promise<void> {
         },
       });
     });
+
+    // Log activity and check achievement
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+      await logActivity('STAKE', {
+        username: user.username,
+        amount: amountNum,
+        duration,
+      });
+      checkAndGrantAchievement(userId, 'FIRST_STAKE').catch(e => logger.error('Achievement error:', e));
+    }
 
     res.json({ message: 'ST úspěšně uzamčeny v trezoru.' });
   } catch (error: any) {

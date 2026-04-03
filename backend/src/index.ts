@@ -25,6 +25,8 @@ import marketRoutes from './routes/market.routes';
 import usersRoutes from './routes/users.routes';
 import vaultRoutes from './routes/vault.routes';
 import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
+import activityRoutes from './routes/activity.routes';
+import { seedAchievements } from './services/achievement.service';
 import { processVaultPayouts } from './controllers/vault.controller';
 
 const app = express();
@@ -73,6 +75,7 @@ app.use('/api/usernames', usernameRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/vault', vaultRoutes);
+app.use('/api/activity', activityRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {
