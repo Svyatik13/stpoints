@@ -24,6 +24,7 @@ export const en: Translations = {
     stroom: 'ST-ROOM',
     leaderboard: 'Leaderboard',
     profile: 'Profile',
+    affiliate: 'Affiliate',
     admin: 'Admin',
     logout: 'Logout',
   },

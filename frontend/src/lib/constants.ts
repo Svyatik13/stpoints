@@ -8,7 +8,6 @@ export const NAV_ITEMS = [
   { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
   { href: '/cases', label: 'Cases', icon: '📦' },
   { href: '/market', label: 'Tržiště', icon: '🏪' },
-  { href: '/affiliate', label: 'Affiliate', icon: '👥' },
   { href: '/st-room', label: 'ST-ROOM', icon: '🔐' },
 ] as const;
 

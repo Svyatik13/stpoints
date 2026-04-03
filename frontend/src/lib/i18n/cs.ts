@@ -22,6 +22,7 @@ export const cs = {
     stroom: 'ST-ROOM',
     leaderboard: 'Žebříček',
     profile: 'Profil',
+    affiliate: 'Affiliate',
     admin: 'Admin',
     logout: 'Odhlásit',
   },

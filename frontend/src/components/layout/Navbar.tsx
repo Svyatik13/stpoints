@@ -108,6 +108,12 @@ export default function Navbar() {
               >
                 <span>🏆</span> {t.nav.leaderboard}
               </Link>
+              <Link
+                href="/affiliate"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-white/[0.06] transition-colors"
+              >
+                <span>👥</span> {t.nav.affiliate}
+              </Link>
 
               <div className="border-t border-glass-border/50 my-1" />
 
