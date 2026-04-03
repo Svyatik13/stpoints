@@ -1,10 +1,28 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/layout/Navbar';
+import { api } from '@/lib/api';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  
+  // Universal Redirect Engine for Static Export
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.startsWith('/invite/') && path.length > 8) {
+        const username = path.substring(8).replace(/\/$/, ''); // Remove /invite/ and trailing slash
+        if (username) {
+          // Track click
+          api.users.recordReferralClick(username).catch(() => {});
+          // Redirect to register with ref
+          window.location.href = `/auth/register?ref=${username}`;
+        }
+      }
+    }
+  }, []);
 
   if (loading) {
     return (
