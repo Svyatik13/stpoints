@@ -150,7 +150,7 @@ export async function registerUser(input: RegisterInput): Promise<{ user: any; t
       }
     }
 
-    return updatedUser;
+    return { ...updatedUser, balance: updatedUser.balance.toString() };
   });
 
   const payload: TokenPayload = { userId: user.id, role: user.role };
@@ -204,10 +204,11 @@ export async function loginUser(input: LoginInput): Promise<{ user: any; tokens:
   };
 
   const { passwordHash, ...safeUser } = user;
+  const normalizedUser = { ...safeUser, balance: safeUser.balance.toString() };
 
   logger.info(`Uživatel přihlášen: ${user.username}`);
 
-  return { user: safeUser, tokens };
+  return { user: normalizedUser, tokens };
 }
 
 export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
