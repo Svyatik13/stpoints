@@ -5,9 +5,9 @@ import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
-const USERNAME_COST = new Decimal('2');
+const USERNAME_COST = new Decimal('10');
 const USERNAME_MAX = 3;
-const USERNAME_COOLDOWN_HOURS = 24;
+const USERNAME_COOLDOWN_HOURS = 0; // disabled for testing
 
 const handleSchema = z.string()
   .min(3, 'Handle musí mít alespoň 3 znaky.')
@@ -47,7 +47,7 @@ export async function createUsername(req: Request, res: Response, next: NextFunc
       const balance = new Decimal(user.balance.toString());
       if (balance.lt(USERNAME_COST)) throw new AppError(`Nedostatečný zůstatek. Potřebujete ${USERNAME_COST} ST.`, 403);
 
-      const canSellAt = new Date(Date.now() + USERNAME_COOLDOWN_HOURS * 60 * 60 * 1000);
+      const canSellAt = new Date(); // no cooldown for testing
 
       const [username] = await Promise.all([
         tx.username.create({ data: { handle: normalizedHandle, ownerId: userId, canSellAt } }),

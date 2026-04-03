@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
 const MIN_PRICE = new Decimal('1');
+const MARKET_FEE_RATE = new Decimal('0.05'); // 5% selling fee (burned)
 const ST_PAYOUT_DELAY_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 // GET /market — all active listings
@@ -61,10 +62,11 @@ export async function createListing(req: Request, res: Response, next: NextFunct
       if (!usernameId) throw new AppError('Musíte zadat ID handleru.', 400);
       const uname = await prisma.username.findUnique({ where: { id: usernameId } });
       if (!uname || uname.ownerId !== userId || !uname.isActive) throw new AppError('Handle nenalezen.', 404);
-      if (new Date() < uname.canSellAt) {
-        const hoursLeft = Math.ceil((uname.canSellAt.getTime() - Date.now()) / 3600000);
-        throw new AppError(`Handle lze prodat až za ${hoursLeft} hod (24h cooldown).`, 400);
-      }
+      // Cooldown disabled for testing
+      // if (new Date() < uname.canSellAt) {
+      //   const hoursLeft = Math.ceil((uname.canSellAt.getTime() - Date.now()) / 3600000);
+      //   throw new AppError(`Handle lze prodat až za ${hoursLeft} hod (24h cooldown).`, 400);
+      // }
 
       const existing = await prisma.marketListing.findFirst({ where: { usernameId, status: 'ACTIVE' } });
       if (existing) throw new AppError('Tento handle je již na tržišti.', 409);
@@ -192,19 +194,21 @@ export async function processPendingPayouts() {
           const seller = await tx.user.findUniqueOrThrow({ where: { id: listing.sellerId }, select: { balance: true } });
           const sellerBalance = new Decimal(seller.balance.toString());
           const price = new Decimal(listing.price.toString());
+          const fee = price.mul(MARKET_FEE_RATE).toDecimalPlaces(6, Decimal.ROUND_UP);
+          const payout = price.sub(fee);
 
-          await tx.user.update({ where: { id: listing.sellerId }, data: { balance: { increment: price } } });
+          await tx.user.update({ where: { id: listing.sellerId }, data: { balance: { increment: payout } } });
           await tx.transaction.create({
             data: {
               type: 'MARKET_SALE',
-              amount: price,
+              amount: payout,
               description: listing.type === 'MYTHIC_PASS'
-                ? 'Market: příjem za prodej Mythic Pass'
-                : `Market: příjem za prodej handle @${listing.username?.handle}`,
+                ? `Market: prodej Mythic Pass (poplatek ${fee} ST)`
+                : `Market: prodej handle @${listing.username?.handle} (poplatek ${fee} ST)`,
               receiverId: listing.sellerId,
               senderId: listing.buyerId!,
               balanceBefore: sellerBalance,
-              balanceAfter: sellerBalance.add(price),
+              balanceAfter: sellerBalance.add(payout),
             },
           });
           await tx.marketListing.update({ where: { id: listing.id }, data: { stPaidAt: new Date() } });
