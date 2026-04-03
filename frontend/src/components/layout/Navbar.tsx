@@ -89,7 +89,7 @@ export default function Navbar() {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 glass-card py-2 animate-fade-up z-[60]">
+            <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-glass-border bg-[#0c1222] shadow-2xl py-2 animate-fade-up z-[60]">
               {/* Balance (mobile) */}
               <div className="sm:hidden px-4 py-2 border-b border-glass-border/50 mb-1">
                 <p className="text-xs text-text-muted">Zůstatek</p>

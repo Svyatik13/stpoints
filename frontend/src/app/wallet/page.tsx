@@ -22,6 +22,8 @@ export default function WalletPage() {
   const [transferAmount, setTransferAmount] = useState('');
   const [transferNote, setTransferNote] = useState('');
   const [transferLoading, setTransferLoading] = useState(false);
+  const [transferFee, setTransferFee] = useState<string | null>(null);
+  const [transferTotal, setTransferTotal] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,6 +59,26 @@ export default function WalletPage() {
     }
   }
 
+  // Fetch fee when amount changes
+  useEffect(() => {
+    if (!transferAmount || parseFloat(transferAmount) <= 0) {
+      setTransferFee(null);
+      setTransferTotal(null);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      try {
+        const data = await api.wallet.transferFee(transferAmount);
+        setTransferFee(data.fee);
+        setTransferTotal(data.total);
+      } catch {
+        setTransferFee(null);
+        setTransferTotal(null);
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [transferAmount]);
+
   async function handleTransfer() {
     if (!transferRecipient || !transferAmount) return;
     setTransferLoading(true);
@@ -66,7 +88,7 @@ export default function WalletPage() {
         amount: transferAmount,
         note: transferNote || undefined,
       });
-      toast('success', `${result.amount} ST odesláno uživateli ${result.recipient}`);
+      toast('success', `${result.amount} ST odesláno uživateli ${result.recipient} (poplatek: ${result.fee} ST)`);
       setShowTransfer(false);
       setTransferRecipient('');
       setTransferAmount('');
@@ -164,6 +186,21 @@ export default function WalletPage() {
                     maxLength={100}
                   />
                 </div>
+
+                {/* Fee preview */}
+                {transferFee && transferTotal && (
+                  <div className="rounded-xl bg-white/[0.03] border border-glass-border/30 p-3 space-y-1">
+                    <div className="flex justify-between text-xs text-text-muted">
+                      <span>⛽ Gas poplatek (2%)</span>
+                      <span className="font-mono text-st-gold">{transferFee} ST</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold text-text-primary">
+                      <span>Celkem</span>
+                      <span className="font-mono text-st-cyan">{transferTotal} ST</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setShowTransfer(false)} className="btn-secondary flex-1">
                     Zrušit

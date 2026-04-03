@@ -26,3 +26,13 @@ export async function transfer(req: Request, res: Response, next: NextFunction) 
     next(error);
   }
 }
+
+export async function getFee(req: Request, res: Response) {
+  const amount = req.query.amount as string;
+  if (!amount || !/^\d+(\.\d{1,6})?$/.test(amount)) {
+    res.status(400).json({ error: 'Neplatná částka.' });
+    return;
+  }
+  const fee = transferService.calculateGasFee(amount);
+  res.json({ amount, fee, total: (parseFloat(amount) + parseFloat(fee)).toFixed(6) });
+}

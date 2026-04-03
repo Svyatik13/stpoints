@@ -3,6 +3,16 @@ import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
+// Gas fee: 2% of transfer amount, minimum 0.000001 ST
+const GAS_FEE_RATE = new Decimal('0.02');
+const GAS_FEE_MIN = new Decimal('0.000001');
+
+export function calculateGasFee(amount: string): string {
+  const fee = Decimal.max(new Decimal(amount).mul(GAS_FEE_RATE), GAS_FEE_MIN);
+  // Round to 6 decimal places
+  return fee.toDecimalPlaces(6, Decimal.ROUND_UP).toString();
+}
+
 export async function transferST(senderId: string, recipientUsername: string, amount: string, note?: string) {
   const transferAmount = new Decimal(amount);
 
@@ -31,18 +41,21 @@ export async function transferST(senderId: string, recipientUsername: string, am
     throw new AppError('Nelze převést sám sobě.', 400);
   }
 
+  const gasFee = new Decimal(calculateGasFee(amount));
+  const totalCost = transferAmount.add(gasFee);
+
   const result = await prisma.$transaction(async (tx) => {
     const sender = await tx.user.findUniqueOrThrow({ where: { id: senderId } });
     const senderBalance = new Decimal(sender.balance.toString());
 
-    if (senderBalance.lt(transferAmount)) {
-      throw new AppError('Nedostatečný zůstatek.', 400);
+    if (senderBalance.lt(totalCost)) {
+      throw new AppError(`Nedostatečný zůstatek. Potřebujete ${totalCost.toString()} ST (včetně ${gasFee.toString()} ST poplatku).`, 400);
     }
 
     const recipientUser = await tx.user.findUniqueOrThrow({ where: { id: recipient.id } });
     const recipientBalance = new Decimal(recipientUser.balance.toString());
 
-    const newSenderBalance = senderBalance.sub(transferAmount);
+    const newSenderBalance = senderBalance.sub(totalCost);
     const newRecipientBalance = recipientBalance.add(transferAmount);
 
     // Update balances
@@ -57,8 +70,8 @@ export async function transferST(senderId: string, recipientUsername: string, am
     });
 
     const description = note
-      ? `Převod: ${note}`
-      : `Převod na ${recipient.username}`;
+      ? `Převod: ${note} (poplatek: ${gasFee.toString()} ST)`
+      : `Převod na ${recipient.username} (poplatek: ${gasFee.toString()} ST)`;
 
     // Sender transaction record
     await tx.transaction.create({
@@ -90,6 +103,8 @@ export async function transferST(senderId: string, recipientUsername: string, am
 
     return {
       amount: transferAmount.toString(),
+      fee: gasFee.toString(),
+      totalCost: totalCost.toString(),
       newBalance: newSenderBalance.toString(),
       recipient: recipient.username,
     };
