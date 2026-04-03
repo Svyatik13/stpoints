@@ -39,18 +39,22 @@ export default function AffiliatePage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="glass-card p-6 border-st-purple/20 flex flex-col items-center justify-center text-center">
+            <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest mb-2">Kliknutí na odkaz</p>
+            <p className="text-3xl font-black font-mono text-st-purple">{(user as any).referralClicks || 0}</p>
+          </div>
           <div className="glass-card p-6 border-st-cyan/20 flex flex-col items-center justify-center text-center">
-            <p className="text-text-muted text-xs uppercase font-bold tracking-widest mb-2">Vaše pozvánky</p>
-            <p className="text-4xl font-black font-mono text-st-cyan">{referralCount}</p>
+            <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest mb-2">Vaše pozvánky</p>
+            <p className="text-3xl font-black font-mono text-st-cyan">{referralCount}</p>
           </div>
           <div className="glass-card p-6 border-st-gold/20 flex flex-col items-center justify-center text-center">
-            <p className="text-text-muted text-xs uppercase font-bold tracking-widest mb-2">Příští odměna</p>
-            <p className="text-4xl font-black font-mono text-st-gold">{nextReward} ST</p>
+            <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest mb-2">Příští odměna</p>
+            <p className="text-3xl font-black font-mono text-st-gold">{nextReward} ST</p>
           </div>
           <div className="glass-card p-6 border-st-emerald/20 flex flex-col items-center justify-center text-center">
-            <p className="text-text-muted text-xs uppercase font-bold tracking-widest mb-2">Bonus pro nováčka</p>
-            <p className="text-4xl font-black font-mono text-st-emerald">10 ST</p>
+            <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest mb-2">Bonus pro nováčka</p>
+            <p className="text-3xl font-black font-mono text-st-emerald">10 ST</p>
           </div>
         </div>
 

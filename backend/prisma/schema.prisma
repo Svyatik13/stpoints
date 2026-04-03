@@ -38,6 +38,7 @@ model User {
   referrer            User?          @relation("UserReferrals", fields: [referrerId], references: [id])
   referredUsers       User[]         @relation("UserReferrals")
   referralCount       Int            @default(0) @map("referral_count")
+  referralClicks      Int            @default(0) @map("referral_clicks")
 
   @@map("users")
 }

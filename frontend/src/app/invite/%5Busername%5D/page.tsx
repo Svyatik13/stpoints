@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { api } from '@/lib/api';
 
 export default function InviteRedirectPage() {
   const router = useRouter();
@@ -10,6 +11,9 @@ export default function InviteRedirectPage() {
 
   useEffect(() => {
     if (username) {
+      // Track click
+      api.users.recordReferralClick(username).catch(() => {});
+
       // Small delay just to show a nice loading state (optional)
       const timeout = setTimeout(() => {
         router.replace(`/auth/register?ref=${username}`);

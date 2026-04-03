@@ -47,3 +47,36 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
     });
   } catch (error) { next(error); }
 }
+
+// POST /users/referral-click/:username — track links
+export async function recordReferralClick(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { username } = req.params;
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: { equals: username, mode: 'insensitive' } },
+          { address: { equals: username, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (user) {
+      // Increment click count
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { referralClicks: { increment: 1 } },
+      });
+      
+      logger.info(`Referral click recorded for: ${username}`);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    // Silent fail for the user, just log it
+    logger.error('Error recording referral click:', error);
+    res.json({ success: false });
+  }
+}

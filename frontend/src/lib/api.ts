@@ -213,6 +213,8 @@ export const api = {
   // ── Public Profiles ──
   users: {
     profile: (handle: string) => request<{ profile: any }>(`/users/profile/${handle}`),
+    recordReferralClick: (username: string) =>
+      request<{ success: boolean }>(`/users/referral-click/${username}`, { method: 'POST' }),
   },
 
   // ── Terminal ──
