@@ -4,7 +4,6 @@ import { env } from '../config/env';
 /**
  * CSRF protection via Origin header validation.
  * Only applies to state-changing methods (POST, PUT, DELETE).
- * Allows requests with no Origin (e.g. server-to-server, Postman in dev).
  */
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
@@ -19,10 +18,13 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   // In production, require Origin or Referer to match frontend URL
   if (env.nodeEnv === 'production') {
     const allowed = env.frontendUrl;
-    const originMatch = (origin && origin === allowed) || (origin && origin.includes('stpoints.fun'));
-    const refererMatch = (referer && referer.startsWith(allowed)) || (referer && referer.includes('stpoints.fun'));
+    
+    // Support both root and www domains via case-insensitive check
+    const originMatch = (origin && (origin === allowed || typeof origin === 'string' && origin.toLowerCase().includes('stpoints.fun')));
+    const refererMatch = (referer && (referer.startsWith(allowed) || referer.toLowerCase().includes('stpoints.fun')));
 
     if (!originMatch && !refererMatch) {
+      console.warn(`[CSRF Blocked] Method: ${req.method}, Path: ${req.path}, Origin: ${origin}, Referer: ${referer}, Allowed: ${allowed}`);
       res.status(403).json({ error: 'Neplatný původ požadavku (CSRF).' });
       return;
     }

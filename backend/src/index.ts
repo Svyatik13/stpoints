@@ -34,11 +34,20 @@ app.set('trust proxy', 1);
 
 // ── Security ──
 app.use(helmet());
+
+// Dynamic CORS to support both stpoints.fun and www.stpoints.fun
+const allowedOrigins = [env.frontendUrl, 'https://stpoints.fun', 'https://www.stpoints.fun'];
 app.use(cors({
-  origin: env.frontendUrl,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || (typeof origin === 'string' && origin.endsWith('stpoints.fun'))) {
+      callback(null, true);
+    } else {
+      callback(new Error('Přístup zamítnut (CORS)'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
 }));
 
 // ── Parsing ──
