@@ -2,19 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 
 import { useToast } from '@/components/ui/Toast';
 
-export default function ProfilePageClient({ handle }: { handle: string }) {
+export default function ProfilePageClient({ handle: staticHandle }: { handle: string }) {
+  const pathname = usePathname(); // e.g. "/u/vial"
+  // Try to get dynamic handle from URL, fallback to static if not on client
+  const urlHandle = typeof window !== 'undefined' ? pathname.split('/')[2] : staticHandle;
+  const handle = (urlHandle && urlHandle !== 'index') ? urlHandle : staticHandle;
+
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!handle) return;
+    if (!handle || handle === 'index') {
+      setError('Uživatel nenalezen');
+      setLoading(false);
+      return;
+    }
     api.users.profile(handle)
       .then(r => setProfile(r.profile))
       .catch(e => setError(e.message))
