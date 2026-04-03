@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
+import { walletAddress } from '../utils/crypto';
 
 export async function getProfile(req: Request, res: Response, next: NextFunction) {
   try {
@@ -50,6 +51,7 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
       user: {
         ...user,
         balance: user.balance.toString(),
+        address: walletAddress(user.id),
       },
       stats: {
         miningSessionsCompleted: miningStats._count,

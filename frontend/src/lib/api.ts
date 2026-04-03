@@ -69,6 +69,8 @@ export const api = {
       request<{ balance: string }>('/wallet/balance'),
     transactions: (page: number = 1, limit: number = 20) =>
       request<any>(`/wallet/transactions?page=${page}&limit=${limit}`),
+    price: () =>
+      request<{ price: string; change24h: string; totalSupply: string; holders: number; volume24h: number; marketCap: string }>('/wallet/price'),
     transferFee: (amount: string) =>
       request<{ amount: string; fee: string; total: string }>(`/wallet/transfer/fee?amount=${amount}`),
     transfer: (body: { recipient: string; amount: string; note?: string }) =>

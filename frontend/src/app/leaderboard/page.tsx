@@ -17,7 +17,6 @@ interface LeaderboardEntry {
 export default function LeaderboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<'balance' | 'mining'>('balance');
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useI18n();
@@ -29,11 +28,11 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    api.leaderboard.get(tab, 50)
+    api.leaderboard.get('balance', 50)
       .then(data => setEntries(data.leaderboard))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user, tab]);
+  }, [user]);
 
   if (!user) return null;
 
@@ -60,29 +59,6 @@ export default function LeaderboardPage() {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setTab('balance')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              tab === 'balance'
-                ? 'bg-st-cyan-dim text-st-cyan border border-st-cyan/20'
-                : 'bg-white/[0.04] text-text-secondary hover:bg-white/[0.08] border border-transparent'
-            }`}
-          >
-            💎 {t.leaderboard.richest}
-          </button>
-          <button
-            onClick={() => setTab('mining')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              tab === 'mining'
-                ? 'bg-st-purple-dim text-st-purple border border-st-purple/20'
-                : 'bg-white/[0.04] text-text-secondary hover:bg-white/[0.08] border border-transparent'
-            }`}
-          >
-            ⛏️ {t.leaderboard.topMiners}
-          </button>
-        </div>
 
         {/* Leaderboard Table */}
         <div className="glass-card-static overflow-hidden">
@@ -121,7 +97,7 @@ export default function LeaderboardPage() {
                         <p className={`font-bold ${sizes[idx]} ${isMe ? 'text-st-cyan' : ''}`}>
                           {e.username}
                         </p>
-                        <p className="font-mono font-bold text-sm mt-1" style={{ color: tab === 'balance' ? '#00e8ff' : '#a855f7' }}>
+                        <p className="font-mono font-bold text-sm mt-1" style={{ color: '#00e8ff' }}>
                           {parseFloat(e.value).toFixed(4)} ST
                         </p>
                       </div>
@@ -150,7 +126,7 @@ export default function LeaderboardPage() {
                           {e.username} {isMe && <span className="text-xs text-text-muted">{t.leaderboard.you}</span>}
                         </span>
                       </div>
-                      <span className="font-mono font-semibold text-sm" style={{ color: tab === 'balance' ? '#00e8ff' : '#a855f7' }}>
+                      <span className="font-mono font-semibold text-sm" style={{ color: '#00e8ff' }}>
                         {parseFloat(e.value).toFixed(4)} ST
                       </span>
                     </div>

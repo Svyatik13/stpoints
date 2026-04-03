@@ -9,6 +9,7 @@ router.use(authMiddleware);
 
 router.get('/balance', walletController.getBalance);
 router.get('/transactions', walletController.getTransactions);
+router.get('/price', walletController.getPrice);
 router.get('/transfer/fee', transferController.getFee);
 router.post('/transfer', transferController.transfer);
 

@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [walletAddr, setWalletAddr] = useState<string>('');
   const { t, locale } = useI18n();
 
   useEffect(() => {
@@ -31,7 +32,10 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     api.profile.get()
-      .then(data => setStats(data.stats))
+      .then(data => {
+        setStats(data.stats);
+        if (data.user?.address) setWalletAddr(data.user.address);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
@@ -53,6 +57,16 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1">
               <h1 className="text-3xl font-bold tracking-tight">{user.username}</h1>
+              {walletAddr && (
+                <button
+                  onClick={() => { navigator.clipboard.writeText(walletAddr); }}
+                  className="flex items-center gap-1.5 mt-1 text-xs font-mono text-text-muted hover:text-st-cyan transition-colors"
+                  title={walletAddr}
+                >
+                  <span>📋</span>
+                  {walletAddr.slice(0, 6)}...{walletAddr.slice(-4)}
+                </button>
+              )}
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <span className={`badge ${user.role === 'ADMIN' ? 'badge-red' : 'badge-cyan'}`}>
                   {user.role === 'ADMIN' ? t.wallet.roleAdmin : t.wallet.roleUser}

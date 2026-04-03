@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
+import { txHash, walletAddress } from '../utils/crypto';
 
 export async function getBalance(userId: string) {
   const user = await prisma.user.findUnique({
@@ -11,7 +12,7 @@ export async function getBalance(userId: string) {
     throw new AppError('Uživatel nenalezen.', 404);
   }
 
-  return { balance: user.balance.toString() };
+  return { balance: user.balance.toString(), address: walletAddress(userId) };
 }
 
 export async function getTransactionHistory(userId: string, page: number = 1, limit: number = 20) {
@@ -59,6 +60,7 @@ export async function getTransactionHistory(userId: string, page: number = 1, li
   return {
     transactions: transactions.map(tx => ({
       ...tx,
+      hash: txHash(tx.id),
       amount: tx.amount.toString(),
       balanceBefore: tx.balanceBefore.toString(),
       balanceAfter: tx.balanceAfter.toString(),

@@ -19,6 +19,8 @@ export default function WalletPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [networkTotal, setNetworkTotal] = useState<string>('0');
+  const [price, setPrice] = useState<{ price: string; change24h: string; marketCap: string; volume24h: number; holders: number } | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string>('');
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferRecipient, setTransferRecipient] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -58,6 +60,14 @@ export default function WalletPage() {
       setNetworkTotal(data.networkTotal || '0');
     } catch {}
   }
+
+  useEffect(() => {
+    if (!user) return;
+    api.wallet.price().then(setPrice).catch(() => {});
+    api.wallet.balance().then(data => {
+      if ((data as any).address) setWalletAddress((data as any).address);
+    }).catch(() => {});
+  }, [user]);
 
   async function fetchTransactions() {
     setTxLoading(true);
@@ -144,11 +154,27 @@ export default function WalletPage() {
                 </span>
                 <span className="text-text-secondary text-lg font-semibold">ST</span>
               </div>
+              {walletAddress && (
+                <button
+                  onClick={() => { navigator.clipboard.writeText(walletAddress); toast('success', 'Address copied!'); }}
+                  className="mt-2 flex items-center gap-2 text-xs text-text-muted hover:text-text-primary transition-colors font-mono"
+                  title={walletAddress}
+                >
+                  <span className="text-text-secondary">📋</span>
+                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                </button>
+              )}
             </div>
             <div className="flex flex-col items-end gap-3">
-              <div className="badge badge-cyan">
-                ZČU Central Node
-              </div>
+              {price && (
+                <div className="text-right">
+                  <p className="text-xs text-text-muted uppercase tracking-wider">ST/USD</p>
+                  <p className="text-lg font-bold font-mono text-st-gold">${price.price}</p>
+                  <p className={`text-xs font-mono ${parseFloat(price.change24h) >= 0 ? 'text-st-emerald' : 'text-st-red'}`}>
+                    {parseFloat(price.change24h) >= 0 ? '▲' : '▼'} {price.change24h}%
+                  </p>
+                </div>
+              )}
               <button
                 onClick={() => setShowTransfer(true)}
                 className="btn-primary text-sm px-5 py-2"
@@ -232,24 +258,27 @@ export default function WalletPage() {
           document.body
         )}
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        {/* Market Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.status}</p>
-            <p className="text-st-emerald font-semibold">● Online</p>
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Market Cap</p>
+            <p className="text-st-gold font-mono font-bold text-lg">${price?.marketCap || '–'}</p>
           </div>
           <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.role}</p>
-            <p className="text-text-primary font-semibold">{user.role === 'ADMIN' ? t.wallet.roleAdmin : t.wallet.roleUser}</p>
-          </div>
-          <div className="glass-card-static p-5">
-            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.created}</p>
-            <p className="text-text-primary font-semibold text-sm">{new Date(user.createdAt).toLocaleDateString('cs-CZ')}</p>
-          </div>
-          <div className="glass-card-static p-5 border-st-gold/20 glow-gold relative overflow-hidden group">
-            <div className="absolute inset-0 bg-st-gold opacity-0 group-hover:opacity-5 transition-opacity" />
             <p className="text-text-muted text-xs uppercase tracking-wider mb-1">{t.wallet.inCirculation}</p>
-            <p className="text-st-gold font-mono font-bold text-lg">{parseFloat(networkTotal).toFixed(2)} ST</p>
+            <p className="text-st-cyan font-mono font-bold text-lg">{parseFloat(networkTotal).toFixed(2)} ST</p>
+          </div>
+          <div className="glass-card-static p-5">
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">24h Volume</p>
+            <p className="text-text-primary font-mono font-bold text-lg">{price?.volume24h ?? '–'} txs</p>
+          </div>
+          <div className="glass-card-static p-5">
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Holders</p>
+            <p className="text-st-purple font-mono font-bold text-lg">{price?.holders ?? '–'}</p>
+          </div>
+          <div className="glass-card-static p-5">
+            <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Gas Fee</p>
+            <p className="text-st-emerald font-mono font-bold text-lg">2%</p>
           </div>
         </div>
 
@@ -284,9 +313,14 @@ export default function WalletPage() {
                       </span>
                       <div>
                         <p className="text-sm text-text-primary">{tx.description || 'Transakce'}</p>
-                        <p className="text-xs text-text-muted">
-                          {new Date(tx.createdAt).toLocaleString('cs-CZ')}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-text-muted">
+                          <span>{new Date(tx.createdAt).toLocaleString('cs-CZ')}</span>
+                          {(tx as any).hash && (
+                            <span className="font-mono text-text-muted/60" title={(tx as any).hash}>
+                              {(tx as any).hash.slice(0, 10)}...
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">

@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
+import { walletAddress } from '../utils/crypto';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
@@ -150,5 +151,5 @@ export async function getCurrentUser(userId: string) {
     throw new AppError('Uživatel nenalezen.', 404);
   }
 
-  return user;
+  return { ...user, balance: user.balance.toString(), address: walletAddress(user.id) };
 }
