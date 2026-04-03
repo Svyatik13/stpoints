@@ -6,11 +6,31 @@ LOG="$HOME/deploy.log"
 MARKER="$HOME/.deployed_head"
 PID_FILE="$HOME/backend.pid"
 
-# 1. Lock check (Self-Heal if stuck > 15 mins)
+# Helper: kill anything on port 4000 using ps (always available)
+kill_backend() {
+  echo "$(date) — Killing all backend processes..." >> "$LOG"
+  # Kill by PID file first
+  if [ -f "$PID_FILE" ]; then
+    kill -9 "$(cat "$PID_FILE")" > /dev/null 2>&1
+    rm -f "$PID_FILE"
+  fi
+  # Kill by process search (ps is ALWAYS available on Linux)
+  ps -u "$USER" -o pid,args 2>/dev/null | grep 'tsx.*index\.ts' | grep -v grep | awk '{print $1}' | while read pid; do
+    kill -9 "$pid" > /dev/null 2>&1
+    echo "  Killed PID $pid" >> "$LOG"
+  done
+  ps -u "$USER" -o pid,args 2>/dev/null | grep 'node.*index\.ts' | grep -v grep | awk '{print $1}' | while read pid; do
+    kill -9 "$pid" > /dev/null 2>&1
+    echo "  Killed PID $pid" >> "$LOG"
+  done
+  sleep 5
+}
+
+# 1. Lock check (Self-Heal if stuck > 10 mins)
 if [ -f "$HOME/.deploy_in_progress" ]; then
-  if test "$(find "$HOME/.deploy_in_progress" -mmin +15)"; then
+  if test "$(find "$HOME/.deploy_in_progress" -mmin +10)"; then
     rm -f "$HOME/.deploy_in_progress"
-    echo "$(date) — Stale lock found and cleared." >> "$LOG"
+    echo "$(date) — Stale lock cleared." >> "$LOG"
   else
     exit 0
   fi
@@ -18,14 +38,13 @@ fi
 touch "$HOME/.deploy_in_progress"
 trap 'rm -f "$HOME/.deploy_in_progress"' EXIT
 
-# 2. FORCE SYNC (Resolve Git Jams)
-echo "$(date) — Synchronizing with GitHub..." >> "$LOG"
+# 2. FORCE SYNC
 cd "$REPO_DIR" || exit 1
 git fetch --all >> "$LOG" 2>&1
 git reset --hard origin/main >> "$LOG" 2>&1
 NEW_HEAD=$(git rev-parse HEAD)
 
-# 3. Smart Health & Version Check
+# 3. Version & Health Check
 BACKEND_RUNNING=0
 if [ -f "$PID_FILE" ]; then
   PID=$(cat "$PID_FILE")
@@ -34,100 +53,60 @@ if [ -f "$PID_FILE" ]; then
   fi
 fi
 
-if [ -f "$MARKER" ] && [ "$(cat $MARKER)" = "$NEW_HEAD" ]; then
+if [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$NEW_HEAD" ]; then
   if [ "$BACKEND_RUNNING" -eq 1 ]; then
     exit 0
   else
-    echo "$(date) — Backend dead, starting..." >> "$LOG"
-    bash "$HOME/start_backend.sh" >> "$LOG" 2>&1
+    echo "$(date) — Backend dead, restarting..." >> "$LOG"
+    kill_backend
+    # Inline start (no external script dependency)
+    cp "$HOME/.env" "$REPO_DIR/backend/.env" 2>/dev/null
+    cd "$REPO_DIR/backend" || exit 1
+    export NODE_ENV=production
+    nohup ./node_modules/.bin/tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
+    echo $! > "$PID_FILE"
+    echo "$(date) — Backend restarted on PID $(cat "$PID_FILE")" >> "$LOG"
     exit 0
   fi
 fi
 
-echo "$(date) — New version detected: $NEW_HEAD. Starting FULL deploy..." >> "$LOG"
+echo "$(date) — New commit $NEW_HEAD — FULL deploy..." >> "$LOG"
 
-# 4. Disk Maintenance
+# 4. Disk cleanup
 npm cache clean --force >> "$LOG" 2>&1
 
-# 5. Deploy Frontend (FLASH-BUILD)
+# 5. Frontend build
 cd "$REPO_DIR/frontend" || exit 1
 rm -rf node_modules .next
-npm install --no-audit --no-fund --omit=optional >> "$LOG" 2>&1
+npm install --no-audit --no-fund --legacy-peer-deps >> "$LOG" 2>&1
 npm run build >> "$LOG" 2>&1
 
 if [ -d "out" ]; then
   rm -rf "$WEB_ROOT"/*
   cp -rf out/* "$WEB_ROOT/"
   cp -f "$REPO_DIR/deploy/www/.htaccess" "$WEB_ROOT/.htaccess" 2>/dev/null
-  echo "$(date) — Frontend built and deployed ✅" >> "$LOG"
+  echo "$(date) — Frontend ✅" >> "$LOG"
 else
-  echo "$(date) — Frontend build FAILED ❌" >> "$LOG"
+  echo "$(date) — Frontend FAILED ❌" >> "$LOG"
 fi
-
-# Cleanup
 rm -rf node_modules .next
 
-# 6. Inject/Update Startup Script
-cat <<EOF > "$HOME/start_backend.sh"
-#!/bin/bash
-PID_FILE="$PID_FILE"
-LOG_FILE="$LOG"
-REPO_DIR="$REPO_DIR"
-
-echo "\$(date) — PORT LIBERATOR: Clearing Port 4000..." >> "\$LOG_FILE"
-
-# 1. Target by Port Address (The most reliable fix)
-lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
-/usr/sbin/fuser -k 4000/tcp > /dev/null 2>&1
-
-# 2. Target by User Process Purge
-pkill -u "\$USER" -9 node > /dev/null 2>&1
-pkill -u "\$USER" -9 tsx > /dev/null 2>&1
-
-# 3. Cleanup PID file
-if [ -f "\$PID_FILE" ]; then rm -f "\$PID_FILE"; fi
-
-echo "\$(date) — Verification Loop: Waiting for port 4000 to be empty..." >> "\$LOG_FILE"
-MAX_TRIES=10
-TRIES=0
-while netstat -tln | grep -q :4000; do
-  if [ \$TRIES -ge \$MAX_TRIES ]; then
-    echo "CRITICAL: Port 4000 still in use after 30s. Manual intervention may be needed." >> "\$LOG_FILE"
-    exit 1
-  fi
-  sleep 3
-  lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
-  TRIES=\$((TRIES+1))
-done
-
-# Link .env
-cp "\$HOME/.env" "\$REPO_DIR/backend/.env" 2>/dev/null
-sync
-
-# ENFORCE PRODUCTION
-export NODE_ENV=production
-
-# Start with local tsx
-cd "\$REPO_DIR/backend" || exit
-nohup ./node_modules/.bin/tsx src/index.ts >> "\$HOME/backend.log" 2>&1 &
-NEW_PID=\$!
-echo "\$NEW_PID" > "\$PID_FILE"
-echo "\$(date) — ST-Points Backend LIBERATED & RESTARTED on PID \$NEW_PID" >> "\$LOG_FILE"
-EOF
-chmod +x "$HOME/start_backend.sh"
-
-# 7. Deploy Backend
+# 6. Backend build
 cd "$REPO_DIR/backend" || exit 1
-if [ -f "$HOME/.env" ]; then cp "$HOME/.env" .env; fi
-
+cp "$HOME/.env" .env 2>/dev/null
 npm install --no-audit --no-fund >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 npx prisma db push --accept-data-loss >> "$LOG" 2>&1
 
-# Final Sync & Kickstart
-sync
-bash "$HOME/start_backend.sh" >> "$LOG" 2>&1
+# 7. Kill old, start new
+kill_backend
 
-# Finalize
+export NODE_ENV=production
+cd "$REPO_DIR/backend" || exit 1
+nohup ./node_modules/.bin/tsx src/index.ts >> "$HOME/backend.log" 2>&1 &
+echo $! > "$PID_FILE"
+echo "$(date) — Backend started on PID $(cat "$PID_FILE")" >> "$LOG"
+
+# 8. Done
 echo "$NEW_HEAD" > "$MARKER"
-echo "$(date) — FINAL Deploy complete ✅" >> "$LOG"
+echo "$(date) — Deploy complete ✅" >> "$LOG"
