@@ -34,6 +34,8 @@ model User {
   marketListingsBought MarketListing[] @relation("marketBuyer")
 
   vaultStakes          VaultStake[]
+  achievements         UserAchievement[]
+  bids                 Bid[]
 
   // Referrals
   referrerId          String?        @map("referrer_id")
@@ -89,6 +91,7 @@ enum TransactionType {
   VAULT_LOCK       // user locks ST in vault
   VAULT_UNLOCK     // user unlocks ST from vault (includes yield)
   AUCTION_REFUND   // refund for outbid user
+  TIP              // peer-to-peer tip
 }
 
 model Teacher {
@@ -414,4 +417,44 @@ model VaultStake {
   @@index([userId, status])
   @@index([unlocksAt])
   @@map("vault_stakes")
+}
+
+// ── Achievements ─────────────────────────────────────────────────────────────
+
+model Achievement {
+  id          String   @id @default(cuid())
+  type        String   @unique // e.g. "MINING_MASTER", "WHALE"
+  label       String   // "Mining Master"
+  description String   // "Solve 50 mining challenges"
+  icon        String   // Emoji or icon name
+  rarity      String   @default("COMMON") // COMMON, RARE, EPIC, MYTHIC
+  
+  users       UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String      @map("user_id")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String      @map("achievement_id")
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  earnedAt      DateTime    @default(now()) @map("earned_at")
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// ── Activity Feed ────────────────────────────────────────────────────────────
+
+model ActivityEvent {
+  id        String   @id @default(cuid())
+  type      String   // "BID", "STAKE", "WIN", "TIP"
+  payload   Json     // { username: "vial", amount: 50, item: "@handle" }
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("activity_events")
 }
