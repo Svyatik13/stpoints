@@ -62,11 +62,6 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
               <div className="absolute inset-0 bg-gradient-to-br from-st-purple/10 via-transparent to-st-cyan/10 pointer-events-none" />
 
               <div className="relative z-10">
-                <div className="absolute top-4 right-4 z-20">
-                  <button onClick={copyShare} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-glass-border tooltip-trigger" title="Sdílet profil">
-                    <span className="text-xl">📤</span>
-                  </button>
-                </div>
 
                 {/* Avatar */}
                 <div className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl font-bold" style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.3), rgba(6,182,212,0.3))', border: '2px solid rgba(168,85,247,0.4)' }}>
@@ -75,20 +70,6 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
 
                 <h1 className="text-2xl font-bold text-text-primary">{profile.username}</h1>
 
-                {profile.address && (
-                  <div className="mt-2 flex items-center justify-center gap-2">
-                    <code className="text-[10px] text-text-muted font-mono bg-white/5 px-2 py-1 rounded border border-glass-border">
-                      {profile.address.slice(0, 6)}...{profile.address.slice(-4)}
-                    </code>
-                    <button 
-                      onClick={() => { navigator.clipboard.writeText(profile.address); toast('success', 'Adresa zkopírována!'); }}
-                      className="text-xs hover:text-text-primary transition-colors grayscale hover:grayscale-0"
-                      title="Kopírovat adresu"
-                    >
-                      📋
-                    </button>
-                  </div>
-                )}
 
                 <p className="text-xs text-text-muted mt-1">
                   Člen od {new Date(profile.joinedAt).toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' })}
