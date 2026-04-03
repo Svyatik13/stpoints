@@ -8,8 +8,6 @@ export const NAV_ITEMS = [
   { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
   { href: '/cases', label: 'Cases', icon: '📦' },
   { href: '/st-room', label: 'ST-ROOM', icon: '🔐' },
-  { href: '/leaderboard', label: 'Žebříček', icon: '🏆' },
-  { href: '/profile', label: 'Profil', icon: '👤' },
 ] as const;
 
 export const ADMIN_NAV_ITEMS = [

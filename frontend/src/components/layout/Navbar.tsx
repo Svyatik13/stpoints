@@ -1,14 +1,34 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { NAV_ITEMS, ADMIN_NAV_ITEMS } from '@/lib/constants';
-import LanguageSelector from '@/components/ui/LanguageSelector';
+import { useI18n } from '@/lib/i18n';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const { locale, setLocale } = useI18n();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setDropdownOpen(false);
+  }, [pathname]);
 
   if (!user) return null;
 
@@ -48,22 +68,70 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* User Section */}
-        <div className="flex items-center gap-3">
-          <LanguageSelector />
-          <div className="hidden sm:flex flex-col items-end">
-            <span className="text-sm font-medium text-text-primary">{user.username}</span>
-            <span className="text-xs text-st-cyan font-mono">
-              {parseFloat(user.balance).toFixed(6)} ST
-            </span>
-          </div>
+        {/* User Dropdown */}
+        <div className="relative" ref={dropdownRef}>
           <button
-            onClick={logout}
-            className="btn-secondary text-sm px-4 py-2"
-            id="logout-button"
+            onClick={() => setDropdownOpen(prev => !prev)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.06] transition-colors"
           >
-            Odhlásit
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-st-cyan/30 to-st-purple/30 flex items-center justify-center text-sm font-bold text-st-cyan border border-st-cyan/20">
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div className="hidden sm:flex flex-col items-start">
+              <span className="text-sm font-medium text-text-primary leading-tight">{user.username}</span>
+              <span className="text-xs text-st-cyan font-mono leading-tight">
+                {parseFloat(user.balance).toFixed(6)} ST
+              </span>
+            </div>
+            <svg className={`w-4 h-4 text-text-muted transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
+
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 glass-card py-2 animate-fade-up z-[60]">
+              {/* Balance (mobile) */}
+              <div className="sm:hidden px-4 py-2 border-b border-glass-border/50 mb-1">
+                <p className="text-xs text-text-muted">Zůstatek</p>
+                <p className="text-sm font-mono font-bold text-st-cyan">{parseFloat(user.balance).toFixed(6)} ST</p>
+              </div>
+
+              <Link
+                href="/profile"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-white/[0.06] transition-colors"
+              >
+                <span>👤</span> Profil
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-white/[0.06] transition-colors"
+              >
+                <span>🏆</span> Žebříček
+              </Link>
+
+              <div className="border-t border-glass-border/50 my-1" />
+
+              <button
+                onClick={() => {
+                  setLocale(locale === 'cs' ? 'en' : 'cs');
+                  setDropdownOpen(false);
+                }}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-white/[0.06] transition-colors w-full text-left"
+              >
+                <span>{locale === 'cs' ? '🇬🇧' : '🇨🇿'}</span>
+                {locale === 'cs' ? 'English' : 'Čeština'}
+              </button>
+
+              <div className="border-t border-glass-border/50 my-1" />
+
+              <button
+                onClick={() => { setDropdownOpen(false); logout(); }}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-st-red hover:bg-st-red-dim/30 transition-colors w-full text-left"
+              >
+                <span>🚪</span> Odhlásit se
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
