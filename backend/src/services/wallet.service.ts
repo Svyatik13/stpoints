@@ -69,7 +69,9 @@ export async function getTransactionHistory(userId: string, page: number = 1, li
       amount: tx.amount.toString(),
       balanceBefore: tx.balanceBefore.toString(),
       balanceAfter: tx.balanceAfter.toString(),
-      isIncoming: tx.receiverId === userId,
+      // If I am the receiver but NOT the sender, it's incoming.
+      // If I am both sender and receiver (debit/fee), it's outgoing.
+      isIncoming: tx.receiverId === userId && tx.senderId !== userId,
     })),
     pagination: {
       page,
