@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/lib/api';
 
 function RegisterForm() {
   const { register } = useAuth();
@@ -19,6 +20,31 @@ function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Manual Referral State
+  const [showManualRef, setShowManualRef] = useState(false);
+  const [manualRef, setManualRef] = useState('');
+  const [isRefVerified, setIsRefVerified] = useState(false);
+  const [verifyingRef, setVerifyingRef] = useState(false);
+  const [refError, setRefError] = useState('');
+
+  const handleVerifyRef = async () => {
+    if (!manualRef) return;
+    setVerifyingRef(true);
+    setRefError('');
+    try {
+      const { profile } = await api.users.profile(manualRef);
+      if (profile) {
+        setIsRefVerified(true);
+        setError(''); // Clear any previous general error if ref is valid
+      }
+    } catch (err: any) {
+      setRefError('Profil nenalezen.');
+      setIsRefVerified(false);
+    } finally {
+      setVerifyingRef(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +62,9 @@ function RegisterForm() {
 
     setLoading(true);
     try {
-      await register(username, password, passCode, ref);
+      // Prioritize manual verified ref over URL ref
+      const finalRef = isRefVerified ? manualRef : ref;
+      await register(username, password, passCode, finalRef);
       router.push('/wallet');
     } catch (err: any) {
       setError(err.message || 'Registrace se nezdařila.');
@@ -189,6 +217,64 @@ function RegisterForm() {
             {loading ? 'Vytváření účtu...' : 'Registrovat'}
           </button>
         </form>
+
+        {/* Manual Referral Entry */}
+        <div className="mt-6 border-t border-glass-border pt-6">
+          {!isRefVerified && !ref && (
+            <>
+              {!showManualRef ? (
+                <button 
+                  onClick={() => setShowManualRef(true)}
+                  className="text-text-muted hover:text-text-primary text-sm flex items-center justify-center gap-1 w-full transition-colors"
+                >
+                  <span>Byl jsi někým pozván?</span>
+                </button>
+              ) : (
+                <div className="space-y-3 animate-fade-in">
+                  <label className="block text-xs font-medium text-text-muted uppercase tracking-wider">
+                    Affiliate kód (nickname/adresa)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={manualRef}
+                      onChange={(e) => {
+                        setManualRef(e.target.value);
+                        setRefError('');
+                      }}
+                      className="glass-input text-sm"
+                      placeholder="např. svyatik"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyRef}
+                      disabled={verifyingRef || !manualRef}
+                      className="btn-secondary text-xs px-4 whitespace-nowrap"
+                    >
+                      {verifyingRef ? '...' : 'Ověřit'}
+                    </button>
+                  </div>
+                  {refError && <p className="text-red-400 text-[10px] uppercase font-bold">{refError}</p>}
+                </div>
+              )}
+            </>
+          )}
+
+          {isRefVerified && (
+            <div className="flex items-center justify-center gap-2 text-st-emerald animate-fade-in font-medium text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+              </svg>
+              <span>Pozvání od uživatele <span className="font-bold underline">{manualRef}</span> bylo potvrzeno!</span>
+            </div>
+          )}
+
+          {ref && !isRefVerified && (
+            <div className="text-center text-text-muted text-[10px] uppercase font-bold tracking-widest">
+              Referral aktivní z odkazu
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
         <p className="text-center text-text-muted text-sm mt-6">
