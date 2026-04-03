@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { NAV_ITEMS, ADMIN_NAV_ITEMS } from '@/lib/constants';
+import LanguageSelector from '@/components/ui/LanguageSelector';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -48,7 +49,8 @@ export default function Navbar() {
         </div>
 
         {/* User Section */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <LanguageSelector />
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-sm font-medium text-text-primary">{user.username}</span>
             <span className="text-xs text-st-cyan font-mono">

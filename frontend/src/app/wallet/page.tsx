@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { Transaction } from '@/types';
 import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPE_COLORS } from '@/lib/constants';
 import AppShell from '@/components/layout/AppShell';
+import { useToast } from '@/components/ui/Toast';
 
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
@@ -16,6 +17,12 @@ export default function WalletPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [networkTotal, setNetworkTotal] = useState<string>('0');
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferRecipient, setTransferRecipient] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferNote, setTransferNote] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -50,6 +57,30 @@ export default function WalletPage() {
     }
   }
 
+  async function handleTransfer() {
+    if (!transferRecipient || !transferAmount) return;
+    setTransferLoading(true);
+    try {
+      const result = await api.wallet.transfer({
+        recipient: transferRecipient,
+        amount: transferAmount,
+        note: transferNote || undefined,
+      });
+      toast('success', `${result.amount} ST odesláno uživateli ${result.recipient}`);
+      setShowTransfer(false);
+      setTransferRecipient('');
+      setTransferAmount('');
+      setTransferNote('');
+      fetchTransactions();
+      // Refresh user balance
+      window.location.reload();
+    } catch (err: any) {
+      toast('error', err.message);
+    } finally {
+      setTransferLoading(false);
+    }
+  }
+
   if (!user) return null;
 
   const balance = parseFloat(user.balance);
@@ -79,16 +110,76 @@ export default function WalletPage() {
                 <span className="text-text-secondary text-lg font-semibold">ST</span>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-3">
               <div className="badge badge-cyan">
                 ZČU Central Node
               </div>
-              <p className="text-text-muted text-xs font-mono">
-                ID: {user.id.slice(0, 12)}...
-              </p>
+              <button
+                onClick={() => setShowTransfer(true)}
+                className="btn-primary text-sm px-5 py-2"
+              >
+                📤 Převést ST
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Transfer Modal */}
+        {showTransfer && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowTransfer(false)}>
+            <div className="glass-card w-full max-w-md p-6 animate-fade-up" onClick={e => e.stopPropagation()}>
+              <h2 className="text-xl font-bold mb-4">📤 Převést ST</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">Příjemce</label>
+                  <input
+                    type="text"
+                    value={transferRecipient}
+                    onChange={e => setTransferRecipient(e.target.value)}
+                    className="glass-input"
+                    placeholder="Uživatelské jméno"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">Částka (ST)</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    min="0.000001"
+                    max={user.balance}
+                    value={transferAmount}
+                    onChange={e => setTransferAmount(e.target.value)}
+                    className="glass-input"
+                    placeholder="0.000000"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">Poznámka (volitelné)</label>
+                  <input
+                    type="text"
+                    value={transferNote}
+                    onChange={e => setTransferNote(e.target.value)}
+                    className="glass-input"
+                    placeholder="Důvod převodu..."
+                    maxLength={100}
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setShowTransfer(false)} className="btn-secondary flex-1">
+                    Zrušit
+                  </button>
+                  <button
+                    onClick={handleTransfer}
+                    disabled={transferLoading || !transferRecipient || !transferAmount}
+                    className="btn-primary flex-1 disabled:opacity-50"
+                  >
+                    {transferLoading ? 'Odesílám...' : 'Odeslat'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">

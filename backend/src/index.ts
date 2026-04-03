@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import { generalLimiter } from './middleware/rateLimit';
 import { errorHandler } from './middleware/errorHandler';
+import { csrfProtection } from './middleware/csrf';
 import { logger } from './utils/logger';
 import { startGiveawayCron } from './services/giveaway.service';
 import { seedDefaults } from './utils/seed';
@@ -17,6 +18,8 @@ import giveawayRoutes from './routes/giveaway.routes';
 import stroomRoutes from './routes/stroom.routes';
 import casesRoutes from './routes/cases.routes';
 import adminRoutes from './routes/admin.routes';
+import leaderboardRoutes from './routes/leaderboard.routes';
+import profileRoutes from './routes/profile.routes';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -37,6 +40,9 @@ app.use(cookieParser());
 // ── Rate Limiting ──
 app.use(generalLimiter);
 
+// ── CSRF Protection ──
+app.use(csrfProtection);
+
 // ── Health Check ──
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -55,6 +61,8 @@ app.use('/api/giveaway', giveawayRoutes);
 app.use('/api/st-room', stroomRoutes);
 app.use('/api/cases', casesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/profile', profileRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {

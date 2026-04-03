@@ -6,7 +6,7 @@ interface ApiOptions {
   headers?: Record<string, string>;
 }
 
-let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
 
 async function rawRequest<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, headers = {} } = options;
@@ -18,7 +18,7 @@ async function rawRequest<T>(endpoint: string, options: ApiOptions = {}): Promis
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include', // Send httpOnly cookies
+    credentials: 'include',
   });
 
   const data = await res.json();
@@ -34,21 +34,15 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
   try {
     return await rawRequest<T>(endpoint, options);
   } catch (error: any) {
-    // If 401 and not already refreshing, try to refresh tokens and retry once
-    if (
-      error?.message?.includes('Neplatný nebo vypršelý token') &&
-      !isRefreshing &&
-      endpoint !== '/auth/refresh' &&
-      endpoint !== '/auth/login' &&
-      endpoint !== '/auth/register'
-    ) {
-      isRefreshing = true;
-      try {
-        await rawRequest('/auth/refresh', { method: 'POST' });
-        return await rawRequest<T>(endpoint, options);
-      } finally {
-        isRefreshing = false;
+    const isAuthEndpoint = ['/auth/refresh', '/auth/login', '/auth/register'].includes(endpoint);
+    if (error?.message?.includes('Neplatný nebo vypršelý token') && !isAuthEndpoint) {
+      // Queue all concurrent 401s behind a single refresh
+      if (!refreshPromise) {
+        refreshPromise = rawRequest<any>('/auth/refresh', { method: 'POST' })
+          .finally(() => { refreshPromise = null; });
       }
+      await refreshPromise;
+      return await rawRequest<T>(endpoint, options);
     }
     throw error;
   }
@@ -75,6 +69,33 @@ export const api = {
       request<{ balance: string }>('/wallet/balance'),
     transactions: (page: number = 1, limit: number = 20) =>
       request<any>(`/wallet/transactions?page=${page}&limit=${limit}`),
+    transfer: (body: { recipient: string; amount: string; note?: string }) =>
+      request<{ amount: string; newBalance: string; recipient: string }>('/wallet/transfer', { method: 'POST', body }),
+  },
+
+  // ── Leaderboard ──
+  leaderboard: {
+    get: (type: 'balance' | 'mining' = 'balance', limit: number = 20) =>
+      request<{ leaderboard: Array<{ rank: number; username: string; value: string; createdAt?: string }>; type: string }>(
+        `/leaderboard?type=${type}&limit=${limit}`
+      ),
+  },
+
+  // ── Profile ──
+  profile: {
+    get: () =>
+      request<{
+        user: any;
+        stats: {
+          miningSessionsCompleted: number;
+          totalMined: string;
+          transfersSent: number;
+          transfersReceived: number;
+          giveawayWins: number;
+          caseOpenings: number;
+          totalEarned: string;
+        };
+      }>('/profile'),
   },
 
   // ── Mining ──
