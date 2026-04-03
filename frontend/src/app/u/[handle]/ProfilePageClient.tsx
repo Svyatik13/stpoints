@@ -113,25 +113,45 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
               </div>
             </div>
 
-            {/* Achievements */}
-            {profile.achievements && profile.achievements.length > 0 && (
+            {/* Achievements / Badges */}
+            {profile.badges && (
               <div className="glass-card-static p-6">
-                <h2 className="font-bold text-text-primary mb-4 flex items-center gap-2">
-                  <span className="text-st-gold">🏆</span> Síň slávy
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {profile.achievements.map((ua: any) => (
-                    <div key={ua.id} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3 group relative overflow-hidden">
-                      {/* Highlight */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-st-gold/5 transparent pointer-events-none" />
-                      
-                      <span className="text-2xl drop-shadow-[0_0_5px_rgba(251,191,36,0.3)]">{ua.achievement.icon}</span>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-text-primary leading-tight truncate">{ua.achievement.label}</p>
-                        <p className="text-[9px] text-text-muted leading-tight mt-0.5">{ua.achievement.description}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-text-primary flex items-center gap-2">
+                    <span className="text-st-gold drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">🏆</span> Síň slávy
+                  </h2>
+                  <span className="text-xs font-mono bg-white/5 px-2 py-1 rounded border border-white/10 text-text-secondary">
+                    {profile.earnedCount}/{profile.totalCount} Odznaků
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {profile.badges.map((b: any) => {
+                    // Rarity styling
+                    let borderClass = 'border-white/5';
+                    let bgClass = 'bg-white/5';
+                    let shadowClass = '';
+                    
+                    if (b.earned) {
+                      switch(b.rarity) {
+                        case 'COMMON': borderClass = 'border-gray-500/30'; bgClass = 'bg-gray-500/10'; break;
+                        case 'RARE': borderClass = 'border-blue-500/40'; bgClass = 'bg-blue-500/10'; shadowClass = 'drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]'; break;
+                        case 'EPIC': borderClass = 'border-purple-500/50'; bgClass = 'bg-purple-500/10'; shadowClass = 'drop-shadow-[0_0_12px_rgba(168,85,247,0.6)]'; break;
+                        case 'MYTHIC': borderClass = 'border-yellow-500/60'; bgClass = 'bg-yellow-500/10'; shadowClass = 'drop-shadow-[0_0_15px_rgba(234,179,8,0.8)]'; break;
+                      }
+                    }
+
+                    return (
+                      <div 
+                        key={b.id} 
+                        className={`relative group p-3 rounded-xl border flex flex-col items-center justify-center text-center transition-all ${borderClass} ${bgClass} ${b.earned ? 'opacity-100 hover:scale-105 hover:z-10' : 'opacity-40 grayscale'}`}
+                        title={`${b.label}\n${b.description}${b.earned ? `\nZískáno: ${new Date(b.earnedAt).toLocaleDateString()}` : '\n(Zamčeno)'}`}
+                      >
+                        <span className={`text-3xl mb-1 ${b.earned ? shadowClass : ''}`}>{b.icon}</span>
+                        <p className="text-[10px] font-bold text-text-primary leading-tight truncate w-full">{b.earned ? b.label : '???'}</p>
+                        <p className="text-[8px] text-text-muted leading-tight mt-0.5 line-clamp-2">{b.description}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

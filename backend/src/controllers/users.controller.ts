@@ -39,6 +39,32 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
       orderBy: { createdAt: 'asc' },
     });
 
+    // Get user's earned achievements
+    const earned = await prisma.userAchievement.findMany({
+      where: { userId: user.id },
+      include: { achievement: true },
+      orderBy: { earnedAt: 'desc' },
+    });
+    const earnedTypes = new Set(earned.map(e => e.achievement.type));
+
+    // Get ALL achievements in the system
+    const allAchievements = await prisma.achievement.findMany({ orderBy: { rarity: 'asc' } });
+
+    // Merge: earned ones get full data, locked ones show requirements
+    const badges = allAchievements.map(a => {
+      const userAch = earned.find(e => e.achievement.type === a.type);
+      return {
+        id: a.id,
+        type: a.type,
+        label: a.label,
+        description: a.description,
+        icon: userAch ? a.icon : '???',
+        rarity: a.rarity,
+        earned: !!userAch,
+        earnedAt: userAch?.earnedAt || null,
+      };
+    });
+
     res.json({
       profile: {
         username: user.username,
@@ -46,11 +72,9 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
         address: user.address,
         joinedAt: user.createdAt,
         handles,
-        achievements: await prisma.userAchievement.findMany({
-          where: { userId: user.id },
-          include: { achievement: true },
-          orderBy: { earnedAt: 'desc' },
-        }),
+        badges,
+        earnedCount: earned.length,
+        totalCount: allAchievements.length,
       },
     });
   } catch (error) { next(error); }

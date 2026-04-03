@@ -6,6 +6,7 @@ const router = Router();
 
 // Public
 router.get('/', marketController.getListings);
+router.get('/:id', marketController.getListing);
 
 // Authenticated
 router.use(authMiddleware);

@@ -11,16 +11,33 @@ const MIN_PRICE = new Decimal('1');
 const MARKET_FEE_RATE = new Decimal('0.05'); // 5% selling fee (burned)
 const ST_PAYOUT_DELAY_MS = 2 * 60 * 60 * 1000; // 2 hours
 
-// GET /market — all active listings
+// GET /market — all listings with sorting and filtering
 export async function getListings(req: Request, res: Response, next: NextFunction) {
   try {
-    const { type } = req.query;
-    const where: any = { status: 'ACTIVE' };
+    const { type, filter, sort } = req.query;
+    
+    // Status filter
+    const where: any = {};
+    if (filter === 'SOLD') {
+      where.status = 'SOLD';
+    } else {
+      where.status = 'ACTIVE';
+    }
+
+    // Type filter
     if (type === 'MYTHIC_PASS' || type === 'USERNAME') where.type = type;
+    if (filter === 'AUCTION') where.isAuction = true;
+    if (filter === 'DIRECT') where.isAuction = false;
+
+    // Sorting
+    let orderBy: any = { createdAt: 'desc' }; // default: Recently listed
+    if (sort === 'PRICE_ASC') orderBy = { price: 'asc' };
+    if (sort === 'PRICE_DESC') orderBy = { price: 'desc' };
+    if (sort === 'ENDING_SOON') orderBy = { endsAt: 'asc' };
 
     const listings = await prisma.marketListing.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       include: {
         seller: { select: { username: true, address: true } },
         username: { select: { handle: true } },
@@ -33,6 +50,30 @@ export async function getListings(req: Request, res: Response, next: NextFunctio
     });
 
     res.json({ listings });
+  } catch (error) { next(error); }
+}
+
+// GET /market/:id — single listing details with bid history (including usernames)
+export async function getListing(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const listing = await prisma.marketListing.findUnique({
+      where: { id },
+      include: {
+        seller: { select: { username: true, address: true, createdAt: true } },
+        buyer: { select: { username: true } },
+        username: { select: { handle: true } },
+        bids: {
+          orderBy: { amount: 'desc' },
+          include: {
+            bidder: { select: { username: true, id: true } }
+          }
+        }
+      }
+    });
+
+    if (!listing) throw new AppError('Záznam nenalezen.', 404);
+    res.json({ listing });
   } catch (error) { next(error); }
 }
 

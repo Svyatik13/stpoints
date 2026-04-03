@@ -206,7 +206,14 @@ export const api = {
 
   // ── Market ──
   market: {
-    list: (type?: string) => request<{ listings: any[] }>(`/market${type ? `?type=${type}` : ''}`),
+    list: (type?: string, filter?: string, sort?: string) => {
+      const params = new URLSearchParams();
+      if (type) params.append('type', type);
+      if (filter) params.append('filter', filter);
+      if (sort) params.append('sort', sort);
+      return request<{ listings: any[] }>(`/market?${params.toString()}`);
+    },
+    getListing: (id: string) => request<{ listing: any }>(`/market/${id}`),
     my: () => request<{ listings: any[] }>('/market/my'),
     create: (body: { type: string; price: string; passId?: string; usernameId?: string; isAuction?: boolean; durationHours?: number; minIncrement?: string }) =>
       request<{ listing: any }>('/market', { method: 'POST', body }),
@@ -236,6 +243,7 @@ export const api = {
     get: () => request<{ stakes: any[] }>('/vault'),
     stake: (body: { amount: string | number; durationDays: number }) => 
       request<any>('/vault/stake', { method: 'POST', body }),
+    earlyUnstake: (id: string) => request<any>(`/vault/unstake/${id}`, { method: 'POST' }),
   },
 };
 

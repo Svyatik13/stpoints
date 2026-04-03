@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { Decimal } from '@prisma/client/runtime/library';
 import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
+import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { logActivity } from '../services/activity.service';
 import { checkAndGrantAchievement } from '../services/achievement.service';
@@ -12,12 +13,14 @@ const APY_RATES = {
   7: 5.0,
   30: 12.0,
   90: 25.0,
+  180: 35.0,
+  365: 50.0,
 };
 
 const stakeSchema = z.object({
   amount: z.string().or(z.number()),
   durationDays: z.number().int().refine(d => Object.keys(APY_RATES).includes(d.toString()), {
-    message: "Nemožná doba uzamčení. Povolené: 7, 30, 90 dnů.",
+    message: "Nemožná doba uzamčení. Povolené: 7, 30, 90, 180, 365 dnů.",
   }),
 });
 
@@ -187,5 +190,69 @@ export async function processVaultPayouts() {
     }
   } catch (error) {
     logger.error('Error processing vault payouts:', error);
+  }
+}
+
+/**
+ * Předčasné odemčení stakeu (25% penalizace z úroku)
+ */
+export async function earlyUnstake(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+
+    await prisma.$transaction(async (tx) => {
+      const stake = await tx.vaultStake.findUnique({ where: { id } });
+      if (!stake || stake.userId !== userId) throw new AppError('Trezor nenalezen.', 404);
+      if (stake.status !== 'ACTIVE') throw new AppError('Tento trezor již není aktivní.', 400);
+
+      // Early unstake calculation: Full principle + (yield * 0.75)
+      const principal = new Decimal(stake.amount.toString());
+      const expectedYield = new Decimal(stake.expectedYield.toString());
+      const penaltyAmount = expectedYield.mul(0.25);
+      const finalYield = expectedYield.sub(penaltyAmount);
+      
+      const totalPayout = principal.add(finalYield);
+
+      const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+      const balanceBefore = user.balance;
+      const balanceAfter = balanceBefore.add(totalPayout);
+
+      // Odeslat ST uzivateli
+      await tx.user.update({
+        where: { id: userId },
+        data: { balance: balanceAfter },
+      });
+
+      // Záznam transakce (VAULT_UNLOCK early)
+      await tx.transaction.create({
+        data: {
+          type: TransactionType.VAULT_UNLOCK,
+          amount: totalPayout,
+          description: `Předčasné odemčení (Jistina: ${principal.toFixed(2)} ST + Úrok: ${finalYield.toFixed(4)} ST [-25% penalizace])`,
+          receiverId: userId,
+          balanceBefore,
+          balanceAfter,
+        },
+      });
+
+      // Změna statusu
+      await tx.vaultStake.update({
+        where: { id },
+        data: {
+          status: 'UNLOCKED',
+          unlockedAt: new Date(),
+        },
+      });
+    });
+
+    res.json({ message: 'Trezor úspěšně odemčen (s 25% penalizací na úroku).' });
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+    logger.error('Error in early unstake =', error);
+    res.status(500).json({ error: 'Chyba serveru při odemčení trezoru.' });
   }
 }
