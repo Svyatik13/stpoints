@@ -27,7 +27,7 @@ export async function getTransactions(req: Request, res: Response, next: NextFun
 
 /**
  * ST/USD price ticker — simulated based on network metrics.
- * Base price $0.12, adjusted by supply scarcity and recent activity.
+ * Base price $8.50, adjusted by supply scarcity and recent activity.
  */
 export async function getPrice(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -42,14 +42,14 @@ export async function getPrice(_req: Request, res: Response, next: NextFunction)
     const totalSupply = parseFloat(supplyAgg._sum.balance?.toString() || '0');
 
     // Price algorithm: base price + scarcity bonus + activity bonus
-    const BASE_PRICE = 0.12;
-    const scarcityFactor = totalSupply > 0 ? Math.max(0.8, 1000 / (totalSupply + 500)) : 1;
-    const activityBonus = Math.min(recentTxCount * 0.002, 0.15);
+    const BASE_PRICE = 8.50;
+    const scarcityFactor = totalSupply > 0 ? Math.max(0.85, 500 / (totalSupply + 200)) : 1;
+    const activityBonus = Math.min(recentTxCount * 0.15, 3.0);
 
     // Add deterministic "volatility" based on current hour
-    const hourSeed = Math.sin(Date.now() / 3600000) * 0.03;
+    const hourSeed = Math.sin(Date.now() / 3600000) * 0.40;
 
-    const price = Math.max(0.01, BASE_PRICE * scarcityFactor + activityBonus + hourSeed);
+    const price = Math.max(1.00, BASE_PRICE * scarcityFactor + activityBonus + hourSeed);
     const change24h = ((activityBonus + hourSeed) / BASE_PRICE) * 100;
 
     res.json({
