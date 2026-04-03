@@ -78,7 +78,7 @@ npm cache clean --force >> "$LOG" 2>&1
 
 # 5. Frontend build
 cd "$REPO_DIR/frontend" || exit 1
-rm -rf node_modules .next
+rm -rf node_modules .next package-lock.json
 npm install --no-audit --no-fund --legacy-peer-deps >> "$LOG" 2>&1
 npm run build >> "$LOG" 2>&1
 
@@ -95,6 +95,7 @@ rm -rf node_modules .next
 # 6. Backend build
 cd "$REPO_DIR/backend" || exit 1
 cp "$HOME/.env" .env 2>/dev/null
+rm -f package-lock.json
 npm install --no-audit --no-fund >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 npx prisma db push --accept-data-loss >> "$LOG" 2>&1
