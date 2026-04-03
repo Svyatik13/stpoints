@@ -68,47 +68,29 @@ rm -rf node_modules .next
 cat <<EOF > "$HOME/start_backend.sh"
 #!/bin/bash
 PID_FILE="\$HOME/backend.pid"
+LOG_FILE="\$HOME/deploy.log"
 
-echo "Attempting to clear port 4000..."
-# 1. Kill by PID file
-if [ -f "\$PID_FILE" ]; then
-  PID=\$(cat "\$PID_FILE")
-  kill -9 "\$PID" > /dev/null 2>&1
-  rm -f "\$PID_FILE"
-fi
+echo "\$(date) — NUCLEAR PURGE: Clearing all node processes for user \$USER..." >> "\$LOG_FILE"
+# 1. Total User Purge: Kill every node process owned by this user
+pkill -u "\$USER" -9 node > /dev/null 2>&1
+pkill -u "\$USER" -9 tsx > /dev/null 2>&1
 
-# 2. Kill by port (High precision)
-/usr/sbin/fuser -k 4000/tcp > /dev/null 2>&1
-lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
+# 2. Cleanup PID file
+if [ -f "\$PID_FILE" ]; then rm -f "\$PID_FILE"; fi
 
-# 3. Kill by name search
-pkill -9 -f "index.ts" > /dev/null 2>&1
-pkill -9 -f "tsx" > /dev/null 2>&1
+echo "\$(date) — Waiting 10s for port 4000 to be released by the OS..." >> "\$LOG_FILE"
+sleep 10
 
-# Wait for port release
-MAX_RETRIES=5
-COUNT=0
-while netstat -tln | grep -q :4000; do
-  if [ \$COUNT -ge \$MAX_RETRIES ]; then
-    echo "Could not clear port 4000 after 15s. Aborting."
-    exit 1
-  fi
-  echo "Port 4000 still busy... waiting..."
-  sleep 3
-  /usr/sbin/fuser -k 4000/tcp > /dev/null 2>&1
-  lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
-  COUNT=\$((COUNT+1))
-done
-
-# Link .env
+# 3. Link .env
 cp "\$HOME/.env" "\$REPO_DIR/backend/.env"
 sync
 
+# 4. Start with local tsx
 cd "\$REPO_DIR/backend"
 nohup ./node_modules/.bin/tsx src/index.ts >> "\$HOME/backend.log" 2>&1 &
 NEW_PID=\$!
 echo "\$NEW_PID" > "\$PID_FILE"
-echo "\$(date) — ST-Points Backend STARTED on PID \$NEW_PID"
+echo "\$(date) — ST-Points Backend PURGED & RESTARTED on PID \$NEW_PID" >> "\$LOG_FILE"
 EOF
 chmod +x "$HOME/start_backend.sh"
 
