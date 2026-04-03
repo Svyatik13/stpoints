@@ -20,10 +20,14 @@ export async function getListings(req: Request, res: Response, next: NextFunctio
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        seller: { select: { username: true, walletId: true } },
+        seller: { select: { username: true, address: true } },
         username: { select: { handle: true } },
       },
+    }).catch(err => {
+      logger.error('Market listing findMany failed:', err);
+      throw new AppError('Chyba při načítání inzerce z databáze: ' + err.message, 500);
     });
+
     res.json({ listings });
   } catch (error) { next(error); }
 }
@@ -145,7 +149,7 @@ export async function buyListing(req: Request, res: Response, next: NextFunction
 export async function cancelListing(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user!.userId;
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const listing = await prisma.marketListing.findUnique({ where: { id } });
     if (!listing || listing.sellerId !== userId) throw new AppError('Inzerce nenalezena.', 404);

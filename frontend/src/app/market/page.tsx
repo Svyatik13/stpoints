@@ -31,6 +31,7 @@ export default function MarketPage() {
   const [handleError, setHandleError] = useState('');
 
   const loadData = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
       const [listRes, handleRes, passRes] = await Promise.all([
@@ -42,11 +43,12 @@ export default function MarketPage() {
       setMyHandles(handleRes.usernames);
       setMyPasses(passRes.passes ?? []);
     } catch (e: any) {
+      if (e.message.includes('401') || e.message.includes('token')) return;
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, [tab, user]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -105,6 +107,7 @@ export default function MarketPage() {
   const handleCreateHandle = async () => {
     setHandleError('');
     if (!newHandle) return;
+    setLoading(true);
     try {
       await api.usernames.create({ handle: newHandle });
       toast(`Handle @${newHandle.toLowerCase()} vytvořen!`);
@@ -113,6 +116,7 @@ export default function MarketPage() {
       setHandleAvail(null);
       loadData();
     } catch (e: any) { setHandleError(e.message); }
+    finally { setLoading(false); }
   };
 
   const handleDelete = async (id: string, handle: string) => {
@@ -219,7 +223,7 @@ export default function MarketPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-st-gold font-mono">{parseFloat(l.price).toFixed(2)}</p>
+                    <p className="text-xl font-bold text-st-gold font-mono">{parseFloat(l.price.toString()).toFixed(2)}</p>
                     <p className="text-xs text-text-muted">ST</p>
                   </div>
                 </div>
@@ -230,8 +234,12 @@ export default function MarketPage() {
                     Stáhnout inzerci
                   </button>
                 ) : (
-                  <button onClick={() => handleBuy(l.id)} className="btn-primary text-xs w-full py-2">
-                    Koupit za {parseFloat(l.price).toFixed(2)} ST
+                  <button 
+                    onClick={() => handleBuy(l.id)} 
+                    className="btn-primary text-xs w-full py-2 flex items-center justify-center gap-2"
+                    disabled={loading}
+                  >
+                    {loading ? 'Zpracovávám...' : `Koupit za ${parseFloat(l.price.toString()).toFixed(2)} ST`}
                   </button>
                 )}
               </div>

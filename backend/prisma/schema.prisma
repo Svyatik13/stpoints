@@ -337,12 +337,12 @@ model MarketListing {
   status       ListingStatus @default(ACTIVE)
 
   sellerId     String        @map("seller_id")
-  seller       User          @relation("marketSeller", fields: [sellerId], references: [id])
+  seller       User          @relation("marketSeller", fields: [sellerId], references: [id], onDelete: Cascade)
 
   // What is for sale
   passId       String?       @map("pass_id")        // UserPass id
   usernameId   String?       @unique @map("username_id")  // Username id
-  username     Username?     @relation("listingUsername", fields: [usernameId], references: [id])
+  username     Username?     @relation("listingUsername", fields: [usernameId], references: [id], onDelete: Cascade)
 
   // Purchase
   buyerId      String?       @map("buyer_id")

@@ -59,9 +59,20 @@ export async function registerUser(input: RegisterInput): Promise<{ user: any; t
 
     // Generate and save address from new user ID
     const address = walletAddress(newUser.id);
+    const canSellAt = new Date();
+    canSellAt.setHours(canSellAt.getHours() + 24); // 24h market cooldown
+
     const updatedUser = await tx.user.update({
       where: { id: newUser.id },
-      data: { address },
+      data: { 
+        address,
+        usernames: {
+          create: {
+            handle: newUser.username.toLowerCase(),
+            canSellAt,
+          }
+        }
+      },
       select: {
         id: true,
         username: true,
