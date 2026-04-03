@@ -102,19 +102,31 @@ app.listen(env.port, async () => {
   startGiveawayCron();
 
   // Seed default data if empty
-  await seedDefaults();
+  await seedDefaults().catch(e => logger.error('Seed defaults failed:', e));
+  
+  // Seed achievements
+  await seedAchievements().catch(e => logger.error('Seed achievements failed:', e));
 
-  // Market payout job: process 2h delayed ST transfers every 5 min
-  setInterval(processPendingPayouts, 5 * 60 * 1000);
-  processPendingPayouts(); // run immediately on startup
-
-  // Vault payouts job: check for unlocked stakes every minute
-  setInterval(processVaultPayouts, 60 * 1000);
-  processVaultPayouts();
-
-  // Auction settlement job: check for expired auctions every minute
-  setInterval(processExpiredAuctions, 60 * 1000);
-  processExpiredAuctions();
+  // Background jobs: run after a short delay for DB stability
+  setTimeout(async () => {
+    try {
+      // Market payout job: process 2h delayed ST transfers every 5 min
+      setInterval(processPendingPayouts, 5 * 60 * 1000);
+      await processPendingPayouts();
+      
+      // Vault payouts job: check for unlocked stakes every minute
+      setInterval(processVaultPayouts, 60 * 1000);
+      await processVaultPayouts();
+      
+      // Auction settlement job: check for expired auctions every minute
+      setInterval(processExpiredAuctions, 60 * 1000);
+      await processExpiredAuctions();
+      
+      logger.success('✅ Background jobs initialized.');
+    } catch (e) {
+      logger.error('Failed to initialize background jobs:', e);
+    }
+  }, 1000);
 });
 
 export default app;
