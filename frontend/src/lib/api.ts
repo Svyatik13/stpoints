@@ -204,9 +204,10 @@ export const api = {
   market: {
     list: (type?: string) => request<{ listings: any[] }>(`/market${type ? `?type=${type}` : ''}`),
     my: () => request<{ listings: any[] }>('/market/my'),
-    create: (body: { type: string; price: string; passId?: string; usernameId?: string }) =>
+    create: (body: { type: string; price: string; passId?: string; usernameId?: string; isAuction?: boolean; durationHours?: number; minIncrement?: string }) =>
       request<{ listing: any }>('/market', { method: 'POST', body }),
     buy: (id: string) => request<{ listing: any; message: string }>(`/market/${id}/buy`, { method: 'POST' }),
+    bid: (id: string, amount: string) => request<{ listing: any; message: string }>(`/market/${id}/bid`, { method: 'POST', body: { amount } }),
     cancel: (id: string) => request<{ success: boolean }>(`/market/${id}`, { method: 'DELETE' }),
   },
 
@@ -221,6 +222,13 @@ export const api = {
   terminal: {
     access: () => request<any>('/terminal/access'),
     command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
+  },
+  
+  // ── Vault ──
+  vault: {
+    get: () => request<{ stakes: any[] }>('/vault'),
+    stake: (body: { amount: string | number; durationDays: number }) => 
+      request<any>('/vault/stake', { method: 'POST', body }),
   },
 };
 

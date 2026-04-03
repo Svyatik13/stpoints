@@ -22,6 +22,8 @@ export async function getListings(req: Request, res: Response, next: NextFunctio
       include: {
         seller: { select: { username: true, address: true } },
         username: { select: { handle: true } },
+        buyer: { select: { username: true } },
+        _count: { select: { bids: true } },
       },
     }).catch(err => {
       logger.error('Market listing findMany failed:', err);
@@ -36,14 +38,19 @@ export async function getListings(req: Request, res: Response, next: NextFunctio
 export async function createListing(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user!.userId;
-    const { type, price, passId, usernameId } = z.object({
+    const { type, price, passId, usernameId, isAuction, durationHours, minIncrement } = z.object({
       type: z.enum(['MYTHIC_PASS', 'USERNAME']),
       price: z.string().refine(v => parseFloat(v) >= 1, 'Minimální cena je 1 ST'),
       passId: z.string().optional(),
       usernameId: z.string().optional(),
+      isAuction: z.boolean().optional().default(false),
+      durationHours: z.number().min(1).max(168).optional(), // Max 7 days
+      minIncrement: z.string().optional().default('1'),
     }).parse(req.body);
 
     const priceDecimal = new Decimal(price);
+    const endsAt = isAuction && durationHours ? new Date(Date.now() + durationHours * 3600000) : null;
+    const incrementDecimal = new Decimal(minIncrement);
 
     if (type === 'MYTHIC_PASS') {
       if (!passId) throw new AppError('Musíte zadat ID passu.', 400);
@@ -56,7 +63,16 @@ export async function createListing(req: Request, res: Response, next: NextFunct
       if (existing) throw new AppError('Tento pass je již na tržišti.', 409);
 
       const listing = await prisma.marketListing.create({
-        data: { type: 'MYTHIC_PASS', price: priceDecimal, sellerId: userId, passId },
+        data: { 
+          type: 'MYTHIC_PASS', 
+          price: priceDecimal, 
+          sellerId: userId, 
+          passId,
+          isAuction,
+          endsAt,
+          minIncrement: isAuction ? incrementDecimal : null,
+          startingPrice: isAuction ? priceDecimal : null,
+        },
         include: { seller: { select: { username: true } } },
       });
       return res.status(201).json({ listing });
@@ -76,7 +92,16 @@ export async function createListing(req: Request, res: Response, next: NextFunct
       if (existing) throw new AppError('Tento handle je již na tržišti.', 409);
 
       const listing = await prisma.marketListing.create({
-        data: { type: 'USERNAME', price: priceDecimal, sellerId: userId, usernameId },
+        data: { 
+          type: 'USERNAME', 
+          price: priceDecimal, 
+          sellerId: userId, 
+          usernameId,
+          isAuction,
+          endsAt,
+          minIncrement: isAuction ? incrementDecimal : null,
+          startingPrice: isAuction ? priceDecimal : null,
+        },
         include: { seller: { select: { username: true } }, username: { select: { handle: true } } },
       });
       return res.status(201).json({ listing });
@@ -142,6 +167,125 @@ export async function buyListing(req: Request, res: Response, next: NextFunction
 
     logger.info(`Market: listing ${id} bought by ${buyerId}, ST payout scheduled`);
     res.json({ listing: result, message: 'Koupě úspěšná! Prodávající dostane ST po 2 hodinách.' });
+  } catch (error) { next(error); }
+}
+
+// POST /market/:id/bid — place a bid
+export async function placeBid(req: Request, res: Response, next: NextFunction) {
+  try {
+    const bidderId = req.user!.userId;
+    const { id } = req.params;
+    const { amount } = z.object({
+      amount: z.string().refine(v => parseFloat(v) > 0, 'Částka musí být kladná'),
+    }).parse(req.body);
+
+    const bidAmount = new Decimal(amount);
+
+    const result = await prisma.$transaction(async (tx: any) => {
+      const listing = await tx.marketListing.findUnique({
+        where: { id },
+        include: { bids: { orderBy: { amount: 'desc' }, take: 1 }, username: true },
+      });
+
+      if (!listing || listing.status !== 'ACTIVE' || !listing.isAuction) {
+        throw new AppError('Aukce nenalezena nebo již není aktivní.', 404);
+      }
+      if (listing.endsAt && new Date() > listing.endsAt) {
+        throw new AppError('Aukce již skončila.', 400);
+      }
+      if (listing.sellerId === bidderId) {
+        throw new AppError('Nemůžete přihazovat ve vlastní aukci.', 400);
+      }
+
+      const currentHighest = listing.bids[0];
+      const minRequired = currentHighest 
+        ? new Decimal(currentHighest.amount.toString()).add(new Decimal(listing.minIncrement?.toString() || '1'))
+        : new Decimal(listing.price.toString());
+
+      if (bidAmount.lt(minRequired)) {
+        throw new AppError(`Minimální příhoz je ${minRequired} ST.`, 400);
+      }
+
+      const bidder = await tx.user.findUniqueOrThrow({ where: { id: bidderId }, select: { balance: true } });
+      const bidderBalance = new Decimal(bidder.balance.toString());
+
+      if (bidderBalance.lt(bidAmount)) {
+        throw new AppError(`Nedostatečný zůstatek. Potřebujete ${bidAmount} ST.`, 403);
+      }
+
+      // 1. Refund previous highest bidder if exists
+      if (currentHighest) {
+        const prevBidder = await tx.user.findUnique({ where: { id: currentHighest.bidderId }, select: { balance: true } });
+        if (prevBidder) {
+          const prevBidderBalance = new Decimal(prevBidder.balance.toString());
+          const refundAmount = new Decimal(currentHighest.amount.toString());
+
+          await tx.user.update({
+            where: { id: currentHighest.bidderId },
+            data: { balance: { increment: refundAmount } },
+          });
+
+          await tx.transaction.create({
+            data: {
+              type: 'AUCTION_REFUND',
+              amount: refundAmount,
+              description: `Vrácení přehozené nabídky: ${listing.type === 'USERNAME' ? `@${listing.username?.handle}` : 'Mythic Pass'}`,
+              receiverId: currentHighest.bidderId,
+              senderId: 'SYSTEM',
+              balanceBefore: prevBidderBalance,
+              balanceAfter: prevBidderBalance.add(refundAmount),
+            },
+          });
+        }
+      }
+
+      // 2. Deduct ST from new bidder
+      await tx.user.update({
+        where: { id: bidderId },
+        data: { balance: { decrement: bidAmount } },
+      });
+
+      await tx.transaction.create({
+        data: {
+          type: 'MARKET_PURCHASE',
+          amount: bidAmount,
+          description: `Příhoz v aukci: ${listing.type === 'USERNAME' ? `@${listing.username?.handle}` : 'Mythic Pass'}`,
+          senderId: bidderId,
+          receiverId: listing.sellerId,
+          balanceBefore: bidderBalance,
+          balanceAfter: bidderBalance.sub(bidAmount),
+        },
+      });
+
+      // 3. Create Bid record
+      const bid = await tx.bid.create({
+        data: {
+          listingId: id,
+          bidderId,
+          amount: bidAmount,
+        },
+      });
+
+      // 4. Update Listing (Current Bid + Anti-Snipe)
+      let newEndsAt = listing.endsAt;
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      if (listing.endsAt && (listing.endsAt.getTime() - Date.now()) < FIVE_MINUTES) {
+        newEndsAt = new Date(Date.now() + FIVE_MINUTES);
+      }
+
+      const updated = await tx.marketListing.update({
+        where: { id },
+        data: {
+          currentHighestBid: bidAmount,
+          endsAt: newEndsAt,
+          buyerId: bidderId, // Track current winner
+        },
+      });
+
+      return { updated, bid };
+    });
+
+    res.json({ message: 'Příhoz úspěšný!', listing: result.updated });
   } catch (error) { next(error); }
 }
 
@@ -224,5 +368,64 @@ export async function processPendingPayouts() {
     }
   } catch (e) {
     logger.error(`Market payout job error: ${e}`);
+  }
+}
+
+// Background job: settle expired auctions
+export async function processExpiredAuctions() {
+  try {
+    const expired = await prisma.marketListing.findMany({
+      where: {
+        isAuction: true,
+        status: 'ACTIVE',
+        endsAt: { lte: new Date() },
+      },
+      include: {
+        bids: { orderBy: { amount: 'desc' }, take: 1 },
+      },
+    });
+
+    for (const listing of expired) {
+      try {
+        await prisma.$transaction(async (tx: any) => {
+          const highestBid = listing.bids[0];
+
+          if (!highestBid) {
+            // No bids -> Cancel auction
+            await tx.marketListing.update({ where: { id: listing.id }, data: { status: 'CANCELLED' } });
+            logger.info(`Auction ${listing.id} expired with no bids. Cancelled.`);
+            return;
+          }
+
+          const soldAt = new Date();
+          const stDueAt = new Date(soldAt.getTime() + ST_PAYOUT_DELAY_MS);
+
+          // Asset transfer to winner
+          if (listing.type === 'MYTHIC_PASS' && listing.passId) {
+            await tx.userPass.update({ where: { id: listing.passId }, data: { userId: highestBid.bidderId } });
+          } else if (listing.type === 'USERNAME' && listing.usernameId) {
+            await tx.username.update({ where: { id: listing.usernameId }, data: { ownerId: highestBid.bidderId } });
+          }
+
+          // Mark as sold
+          await tx.marketListing.update({
+            where: { id: listing.id },
+            data: { 
+              status: 'SOLD', 
+              buyerId: highestBid.bidderId, 
+              soldAt, 
+              stDueAt,
+              price: highestBid.amount // Set final price to highest bid
+            },
+          });
+
+          logger.info(`Auction ${listing.id} settled. Winner: ${highestBid.bidderId}, Price: ${highestBid.amount}`);
+        });
+      } catch (e) {
+        logger.error(`Settle auction failed for ${listing.id}: ${e}`);
+      }
+    }
+  } catch (e) {
+    logger.error(`Settle auction job error: ${e}`);
   }
 }

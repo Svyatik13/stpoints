@@ -11,6 +11,34 @@ function formatDate(d: string) {
   return new Date(d).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+function CountdownTimer({ endsAt }: { endsAt: string }) {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const update = () => {
+      const diff = new Date(endsAt).getTime() - Date.now();
+      if (diff <= 0) {
+        setTimeLeft('Ukončeno');
+        return;
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      let str = '';
+      if (days > 0) str += `${days}d `;
+      str += `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      setTimeLeft(str);
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [endsAt]);
+
+  return <span className="font-mono font-bold text-st-red">{timeLeft}</span>;
+}
+
 export default function MarketPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('passes');
@@ -29,6 +57,11 @@ export default function MarketPage() {
   const [checkingAvail, setCheckingAvail] = useState(false);
   const [showHandleModal, setShowHandleModal] = useState(false);
   const [handleError, setHandleError] = useState('');
+
+  // Auction creation state
+  const [isAuction, setIsAuction] = useState(false);
+  const [duration, setDuration] = useState(24);
+  const [increment, setIncrement] = useState('1');
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -79,6 +112,16 @@ export default function MarketPage() {
     } catch (e: any) { toast(e.message, true); }
   };
 
+  const handleBid = async (id: string, currentPrice: number, increment: number) => {
+    const amount = prompt(`Zadejte vaši nabídku (Min: ${currentPrice + increment} ST):`, (currentPrice + increment).toString());
+    if (!amount) return;
+    try {
+      const r = await api.market.bid(id, amount);
+      toast(r.message);
+      loadData();
+    } catch (e: any) { toast(e.message, true); }
+  };
+
   const handleCancel = async (id: string) => {
     try {
       await api.market.cancel(id);
@@ -90,16 +133,21 @@ export default function MarketPage() {
   const handleCreateListing = async () => {
     if (!sellPrice) return toast('Zadejte cenu.', true);
     try {
-      if (tab === 'passes') {
-        if (!sellPassId) return toast('Vyberte pass.', true);
-        await api.market.create({ type: 'MYTHIC_PASS', price: sellPrice, passId: sellPassId });
-      } else {
-        if (!sellHandleId) return toast('Vyberte handle.', true);
-        await api.market.create({ type: 'USERNAME', price: sellPrice, usernameId: sellHandleId });
-      }
-      toast('Inzerce vytvořena!');
+      const payload = {
+        type: tab === 'passes' ? 'MYTHIC_PASS' : 'USERNAME',
+        price: sellPrice,
+        passId: tab === 'passes' ? sellPassId : undefined,
+        usernameId: tab === 'handles' ? sellHandleId : undefined,
+        isAuction,
+        durationHours: isAuction ? duration : undefined,
+        minIncrement: isAuction ? increment : undefined,
+      };
+      
+      await api.market.create(payload as any);
+      toast(isAuction ? 'Aukce vytvořena!' : 'Inzerce vytvořena!');
       setShowSell(false);
       setSellPrice(''); setSellPassId(''); setSellHandleId('');
+      setIsAuction(false);
       loadData();
     } catch (e: any) { toast(e.message, true); }
   };
@@ -213,41 +261,84 @@ export default function MarketPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {listings.map((l: any) => (
-              <div key={l.id} className="glass-card-static p-5 flex flex-col gap-3">
+              <div key={l.id} className={`glass-card-static p-5 flex flex-col gap-3 relative overflow-hidden ${l.isAuction ? 'border-st-gold/30' : ''}`}>
+                {l.isAuction && (
+                  <div className="absolute top-0 left-0 bg-st-gold text-black text-[10px] font-bold px-2 py-0.5 rounded-br-lg uppercase tracking-tighter">
+                    Aukce
+                  </div>
+                )}
+                
                 <div className="flex items-start justify-between">
                   <div>
                     {l.type === 'MYTHIC_PASS' ? (
                       <span className="text-2xl">🌈</span>
                     ) : (
-                      <span className="font-mono font-bold text-st-purple text-lg">@{l.username?.handle}</span>
+                      <div className="flex flex-col">
+                        <span className="font-mono font-bold text-st-purple text-lg">@{l.username?.handle}</span>
+                      </div>
                     )}
                     <p className="text-xs text-text-muted mt-1">
                       Prodávající: <span className="text-text-secondary">{l.seller?.username}</span>
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-st-gold font-mono">{parseFloat(l.price.toString()).toFixed(2)}</p>
+                    <p className="text-xl font-bold text-st-gold font-mono">
+                      {parseFloat((l.currentHighestBid || l.price).toString()).toFixed(2)}
+                    </p>
                     <p className="text-xs text-text-muted">ST</p>
                   </div>
                 </div>
-                <p className="text-xs text-text-muted">⏱ ST dorazí prodávajícímu za 2 hod po koupi</p>
 
-                {l.sellerId === user.id ? (
-                  <button onClick={() => handleCancel(l.id)} className="btn-secondary text-xs w-full py-2">
-                    Stáhnout inzerci
-                  </button>
+                {l.isAuction ? (
+                  <div className="bg-white/5 rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-text-muted">Končí za:</span>
+                      <CountdownTimer endsAt={l.endsAt} />
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-text-muted">Nabídky:</span>
+                      <span className="text-text-secondary font-mono">{l._count?.bids || 0}</span>
+                    </div>
+                    {l.buyer && (
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-text-muted">Aktuální vítěz:</span>
+                        <span className="text-st-cyan">@{l.buyer.username}</span>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <button 
-                    onClick={() => handleBuy(l.id)} 
-                    className="btn-primary text-xs w-full py-2 flex items-center justify-center gap-2"
-                    disabled={loading}
-                  >
-                    {loading ? 'Zpracovávám...' : `Koupit za ${parseFloat(l.price.toString()).toFixed(2)} ST`}
-                  </button>
+                  <p className="text-[10px] text-text-muted bg-white/5 p-2 rounded italic">
+                    ⏱ Pevná cena. ST dorazí prodávajícímu za 2 hod po koupi.
+                  </p>
                 )}
+
+                <div className="mt-auto pt-2">
+                  {l.sellerId === user.id ? (
+                    <button onClick={() => handleCancel(l.id)} className="btn-secondary text-xs w-full py-2">
+                      Stáhnout inzerci
+                    </button>
+                  ) : l.isAuction ? (
+                    <button 
+                      onClick={() => handleBid(l.id, parseFloat((l.currentHighestBid || l.price).toString()), parseFloat(l.minIncrement?.toString() || '1'))} 
+                      className="btn-primary text-xs w-full py-2 flex items-center justify-center gap-2"
+                      disabled={loading || (l.endsAt && new Date() > new Date(l.endsAt))}
+                    >
+                      {l.endsAt && new Date() > new Date(l.endsAt) ? 'Aukce skončila' : 'Přihodit'}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleBuy(l.id)} 
+                      className="btn-primary text-xs w-full py-2 flex items-center justify-center gap-2"
+                      disabled={loading}
+                    >
+                      Koupit za {parseFloat(l.price.toString()).toFixed(2)} ST
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+        )}
         )}
       </div>
 
@@ -303,11 +394,48 @@ export default function MarketPage() {
 
               <div>
                 <label className="text-sm text-text-secondary block mb-1">Cena (ST)</label>
-                <input type="number" min="1" step="0.5" value={sellPrice} onChange={e => setSellPrice(e.target.value)} className="glass-input" placeholder="např. 50" />
+                <input type="number" min="1" step="0.5" value={sellPrice} onChange={e => setSellPrice(e.target.value)} className="glass-input" placeholder={isAuction ? "Počáteční cena" : "Pevná cena"} />
               </div>
 
-              <div className="flex gap-3">
-                <button onClick={() => setShowSell(false)} className="btn-secondary flex-1 py-2 text-sm">Zrušit</button>
+              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                <input 
+                  type="checkbox" 
+                  id="isAuction"
+                  checked={isAuction} 
+                  onChange={e => setIsAuction(e.target.checked)} 
+                  className="w-4 h-4 accent-st-gold"
+                />
+                <label htmlFor="isAuction" className="text-sm font-bold text-st-gold cursor-pointer select-none">
+                  ⚡ Formát Aukce
+                </label>
+              </div>
+
+              {isAuction && (
+                <div className="space-y-3 animate-fade-in">
+                  <div>
+                    <label className="text-sm text-text-secondary block mb-1">Doba trvání (hodiny)</label>
+                    <select value={duration} onChange={e => setDuration(parseInt(e.target.value))} className="glass-input">
+                      <option value="1">1 hodina</option>
+                      <option value="6">6 hodin</option>
+                      <option value="12">12 hodin</option>
+                      <option value="24">24 hodin (1 den)</option>
+                      <option value="48">48 hodin (2 dny)</option>
+                      <option value="72">72 hodin (3 dny)</option>
+                      <option value="168">168 hodin (7 dní)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-text-secondary block mb-1">Minimální příhoz (ST)</label>
+                    <input type="number" min="0.1" step="0.1" value={increment} onChange={e => setIncrement(e.target.value)} className="glass-input" />
+                  </div>
+                  <p className="text-[10px] text-text-muted italic">
+                    * Bids placed in the last 5 minutes extend the auction by 5 more minutes.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setShowSell(false); setIsAuction(false); }} className="btn-secondary flex-1 py-2 text-sm">Zrušit</button>
                 <button onClick={handleCreateListing} className="btn-primary flex-1 py-2 text-sm">Vytvořit</button>
               </div>
             </div>

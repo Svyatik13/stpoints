@@ -12,6 +12,7 @@ router.use(authMiddleware);
 router.get('/my', marketController.getMyListings);
 router.post('/', marketController.createListing);
 router.post('/:id/buy', marketController.buyListing);
+router.post('/:id/bid', marketController.placeBid);
 router.delete('/:id', marketController.cancelListing);
 
 export default router;
