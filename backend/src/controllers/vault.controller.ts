@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
@@ -69,7 +69,7 @@ export async function createStake(req: Request, res: Response): Promise<void> {
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user) throw new Error('Uživatel nenalezen.');
 
-      const buyerBalance = new Decimal(user.balance.toString());
+      const buyerBalance = new Prisma.Decimal(user.balance.toString());
       if (buyerBalance.lt(amountNum)) {
         throw new Error('Nedostatečný zůstatek pro uzamčení do trezoru.');
       }
@@ -160,7 +160,7 @@ export async function processVaultPayouts() {
         if (!user) return;
 
         const balanceBefore = user.balance;
-        const balanceAfter = new Decimal(user.balance.toString()).add(totalPayout);
+        const balanceAfter = new Prisma.Decimal(user.balance.toString()).add(totalPayout);
         
         await tx.user.update({
           where: { id: stake.userId },
@@ -207,8 +207,8 @@ export async function earlyUnstake(req: Request, res: Response): Promise<void> {
       if (stake.status !== 'ACTIVE') throw new AppError('Tento trezor již není aktivní.', 400);
 
       // Early unstake calculation: Full principle + (yield * 0.75)
-      const principal = new Decimal(stake.amount.toString());
-      const expectedYield = new Decimal(stake.expectedYield.toString());
+      const principal = new Prisma.Decimal(stake.amount.toString());
+      const expectedYield = new Prisma.Decimal(stake.expectedYield.toString());
       const penaltyAmount = expectedYield.mul(0.25);
       const finalYield = expectedYield.sub(penaltyAmount);
       

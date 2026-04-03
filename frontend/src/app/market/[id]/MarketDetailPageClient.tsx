@@ -221,7 +221,7 @@ export default function MarketDetailPageClient({ id }: { id: string }) {
                     </div>
                   )}
 
-                  {listing.sellerId === user?.userId ? (
+                  {listing.sellerId === user?.id ? (
                     <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
                       <p className="text-sm font-bold text-text-muted mb-2">Toto je váš inzerát.</p>
                       {(!listing.isAuction || listing.bids?.length === 0) && (

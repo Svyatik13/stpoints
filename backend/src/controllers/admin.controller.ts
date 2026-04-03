@@ -284,7 +284,7 @@ export async function createCase(req: Request, res: Response, next: NextFunction
 
 export async function updateCase(req: Request, res: Response, next: NextFunction) {
   try {
-    const { caseId } = req.params;
+    const caseId = req.params.caseId as string;
     const data = z.object({
       name: z.string().min(1).max(80).optional(),
       description: z.string().optional(),
@@ -299,7 +299,7 @@ export async function updateCase(req: Request, res: Response, next: NextFunction
 
 export async function deleteCase(req: Request, res: Response, next: NextFunction) {
   try {
-    const { caseId } = req.params;
+    const caseId = req.params.caseId as string;
     await prisma.case.delete({ where: { id: caseId } });
     logger.info(`ADMIN: Case deleted: ${caseId}`);
     res.json({ success: true });
@@ -308,7 +308,7 @@ export async function deleteCase(req: Request, res: Response, next: NextFunction
 
 export async function addCaseItem(req: Request, res: Response, next: NextFunction) {
   try {
-    const { caseId } = req.params;
+    const caseId = req.params.caseId as string;
     const data = z.object({
       type: z.enum(['ST_REWARD', 'MYTHIC_PASS']),
       label: z.string().min(1).max(50),
@@ -322,7 +322,7 @@ export async function addCaseItem(req: Request, res: Response, next: NextFunctio
 
 export async function updateCaseItem(req: Request, res: Response, next: NextFunction) {
   try {
-    const { itemId } = req.params;
+    const itemId = req.params.itemId as string;
     const data = z.object({
       label: z.string().min(1).max(50).optional(),
       type: z.enum(['ST_REWARD', 'MYTHIC_PASS']).optional(),
@@ -336,7 +336,7 @@ export async function updateCaseItem(req: Request, res: Response, next: NextFunc
 
 export async function deleteCaseItem(req: Request, res: Response, next: NextFunction) {
   try {
-    const { itemId } = req.params;
+    const itemId = req.params.itemId as string;
     await prisma.caseItem.delete({ where: { id: itemId } });
     res.json({ success: true });
   } catch (error) { next(error); }

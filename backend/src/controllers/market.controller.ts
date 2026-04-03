@@ -56,7 +56,7 @@ export async function getListings(req: Request, res: Response, next: NextFunctio
 // GET /market/:id — single listing details with bid history (including usernames)
 export async function getListing(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const listing = await prisma.marketListing.findUnique({
       where: { id },
       include: {

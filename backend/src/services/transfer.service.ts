@@ -38,17 +38,11 @@ export async function transferST(senderId: string, recipientUsername: string, am
     });
     recipient = usernameRecord?.owner ?? null;
   } else {
-    // Try username first, then walletId
+    // Try username
     recipient = await prisma.user.findUnique({
       where: { username: input },
       select: { id: true, username: true, isActive: true },
     });
-    if (!recipient) {
-      recipient = await prisma.user.findUnique({
-        where: { walletId: input },
-        select: { id: true, username: true, isActive: true },
-      });
-    }
   }
 
   if (!recipient) {
