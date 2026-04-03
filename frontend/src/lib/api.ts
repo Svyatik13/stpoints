@@ -201,7 +201,6 @@ export const api = {
     check: (handle: string) => request<{ available: boolean }>(`/usernames/check?handle=${handle}`),
     delete: (id: string) => request<{ success: boolean }>(`/usernames/${id}`, { method: 'DELETE' }),
     profile: (handle: string) => request<{ profile: any }>(`/users/profile/${handle}`),
-    tip: (handle: string, amount: string, message?: string) => request<{ message: string; balance: string }>(`/users/tip/${handle}`, { method: 'POST', body: { amount, message } }),
   },
 
   // ── Market ──
@@ -230,6 +229,8 @@ export const api = {
     profile: (handle: string) => request<{ profile: any }>(`/users/profile/${handle}`),
     recordReferralClick: (username: string) =>
       request<{ success: boolean }>(`/users/referral-click/${username}`, { method: 'POST' }),
+    tip: (handle: string, amount: string, message?: string) => 
+      request<{ message: string; balance: string }>(`/users/tip/${handle}`, { method: 'POST', body: { amount, message } }),
   },
 
   // ── Terminal ──
