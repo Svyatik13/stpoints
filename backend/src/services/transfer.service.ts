@@ -24,10 +24,32 @@ export async function transferST(senderId: string, recipientUsername: string, am
     throw new AppError('Minimální převod je 0.000001 ST.', 400);
   }
 
-  const recipient = await prisma.user.findUnique({
-    where: { username: recipientUsername },
-    select: { id: true, username: true, isActive: true },
-  });
+  // Resolve recipient by username, @handle, or walletId
+  let recipient: { id: string; username: string; isActive: boolean } | null = null;
+
+  const input = recipientUsername.trim();
+
+  if (input.startsWith('@')) {
+    // Lookup by handle
+    const handle = input.slice(1).toLowerCase();
+    const usernameRecord = await prisma.username.findUnique({
+      where: { handle },
+      select: { owner: { select: { id: true, username: true, isActive: true } } },
+    });
+    recipient = usernameRecord?.owner ?? null;
+  } else {
+    // Try username first, then walletId
+    recipient = await prisma.user.findUnique({
+      where: { username: input },
+      select: { id: true, username: true, isActive: true },
+    });
+    if (!recipient) {
+      recipient = await prisma.user.findUnique({
+        where: { walletId: input },
+        select: { id: true, username: true, isActive: true },
+      });
+    }
+  }
 
   if (!recipient) {
     throw new AppError('Příjemce nenalezen.', 404);
