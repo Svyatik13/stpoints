@@ -65,7 +65,7 @@ export async function createStake(req: Request, res: Response): Promise<void> {
     // Vypočet yield
     const expectedYield = amountNum * (apy / 100) * (duration / 365);
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user) throw new Error('Uživatel nenalezen.');
 
@@ -149,7 +149,7 @@ export async function processVaultPayouts() {
     if (readyStakes.length === 0) return;
 
     for (const stake of readyStakes) {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         // Kontrola jestli neni uz oznacen
         const currentStake = await tx.vaultStake.findUnique({ where: { id: stake.id } });
         if (!currentStake || currentStake.status !== 'ACTIVE') return;
@@ -201,7 +201,7 @@ export async function earlyUnstake(req: Request, res: Response): Promise<void> {
     const userId = req.user!.userId;
     const { id } = req.params;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       const stake = await tx.vaultStake.findUnique({ where: { id } });
       if (!stake || stake.userId !== userId) throw new AppError('Trezor nenalezen.', 404);
       if (stake.status !== 'ACTIVE') throw new AppError('Tento trezor již není aktivní.', 400);
