@@ -11,10 +11,9 @@ cd "$REPO_DIR"
 git pull origin main >> "$LOG" 2>&1
 NEW_HEAD=$(git rev-parse HEAD)
 
-# 1. Lock check
+# 1. Lock & Disk Cleanup
 if [ -f "$HOME/.deploy_in_progress" ]; then
-  # If lock is older than 10 mins, clear it (panic recovery)
-  if test "$(find "$HOME/.deploy_in_progress" -mmin +10)"; then
+  if test "$(find "$HOME/.deploy_in_progress" -mmin +15)"; then
     rm -f "$HOME/.deploy_in_progress"
   else
     exit 0
@@ -23,25 +22,18 @@ fi
 touch "$HOME/.deploy_in_progress"
 trap 'rm -f "$HOME/.deploy_in_progress"' EXIT
 
+# Panic Disk Cleanup (Ensure we have space to start)
+rm -rf "$REPO_DIR/frontend/node_modules" "$REPO_DIR/frontend/.next"
+npm cache clean --force >> "$LOG" 2>&1
+
 # Pull latest
 cd "$REPO_DIR"
 git pull origin main >> "$LOG" 2>&1
 NEW_HEAD=$(git rev-parse HEAD)
 
-# Check if already deployed this version (unless forced)
-if [ -f "$MARKER" ] && [ "$(cat $MARKER)" = "$NEW_HEAD" ]; then
-  # No changes — just ensure backend is alive
-  if ! pgrep -f "tsx src/index.ts" > /dev/null 2>&1; then
-    bash "$HOME/start_backend.sh"
-  fi
-  exit 0
-fi
-
-echo "$(date) — Deploying $NEW_HEAD (FULL)" >> "$LOG"
-
 # 2. Deploy frontend (Build on server)
 cd "$REPO_DIR/frontend"
-npm install >> "$LOG" 2>&1
+npm install --no-audit --no-fund >> "$LOG" 2>&1
 npm run build >> "$LOG" 2>&1
 
 if [ -d "out" ]; then
@@ -53,6 +45,9 @@ else
   echo "$(date) — Frontend build FAILED ❌" >> "$LOG"
 fi
 
+# IMPORTANT: Free up space by destroying build artifacts
+rm -rf node_modules .next
+
 # 3. Deploy backend
 cd "$REPO_DIR"
 cp -rf "$REPO_DIR/backend/src" "$BACKEND_DIR/"
@@ -62,7 +57,7 @@ cp -f "$REPO_DIR/backend/package-lock.json" "$BACKEND_DIR/"
 cp -f "$REPO_DIR/backend/tsconfig.json" "$BACKEND_DIR/"
 
 cd "$BACKEND_DIR"
-npm install --production=false >> "$LOG" 2>&1
+npm install --production=false --no-audit --no-fund >> "$LOG" 2>&1
 npx prisma generate >> "$LOG" 2>&1
 npx prisma db push --accept-data-loss >> "$LOG" 2>&1
 
