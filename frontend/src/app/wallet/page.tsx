@@ -28,6 +28,16 @@ export default function WalletPage() {
   const { toast } = useToast();
   const { t } = useI18n();
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (showTransfer) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showTransfer]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace('/auth/login');
@@ -150,8 +160,8 @@ export default function WalletPage() {
 
         {/* Transfer Modal */}
         {showTransfer && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowTransfer(false)}>
-            <div className="glass-card w-full max-w-md p-6 animate-fade-up" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-hidden" onClick={() => setShowTransfer(false)}>
+            <div className="glass-card w-full max-w-md p-6 animate-fade-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h2 className="text-xl font-bold mb-4">📤 {t.wallet.transfer}</h2>
               <div className="space-y-4">
                 <div>
