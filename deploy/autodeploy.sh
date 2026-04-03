@@ -14,6 +14,13 @@ kill_backend() {
     kill -9 "$(cat "$PID_FILE")" > /dev/null 2>&1
     rm -f "$PID_FILE"
   fi
+  # Kill by lsof just to be universally safe against stuck ports
+  if command -v lsof > /dev/null; then
+    lsof -t -i :4000 2>/dev/null | while read pid; do
+      kill -9 "$pid" > /dev/null 2>&1
+      echo "  Killed port 4000 PID $pid" >> "$LOG"
+    done
+  fi
   # Kill by process search (ps is ALWAYS available on Linux)
   ps -u "$USER" -o pid,args 2>/dev/null | grep 'tsx.*index\.ts' | grep -v grep | awk '{print $1}' | while read pid; do
     kill -9 "$pid" > /dev/null 2>&1
@@ -72,7 +79,11 @@ fi
 
 echo "$(date) — New commit $NEW_HEAD — FULL deploy..." >> "$LOG"
 
-# 4. Disk cleanup
+# 4. Nuclear Disk cleanup
+echo "$(date) — Executing Nuclear Cleanup (saving disk space)..." >> "$LOG"
+rm -rf "$REPO_DIR/frontend/node_modules" "$REPO_DIR/frontend/.next"
+rm -rf "$REPO_DIR/backend/node_modules"
+rm -f "$HOME/.npm/_logs/*" 2>/dev/null
 npm cache clean --force >> "$LOG" 2>&1
 
 # 5. Frontend build
