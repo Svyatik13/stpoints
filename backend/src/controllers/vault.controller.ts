@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import prisma from '../utils/prisma';
+import prisma from '../config/database';
+import { Decimal } from '@prisma/client/runtime/library';
 import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
 import { logger } from '../utils/logger';
@@ -65,13 +66,14 @@ export async function createStake(req: Request, res: Response): Promise<void> {
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user) throw new Error('Uživatel nenalezen.');
 
-      if (Number(user.balance) < amountNum) {
+      const buyerBalance = new Decimal(user.balance.toString());
+      if (buyerBalance.lt(amountNum)) {
         throw new Error('Nedostatečný zůstatek pro uzamčení do trezoru.');
       }
 
-      // Odebrat balance
+      // Deduct balance
       const balanceBefore = user.balance;
-      const balanceAfter = Number(user.balance) - amountNum;
+      const balanceAfter = buyerBalance.sub(amountNum);
       
       await tx.user.update({
         where: { id: userId },
@@ -155,7 +157,7 @@ export async function processVaultPayouts() {
         if (!user) return;
 
         const balanceBefore = user.balance;
-        const balanceAfter = Number(user.balance) + totalPayout;
+        const balanceAfter = new Decimal(user.balance.toString()).add(totalPayout);
         
         await tx.user.update({
           where: { id: stake.userId },
