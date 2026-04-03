@@ -70,11 +70,16 @@ rm -rf node_modules .next
 cat <<EOF > "$HOME/start_backend.sh"
 #!/bin/bash
 PID_FILE="\$HOME/backend.pid"
+# AGGRESSIVE KILL
 if [ -f "\$PID_FILE" ]; then
   PID=\$(cat "\$PID_FILE")
-  kill "\$PID" > /dev/null 2>&1
-  sleep 2
+  kill -9 "\$PID" > /dev/null 2>&1
+  rm -f "\$PID_FILE"
 fi
+
+# FALLBACK KILL (Wait for port release)
+pkill -9 -f "tsx src/index.ts" > /dev/null 2>&1
+sleep 5
 
 # Ensure .env is linked and FLUSHED to disk
 if [ -f "\$HOME/.env" ]; then
@@ -87,13 +92,13 @@ cd "\$REPO_DIR/backend"
 nohup ./node_modules/.bin/tsx src/index.ts >> "\$HOME/backend.log" 2>&1 &
 NEW_PID=\$!
 echo "\$NEW_PID" > "\$PID_FILE"
-echo "\$(date) — ST-Points Backend Started with PID \$NEW_PID" >> "\$LOG"
+echo "\$(date) — ST-Points Backend NUCLEAR RESTART with PID \$NEW_PID" >> "\$LOG"
 EOF
 chmod +x "$HOME/start_backend.sh"
 
 # 6. Deploy Backend
 cd "$REPO_DIR/backend"
-# Ensure the .env is present
+# Ensure the .env is present even during the install/generate phase
 if [ -f "$HOME/.env" ]; then cp "$HOME/.env" .env; fi
 
 npm install --no-audit --no-fund >> "$LOG" 2>&1
