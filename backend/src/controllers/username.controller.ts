@@ -90,7 +90,7 @@ export async function deleteUsername(req: Request, res: Response, next: NextFunc
     });
     if (listed) throw new AppError('Handle je momentálně na tržišti. Nejdříve jej stáhněte.', 400);
 
-    await prisma.username.update({ where: { id }, data: { isActive: false } });
+    await prisma.username.delete({ where: { id } });
     res.json({ success: true });
   } catch (error) { next(error); }
 }

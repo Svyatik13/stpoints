@@ -11,8 +11,8 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
     const handle = (req.params.handle as string).toLowerCase().replace('@', '');
 
     // Find by username handle or by username (account name)
-    const username = await prisma.username.findUnique({
-      where: { handle },
+    const username = await prisma.username.findFirst({
+      where: { handle, isActive: true },
       include: { owner: { select: { id: true, username: true, balance: true, createdAt: true, address: true } } },
     });
 
@@ -51,7 +51,7 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
 // POST /users/referral-click/:username — track links
 export async function recordReferralClick(req: Request, res: Response, next: NextFunction) {
   try {
-    const { username } = req.params;
+    const username = req.params.username as string;
 
     const user = await prisma.user.findFirst({
       where: {
