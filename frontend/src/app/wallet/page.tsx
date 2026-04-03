@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -158,9 +159,9 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {/* Transfer Modal */}
-        {showTransfer && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 overflow-hidden" onClick={() => setShowTransfer(false)}>
+        {/* Transfer Modal — portaled to body for proper centering */}
+        {showTransfer && createPortal(
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4" onClick={() => setShowTransfer(false)}>
             <div className="glass-card w-full max-w-md p-6 animate-fade-up max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h2 className="text-xl font-bold mb-4">📤 {t.wallet.transfer}</h2>
               <div className="space-y-4">
@@ -227,7 +228,8 @@ export default function WalletPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Quick Stats */}
