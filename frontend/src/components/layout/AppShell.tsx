@@ -8,6 +8,9 @@ import { api } from '@/lib/api';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   
+  // Detect if we're on a static invite redirect path
+  const isInvite = typeof window !== 'undefined' && window.location.pathname.startsWith('/invite/');
+
   // Universal Redirect Engine for Static Export
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -24,12 +27,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  if (loading) {
+  if (loading || isInvite) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <img src="/logo.png" alt="ST-Points Logo" className="w-16 h-16 object-contain mx-auto mb-4 animate-pulse drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
-          <p className="text-text-secondary text-sm">Načítání systému...</p>
+          <p className="text-text-secondary text-sm">{isInvite ? "Přijímáme pozvánku..." : "Načítání systému..."}</p>
         </div>
       </div>
     );
