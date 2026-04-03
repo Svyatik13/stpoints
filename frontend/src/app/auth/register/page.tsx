@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,7 +36,7 @@ function RegisterForm() {
       const { profile } = await api.users.profile(manualRef);
       if (profile) {
         setIsRefVerified(true);
-        setError(''); // Clear any previous general error if ref is valid
+        setError('');
       }
     } catch (err: any) {
       setRefError('Profil nenalezen.');
@@ -45,6 +45,14 @@ function RegisterForm() {
       setVerifyingRef(false);
     }
   };
+
+  // Auto-fill from URL ref
+  useEffect(() => {
+    if (ref && !manualRef) {
+      setManualRef(ref);
+      setShowManualRef(true);
+    }
+  }, [ref, manualRef]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,21 +82,15 @@ function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
-      <div className="glass-card w-full max-w-md p-8 animate-fade-up">
+    <div className="min-h-screen flex items-center justify-center px-4 py-6">
+      <div className="glass-card w-full max-w-md p-6 animate-fade-up">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <Link href="/" className="inline-block">
-            <img src="/logo.png" alt="ST-Points Logo" className="w-16 h-16 object-contain mx-auto mb-4 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
+            <img src="/logo.png" alt="ST-Points Logo" className="w-12 h-12 object-contain mx-auto mb-2 drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
           </Link>
-          <h1 className="text-2xl font-bold text-text-primary">Registrace</h1>
-          <p className="text-text-secondary text-sm mt-1">Vytvořte si účet v systému ST-Points</p>
-          
-          {ref && (
-            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-st-emerald/10 border border-st-emerald/20 text-st-emerald text-xs font-medium">
-              <span>🎟️</span> Pozvání od: <span className="font-bold">{ref}</span>
-            </div>
-          )}
+          <h1 className="text-xl font-bold text-text-primary">Registrace</h1>
+          <p className="text-text-secondary text-xs mt-1">Vytvořte si účet v systému ST-Points</p>
         </div>
 
         {/* Error */}
@@ -99,7 +101,7 @@ function RegisterForm() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-2">
               Uživatelské jméno
@@ -231,8 +233,8 @@ function RegisterForm() {
                 </button>
               ) : (
                 <div className="space-y-3 animate-fade-in">
-                  <label className="block text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Affiliate kód (nickname/adresa)
+                  <label className="block text-xs font-medium text-text-muted uppercase tracking-wider text-center">
+                    Affiliate kód
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -243,7 +245,7 @@ function RegisterForm() {
                         setRefError('');
                       }}
                       className="glass-input text-sm"
-                      placeholder="např. svyatik"
+                      placeholder="např. vas_nickname"
                     />
                     <button
                       type="button"
