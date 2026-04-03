@@ -75,8 +75,19 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
 
                 <h1 className="text-2xl font-bold text-text-primary">{profile.username}</h1>
 
-                {profile.walletId && (
-                  <p className="text-xs text-text-muted font-mono mt-1">ID: {profile.walletId}</p>
+                {profile.address && (
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    <code className="text-[10px] text-text-muted font-mono bg-white/5 px-2 py-1 rounded border border-glass-border">
+                      {profile.address.slice(0, 6)}...{profile.address.slice(-4)}
+                    </code>
+                    <button 
+                      onClick={() => { navigator.clipboard.writeText(profile.address); toast('success', 'Adresa zkopírována!'); }}
+                      className="text-xs hover:text-text-primary transition-colors grayscale hover:grayscale-0"
+                      title="Kopírovat adresu"
+                    >
+                      📋
+                    </button>
+                  </div>
                 )}
 
                 <p className="text-xs text-text-muted mt-1">

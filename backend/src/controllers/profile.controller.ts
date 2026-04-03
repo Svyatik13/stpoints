@@ -13,6 +13,7 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
         username: true,
         balance: true,
         role: true,
+        referralCount: true,
         createdAt: true,
         lastActiveAt: true,
       },

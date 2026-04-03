@@ -51,7 +51,7 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
 // ── Auth ──
 export const api = {
   auth: {
-    register: (body: { username: string; password: string; passCode: string }) =>
+    register: (body: { username: string; password: string; passCode: string; ref?: string }) =>
       request<{ user: any }>('/auth/register', { method: 'POST', body }),
     login: (body: { username: string; password: string }) =>
       request<{ user: any }>('/auth/login', { method: 'POST', body }),
@@ -66,7 +66,7 @@ export const api = {
   // ── Wallet ──
   wallet: {
     balance: () =>
-      request<{ balance: string; walletId: string | null }>('/wallet/balance'),
+      request<{ balance: string; address: string }>('/wallet/balance'),
     transactions: (page: number = 1, limit: number = 20) =>
       request<any>(`/wallet/transactions?page=${page}&limit=${limit}`),
     price: () =>

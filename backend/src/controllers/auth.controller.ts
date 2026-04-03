@@ -8,6 +8,7 @@ const registerSchema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, 'Uživatelské jméno smí obsahovat pouze písmena, čísla a podtržítka.'),
   password: z.string().min(8, 'Heslo musí mít alespoň 8 znaků.'),
   passCode: z.string().min(1, 'Přístupový kód je povinný.'),
+  ref: z.string().optional(),
 });
 
 const loginSchema = z.object({

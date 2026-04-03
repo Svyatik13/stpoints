@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string, passCode: string) => Promise<void>;
+  register: (username: string, password: string, passCode: string, ref?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -43,8 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user);
   };
 
-  const register = async (username: string, password: string, passCode: string) => {
-    const { user } = await api.auth.register({ username, password, passCode });
+  const register = async (username: string, password: string, passCode: string, ref?: string) => {
+    const { user } = await api.auth.register({ username, password, passCode, ref });
     localStorage.removeItem('stpoints_logged_out');
     setUser(user);
   };

@@ -5,26 +5,19 @@ import { txHash, walletAddress } from '../utils/crypto';
 export async function getBalance(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { balance: true, walletId: true },
+    select: { balance: true, address: true },
   });
 
   if (!user) throw new AppError('Uživatel nenalezen.', 404);
 
-  // Generate walletId lazily for existing users
-  let walletId = user.walletId;
-  if (!walletId) {
-    const alphabet = 'ABCDEFGHJKLMNPQRTUVWXY23456789';
-    let attempts = 0;
-    while (attempts < 20) {
-      walletId = Array.from({ length: 5 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
-      const taken = await prisma.user.findUnique({ where: { walletId } });
-      if (!taken) break;
-      attempts++;
-    }
-    await prisma.user.update({ where: { id: userId }, data: { walletId } });
+  // If address is missing (pre-migration), generate it lazily
+  let address = user.address;
+  if (!address) {
+    address = walletAddress(userId);
+    await prisma.user.update({ where: { id: userId }, data: { address } });
   }
 
-  return { balance: user.balance.toString(), address: walletAddress(userId), walletId };
+  return { balance: user.balance.toString(), address };
 }
 
 export async function getTransactionHistory(userId: string, page: number = 1, limit: number = 20) {
@@ -70,7 +63,7 @@ export async function getTransactionHistory(userId: string, page: number = 1, li
   ]);
 
   return {
-    transactions: transactions.map(tx => ({
+    transactions: transactions.map((tx: any) => ({
       ...tx,
       hash: txHash(tx.id),
       amount: tx.amount.toString(),

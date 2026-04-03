@@ -146,6 +146,60 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Affiliate Program */}
+            <div className="glass-card p-6 border-st-cyan/20 animate-fade-up">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    Affiliate Program 👥
+                    <span className="badge badge-cyan text-[10px]">NEW</span>
+                  </h3>
+                  <p className="text-text-muted text-sm mt-1">Pozvěte přátele a získejte bonus za každou registraci!</p>
+                </div>
+                <div className="bg-st-cyan/10 px-4 py-2 rounded-2xl border border-st-cyan/20 text-center sm:text-right">
+                  <p className="text-text-muted text-[10px] uppercase tracking-widest font-bold">Vaše pozvánky</p>
+                  <p className="text-2xl font-black font-mono text-st-cyan">{user.referralCount || 0}</p>
+                </div>
+              </div>
+              
+              <div className="bg-[#0c1222] rounded-2xl p-5 border border-glass-border">
+                <p className="text-text-muted text-[10px] uppercase font-bold mb-3 tracking-widest">Váš unikátní odkaz:</p>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="flex-1 bg-white/5 rounded-xl px-4 py-3 border border-glass-border overflow-hidden">
+                    <code className="text-sm font-mono text-st-cyan whitespace-nowrap block overflow-x-auto">
+                      {typeof window !== 'undefined' ? `${window.location.origin}/auth/register?ref=${user.username}` : `https://stpoints.fun/auth/register?ref=${user.username}`}
+                    </code>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      const url = `${window.location.origin}/auth/register?ref=${user.username}`;
+                      navigator.clipboard.writeText(url);
+                    }} 
+                    className="btn-secondary whitespace-nowrap flex items-center justify-center gap-2"
+                  >
+                    <span>📋</span> Kopírovat
+                  </button>
+                </div>
+              </div>
+              
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 bg-white/5 rounded-2xl border border-glass-border flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-st-gold/20 flex items-center justify-center text-xl">🎁</div>
+                  <div>
+                    <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Příští odměna</p>
+                    <p className="text-lg font-bold font-mono">{20 + (user.referralCount || 0) * 5} ST</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-white/5 rounded-2xl border border-glass-border flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-st-emerald/20 flex items-center justify-center text-xl">✨</div>
+                  <div>
+                    <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest">Bonus pro nováčka</p>
+                    <p className="text-lg font-bold font-mono">10 ST</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Quick Links */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <button onClick={() => router.push('/mining')} className="glass-card-static p-5 text-left hover:bg-white/[0.04] transition-colors group">

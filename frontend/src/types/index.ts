@@ -3,13 +3,15 @@ export interface User {
   username: string;
   balance: string;
   role: 'USER' | 'ADMIN';
+  address: string;
+  referralCount: number;
   createdAt: string;
   lastActiveAt: string | null;
 }
 
 export interface Transaction {
   id: string;
-  type: 'MINING_REWARD' | 'GIVEAWAY' | 'ADMIN_GRANT' | 'TRANSFER' | 'SYSTEM_DEBIT' | 'ST_ROOM_ACCESS' | 'CASE_OPENING';
+  type: 'MINING_REWARD' | 'GIVEAWAY' | 'ADMIN_GRANT' | 'TRANSFER' | 'SYSTEM_DEBIT' | 'ST_ROOM_ACCESS' | 'CASE_OPENING' | 'REFERRAL_REWARD';
   amount: string;
   description: string | null;
   balanceBefore: string;

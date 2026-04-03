@@ -14,7 +14,7 @@ model User {
   balance      Decimal  @default(0) @db.Decimal(18, 6)
   role         Role     @default(USER)
   isActive     Boolean  @default(true) @map("is_active")
-  walletId     String?  @unique @map("wallet_id") // 5-char readable wallet ID
+  address      String?  @unique @map("wallet_address") // 42-char hexadecimal wallet address
   lastActiveAt    DateTime? @map("last_active_at")
   miningStartedAt DateTime? @map("mining_started_at")
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -32,6 +32,12 @@ model User {
   usernames            Username[]
   marketListingsSold   MarketListing[] @relation("marketSeller")
   marketListingsBought MarketListing[] @relation("marketBuyer")
+
+  // Referrals
+  referrerId          String?        @map("referrer_id")
+  referrer            User?          @relation("UserReferrals", fields: [referrerId], references: [id])
+  referredUsers       User[]         @relation("UserReferrals")
+  referralCount       Int            @default(0) @map("referral_count")
 
   @@map("users")
 }
@@ -76,6 +82,7 @@ enum TransactionType {
   MARKET_SALE      // seller receives ST from market (delayed)
   MARKET_PURCHASE  // buyer pays ST on market
   HANDLE_CREATE    // user pays to register a username handle
+  REFERRAL_REWARD  // bonus for inviter or invitee
 }
 
 model Teacher {

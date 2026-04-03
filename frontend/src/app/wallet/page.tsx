@@ -21,7 +21,6 @@ export default function WalletPage() {
   const [networkTotal, setNetworkTotal] = useState<string>('0');
   const [price, setPrice] = useState<{ price: string; change24h: string; marketCap: string; volume24h: number; holders: number } | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>('');
-  const [walletId, setWalletId] = useState<string | null>(null);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferRecipient, setTransferRecipient] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -48,21 +47,6 @@ export default function WalletPage() {
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (user) {
-      fetchTransactions();
-      fetchNetworkStats();
-      fetchWalletId();
-    }
-  }, [user, page]);
-
-  async function fetchWalletId() {
-    try {
-      const data = await api.wallet.balance();
-      if (data.walletId) setWalletId(data.walletId);
-    } catch {}
-  }
-
   async function fetchNetworkStats() {
     try {
       const data = await api.mining.stats();
@@ -71,10 +55,17 @@ export default function WalletPage() {
   }
 
   useEffect(() => {
+    if (user) {
+      fetchTransactions();
+      fetchNetworkStats();
+    }
+  }, [user, page]);
+
+  useEffect(() => {
     if (!user) return;
     api.wallet.price().then(setPrice).catch(() => {});
     api.wallet.balance().then(data => {
-      if ((data as any).address) setWalletAddress((data as any).address);
+      setWalletAddress(data.address);
     }).catch(() => {});
   }, [user]);
 
@@ -178,12 +169,27 @@ export default function WalletPage() {
                 </button>
               )}
             </div>
-            <button
-              onClick={() => setShowTransfer(true)}
-              className="btn-primary text-sm px-5 py-2"
-            >
-              📤 {t.wallet.transfer}
-            </button>
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex gap-2 mb-1">
+                <div className="badge badge-cyan">ZČU Central Node</div>
+                <div className="badge badge-purple font-mono">STATUS: ACTIVE</div>
+              </div>
+              {price && (
+                <div className="text-right">
+                  <p className="text-xs text-text-muted uppercase tracking-wider">ST/USD</p>
+                  <p className="text-lg font-bold font-mono text-st-gold">${price.price}</p>
+                  <p className={`text-xs font-mono ${parseFloat(price.change24h) >= 0 ? 'text-st-emerald' : 'text-st-red'}`}>
+                    {parseFloat(price.change24h) >= 0 ? '▲' : '▼'} {price.change24h}%
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={() => setShowTransfer(true)}
+                className="btn-primary text-sm px-5 py-2"
+              >
+                📤 {t.wallet.transfer}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -200,7 +206,7 @@ export default function WalletPage() {
                     value={transferRecipient}
                     onChange={e => setTransferRecipient(e.target.value)}
                     className="glass-input"
-                    placeholder="Username nebo Wallet ID"
+                    placeholder="Username nebo Adresa (0x...)"
                   />
                 </div>
                 <div>

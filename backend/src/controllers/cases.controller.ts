@@ -64,7 +64,8 @@ export async function openCase(req: Request, res: Response, next: NextFunction) 
       let rewardAmount: Decimal | null = null;
 
       if (wonItem.type === 'ST_REWARD' && wonItem.amount) {
-        rewardAmount = new Decimal(wonItem.amount.toString());
+        // Apply 20% house edge (nerf)
+        rewardAmount = new Decimal(wonItem.amount.toString()).mul(0.8);
         newBalance = newBalance.add(rewardAmount);
       } else if (wonItem.type === 'MYTHIC_PASS') {
         // Grant a pass

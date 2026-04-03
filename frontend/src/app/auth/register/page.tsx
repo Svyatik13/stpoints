@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const ref = searchParams.get('ref') || undefined;
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,7 +36,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await register(username, password, passCode);
+      await register(username, password, passCode, ref);
       router.push('/wallet');
     } catch (err: any) {
       setError(err.message || 'Registrace se nezdařila.');
@@ -52,6 +55,12 @@ export default function RegisterPage() {
           </Link>
           <h1 className="text-2xl font-bold text-text-primary">Registrace</h1>
           <p className="text-text-secondary text-sm mt-1">Vytvořte si účet v systému ST-Points</p>
+          
+          {ref && (
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-st-emerald/10 border border-st-emerald/20 text-st-emerald text-xs font-medium">
+              <span>🎟️</span> Pozvání od: <span className="font-bold">{ref}</span>
+            </div>
+          )}
         </div>
 
         {/* Error */}
@@ -190,5 +199,17 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass-card p-12 animate-pulse">Načítám registrační formulář...</div>
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 }

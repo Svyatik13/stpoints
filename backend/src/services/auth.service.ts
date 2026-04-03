@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../config/database';
 import { walletAddress } from '../utils/crypto';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, TokenPayload } from '../utils/jwt';
@@ -10,6 +11,7 @@ const SALT_ROUNDS = 12;
 export interface RegisterInput {
   username: string;
   password: string;
+  ref?: string;
 }
 
 export interface LoginInput {
@@ -39,31 +41,97 @@ export async function registerUser(input: RegisterInput): Promise<{ user: any; t
 
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
 
-  // Generate unique 5-char wallet ID
-  const alphabet = 'ABCDEFGHJKLMNPQRTUVWXY23456789';
-  let walletId: string = '';
-  let attempts = 0;
-  while (attempts < 20) {
-    walletId = Array.from({ length: 5 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
-    const taken = await prisma.user.findUnique({ where: { walletId } });
-    if (!taken) break;
-    attempts++;
-  }
+  const user = await prisma.$transaction(async (tx: any) => {
+    const newUser = await tx.user.create({
+      data: {
+        username: input.username,
+        passwordHash,
+        balance: input.ref ? 10 : 0, // 10 ST bonus for invitee
+      },
+      select: {
+        id: true,
+        username: true,
+        balance: true,
+        role: true,
+        createdAt: true,
+      },
+    });
 
-  const user = await prisma.user.create({
-    data: {
-      username: input.username,
-      passwordHash,
-      walletId,
-    },
-    select: {
-      id: true,
-      username: true,
-      balance: true,
-      role: true,
-      walletId: true,
-      createdAt: true,
-    },
+    // Generate and save address from new user ID
+    const address = walletAddress(newUser.id);
+    const updatedUser = await tx.user.update({
+      where: { id: newUser.id },
+      data: { address },
+      select: {
+        id: true,
+        username: true,
+        balance: true,
+        role: true,
+        address: true,
+        createdAt: true,
+      },
+    });
+
+    if (input.ref) {
+      const referrer = await tx.user.findFirst({
+        where: {
+          OR: [
+            { username: input.ref },
+            { address: input.ref },
+          ],
+          isActive: true,
+        },
+        select: { id: true, username: true, balance: true, referralCount: true },
+      });
+
+      if (referrer && referrer.id !== newUser.id) {
+        // Link referral
+        await tx.user.update({
+          where: { id: newUser.id },
+          data: { referrerId: referrer.id },
+        });
+
+        // Calculate inviter bonus: 20 + (referralCount * 5)
+        const inviterBonus = 20 + (referrer.referralCount * 5);
+        const inviterBalanceBefore = new Decimal(referrer.balance.toString());
+        const inviterBalanceAfter = inviterBalanceBefore.add(inviterBonus);
+
+        // Update inviter
+        await tx.user.update({
+          where: { id: referrer.id },
+          data: {
+            balance: { increment: inviterBonus },
+            referralCount: { increment: 1 },
+          },
+        });
+
+        // Log inviter transaction
+        await tx.transaction.create({
+          data: {
+            type: 'REFERRAL_REWARD',
+            amount: new Decimal(inviterBonus),
+            receiverId: referrer.id,
+            balanceBefore: inviterBalanceBefore,
+            balanceAfter: inviterBalanceAfter,
+            description: `Bonus za pozvání: ${newUser.username}`,
+          },
+        });
+
+        // Log invitee transaction (10 ST)
+        await tx.transaction.create({
+          data: {
+            type: 'REFERRAL_REWARD',
+            amount: new Decimal(10),
+            receiverId: newUser.id,
+            balanceBefore: 0,
+            balanceAfter: 10,
+            description: `Vstupní bonus (ref: ${referrer.username})`,
+          },
+        });
+      }
+    }
+
+    return updatedUser;
   });
 
   const payload: TokenPayload = { userId: user.id, role: user.role };
@@ -155,6 +223,7 @@ export async function getCurrentUser(userId: string) {
       username: true,
       balance: true,
       role: true,
+      address: true,
       createdAt: true,
       lastActiveAt: true,
     },
@@ -164,5 +233,5 @@ export async function getCurrentUser(userId: string) {
     throw new AppError('Uživatel nenalezen.', 404);
   }
 
-  return { ...user, balance: user.balance.toString(), address: walletAddress(user.id) };
+  return { ...user, balance: user.balance.toString() };
 }

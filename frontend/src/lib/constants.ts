@@ -26,6 +26,7 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   MARKET_SALE: 'Tržiště',
   MARKET_PURCHASE: 'Tržiště',
   HANDLE_CREATE: 'Handle',
+  REFERRAL_REWARD: 'Affiliate',
 };
 
 export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
@@ -39,4 +40,5 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
   MARKET_SALE: 'badge-emerald',
   MARKET_PURCHASE: 'badge-red',
   HANDLE_CREATE: 'badge-cyan',
+  REFERRAL_REWARD: 'badge-emerald',
 };

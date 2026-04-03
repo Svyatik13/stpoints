@@ -21,6 +21,7 @@ interface AdminUser {
   username: string;
   balance: string;
   role: string;
+  address: string;
   isActive: boolean;
   lastActiveAt: string | null;
   createdAt: string;
@@ -381,11 +382,20 @@ export default function AdminPage() {
                     {users.map(u => (
                       <tr key={u.id} className="border-b border-glass-border/50 hover:bg-white/[0.02] transition-colors">
                         <td className="p-4">
-                          <div>
+                          <div className="flex flex-col">
                             <p className="font-semibold flex items-center gap-2">
                               {u.username}
                               {!u.isActive && <span className="badge badge-red text-[9px]">BAN</span>}
                             </p>
+                            {u.address && (
+                              <button 
+                                onClick={() => { navigator.clipboard.writeText(u.address); showMessage('success', 'Adresa zkopírována'); }}
+                                className="text-[10px] text-text-muted font-mono hover:text-st-cyan transition-colors text-left"
+                                title={u.address}
+                              >
+                                {u.address.slice(0, 6)}...{u.address.slice(-4)} 📋
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="p-4 text-right">

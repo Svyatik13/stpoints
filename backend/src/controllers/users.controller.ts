@@ -8,12 +8,12 @@ import { logger } from '../utils/logger';
 // GET /users/profile/:handle — public profile
 export async function getPublicProfile(req: Request, res: Response, next: NextFunction) {
   try {
-    const handle = req.params.handle.toLowerCase().replace('@', '');
+    const handle = (req.params.handle as string).toLowerCase().replace('@', '');
 
     // Find by username handle or by username (account name)
     const username = await prisma.username.findUnique({
       where: { handle },
-      include: { owner: { select: { id: true, username: true, balance: true, createdAt: true, walletId: true } } },
+      include: { owner: { select: { id: true, username: true, balance: true, createdAt: true, address: true } } },
     });
 
     let user;
@@ -23,7 +23,7 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
       // Fall back to looking up by account username
       user = await prisma.user.findUnique({
         where: { username: handle },
-        select: { id: true, username: true, balance: true, createdAt: true, walletId: true },
+        select: { id: true, username: true, balance: true, createdAt: true, address: true },
       });
     }
 
@@ -40,7 +40,7 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
       profile: {
         username: user.username,
         balance: parseFloat(user.balance.toString()).toFixed(4),
-        walletId: user.walletId,
+        address: user.address,
         joinedAt: user.createdAt,
         handles,
       },
