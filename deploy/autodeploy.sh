@@ -20,7 +20,7 @@ trap 'rm -f "$HOME/.deploy_in_progress"' EXIT
 
 # 2. FORCE SYNC (Resolve Git Jams)
 echo "$(date) — Synchronizing with GitHub..." >> "$LOG"
-cd "$REPO_DIR"
+cd "$REPO_DIR" || exit 1
 git fetch --all >> "$LOG" 2>&1
 git reset --hard origin/main >> "$LOG" 2>&1
 NEW_HEAD=$(git rev-parse HEAD)
@@ -50,7 +50,7 @@ echo "$(date) — New version detected: $NEW_HEAD. Starting FULL deploy..." >> "
 npm cache clean --force >> "$LOG" 2>&1
 
 # 5. Deploy Frontend (FLASH-BUILD)
-cd "$REPO_DIR/frontend"
+cd "$REPO_DIR/frontend" || exit 1
 rm -rf node_modules .next
 npm install --no-audit --no-fund --omit=optional >> "$LOG" 2>&1
 npm run build >> "$LOG" 2>&1
@@ -68,24 +68,37 @@ fi
 rm -rf node_modules .next
 
 # 6. Inject/Update Startup Script
-# IMPORTANT: Pass REPO_DIR and others into the EOF to avoid \$ empty issues
 cat <<EOF > "$HOME/start_backend.sh"
 #!/bin/bash
 PID_FILE="$PID_FILE"
 LOG_FILE="$LOG"
 REPO_DIR="$REPO_DIR"
 
-echo "\$(date) — NUCLEAR PURGE: Releasing Port 4000..." >> "\$LOG_FILE"
+echo "\$(date) — PORT LIBERATOR: Clearing Port 4000..." >> "\$LOG_FILE"
+
+# 1. Target by Port Address (The most reliable fix)
+lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
+/usr/sbin/fuser -k 4000/tcp > /dev/null 2>&1
+
+# 2. Target by User Process Purge
 pkill -u "\$USER" -9 node > /dev/null 2>&1
 pkill -u "\$USER" -9 tsx > /dev/null 2>&1
-if [ -f "\$PID_FILE" ]; then
-  OLD_PID=\$(cat "\$PID_FILE")
-  kill -9 "\$OLD_PID" > /dev/null 2>&1
-  rm -f "\$PID_FILE"
-fi
 
-echo "\$(date) — Waiting for port release..." >> "\$LOG_FILE"
-sleep 10
+# 3. Cleanup PID file
+if [ -f "\$PID_FILE" ]; then rm -f "\$PID_FILE"; fi
+
+echo "\$(date) — Verification Loop: Waiting for port 4000 to be empty..." >> "\$LOG_FILE"
+MAX_TRIES=10
+TRIES=0
+while netstat -tln | grep -q :4000; do
+  if [ \$TRIES -ge \$MAX_TRIES ]; then
+    echo "CRITICAL: Port 4000 still in use after 30s. Manual intervention may be needed." >> "\$LOG_FILE"
+    exit 1
+  fi
+  sleep 3
+  lsof -ti:4000 | xargs kill -9 > /dev/null 2>&1
+  TRIES=\$((TRIES+1))
+done
 
 # Link .env
 cp "\$HOME/.env" "\$REPO_DIR/backend/.env" 2>/dev/null
@@ -99,12 +112,12 @@ cd "\$REPO_DIR/backend" || exit
 nohup ./node_modules/.bin/tsx src/index.ts >> "\$HOME/backend.log" 2>&1 &
 NEW_PID=\$!
 echo "\$NEW_PID" > "\$PID_FILE"
-echo "\$(date) — ST-Points Backend RESTARTED on PID \$NEW_PID" >> "\$LOG_FILE"
+echo "\$(date) — ST-Points Backend LIBERATED & RESTARTED on PID \$NEW_PID" >> "\$LOG_FILE"
 EOF
 chmod +x "$HOME/start_backend.sh"
 
 # 7. Deploy Backend
-cd "$REPO_DIR/backend"
+cd "$REPO_DIR/backend" || exit 1
 if [ -f "$HOME/.env" ]; then cp "$HOME/.env" .env; fi
 
 npm install --no-audit --no-fund >> "$LOG" 2>&1
