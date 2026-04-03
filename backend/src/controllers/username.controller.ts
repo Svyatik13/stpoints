@@ -39,8 +39,21 @@ export async function createUsername(req: Request, res: Response, next: NextFunc
       if (count >= USERNAME_MAX) throw new AppError(`Můžete vlastnit maximálně ${USERNAME_MAX} handlery současně.`, 400);
 
       // Uniqueness
-      const existing = await tx.username.findUnique({ where: { handle: normalizedHandle } });
-      if (existing) throw new AppError('Tento handle je již obsazený.', 409);
+      const [existingHandle, existingUser] = await Promise.all([
+        tx.username.findUnique({ where: { handle: normalizedHandle } }),
+        tx.user.findUnique({ where: { username: normalizedHandle } })
+      ]);
+
+      if (existingUser) throw new AppError('Tento handle je již obsazený (jméno účtu).', 409);
+
+      if (existingHandle) {
+        if (!existingHandle.isActive) {
+          // If it exists but is inactive, delete it to allow re-creation
+          await tx.username.delete({ where: { id: existingHandle.id } });
+        } else {
+          throw new AppError('Tento handle je již obsazený.', 409);
+        }
+      }
 
       // Balance check
       const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { balance: true } });
@@ -99,9 +112,15 @@ export async function deleteUsername(req: Request, res: Response, next: NextFunc
 export async function checkHandle(req: Request, res: Response, next: NextFunction) {
   try {
     const handle = (req.params.handle as string).toLowerCase();
-    const existing = await prisma.username.findUnique({ where: { handle } });
-    const available = !existing || !existing.isActive;
-    logger.info(`Handle check: @${handle} -> available: ${available}`);
+    
+    const [existingHandle, existingUser] = await Promise.all([
+      prisma.username.findUnique({ where: { handle } }),
+      prisma.user.findUnique({ where: { username: handle } })
+    ]);
+
+    const available = (!existingHandle || !existingHandle.isActive) && !existingUser;
+    
+    logger.info(`Handle check: @${handle} -> available: ${available} (H: ${!!existingHandle}, U: ${!!existingUser})`);
     res.json({ available });
   } catch (error) { next(error); }
 }
