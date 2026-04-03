@@ -5,6 +5,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { I18nProvider } from "@/lib/i18n";
+import ReferralHandler from "@/components/ReferralHandler";
 
 const inter = Inter({
   subsets: ['latin', 'latin-ext'],
@@ -47,6 +48,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <I18nProvider>
             <AuthProvider>
+              <ReferralHandler />
               <ToastProvider>
                 <div className="relative z-10">
                   {children}
