@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_BASE = (typeof window !== 'undefined' 
+  ? `${window.location.origin}/api` 
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'));
 
 interface ApiOptions {
   method?: string;
