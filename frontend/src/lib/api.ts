@@ -83,8 +83,8 @@ export const api = {
 
   // ── Leaderboard ──
   leaderboard: {
-    get: (type: 'balance' | 'mining' = 'balance', limit: number = 20) =>
-      request<{ leaderboard: Array<{ rank: number; username: string; value: string; createdAt?: string }>; type: string }>(
+    get: (type: string = 'balance', limit: number = 20) =>
+      request<{ leaderboard: any[]; type: string }>(
         `/leaderboard?type=${type}&limit=${limit}`
       ),
   },
