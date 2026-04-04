@@ -24,7 +24,8 @@ jobs:
             
             echo "📦 Updating Backend..."
             cd backend
-            npm install --production
+            npm install
+            npm run build
             npx prisma generate
             
             echo "📦 Updating Frontend..."
