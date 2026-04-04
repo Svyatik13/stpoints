@@ -55,7 +55,7 @@ export const api = {
   auth: {
     register: (body: { username: string; password: string; passCode: string; ref?: string }) =>
       request<{ user: any }>('/auth/register', { method: 'POST', body }),
-    login: (body: { username: string; password: string }) =>
+    login: (body: { username: string; password: string; rememberMe?: boolean }) =>
       request<{ user: any }>('/auth/login', { method: 'POST', body }),
     logout: () =>
       request<{ message: string }>('/auth/logout', { method: 'POST' }),
