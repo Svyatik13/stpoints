@@ -346,7 +346,7 @@ export default function StRoomPage() {
             <h1 className="text-3xl font-bold tracking-tight text-st-cyan" style={{ textShadow: '0 0 20px rgba(6,182,212,0.4)' }}>
               🔐 ST-ROOM
             </h1>
-            <p className="text-text-secondary text-sm mt-1">Prémiový přístup k výukové místnosti</p>
+            <p className="text-text-secondary text-sm mt-1">Prémiová výuková místnost (+ 2x bonus k těžbě! ⛏️)</p>
           </div>
           <div className="glass-card-static px-4 py-2 text-center">
             <p className="text-text-muted text-xs">Váš zůstatek</p>
@@ -459,7 +459,7 @@ export default function StRoomPage() {
             <div className="glass-card p-6">
               <h2 className="text-xl font-bold mb-2">Vyberte učitele</h2>
               <p className="text-text-secondary text-sm mb-6">
-                Cena závisí na raritě učitele. Mythic učitelé vyžadují speciální <span className="mythic-text font-bold">Pass z Case</span>.
+                Cena závisí na raritě. Během relace získáváš <span className="text-st-gold font-bold">2x ST pointy</span> z těžby!
               </p>
 
               {/* Group by rarity */}

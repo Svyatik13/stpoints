@@ -27,8 +27,10 @@ import activityRoutes from './routes/activity.routes';
 import coinflipRoutes from './routes/coinflip.routes';
 import rewardsRoutes from './routes/rewards.routes';
 import chatRoutes from './routes/chat.routes';
+import investRoutes from './routes/invest.routes';
 
 import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
+import { startStockEngine } from './services/invest.service';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -105,7 +107,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/coinflip', coinflipRoutes);
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/chat', chatRoutes);
-
+app.use('/api/invest', investRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {
@@ -134,6 +136,8 @@ app.listen(env.port, async () => {
   // Seed default data if empty
   await seedDefaults().catch(e => logger.error('Seed defaults failed:', e));
 
+  // Start stock price engine
+  startStockEngine();
 
   // Background jobs: run after a short delay for DB stability
   setTimeout(async () => {
@@ -145,7 +149,6 @@ app.listen(env.port, async () => {
       // Auction settlement job: check for expired auctions every minute
       setInterval(processExpiredAuctions, 60 * 1000);
       await processExpiredAuctions();
-
       
       logger.success('✅ Background jobs initialized.');
     } catch (e) {

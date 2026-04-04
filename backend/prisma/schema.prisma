@@ -41,9 +41,10 @@ model User {
   marketListingsBought MarketListing[]   @relation("marketBuyer")
 
   bids             Bid[]
-  coinflipsCreated CoinflipGame[] @relation("coinflipCreator")
-  coinflipsJoined  CoinflipGame[] @relation("coinflipJoiner")
+  coinflipsCreated CoinflipGame[]   @relation("coinflipCreator")
+  coinflipsJoined  CoinflipGame[]   @relation("coinflipJoiner")
   chatMessages     ChatMessage[]
+  investments      UserInvestment[]
 
   // Referrals
   referrerId     String? @map("referrer_id")
@@ -92,14 +93,17 @@ enum TransactionType {
   SYSTEM_DEBIT
   ST_ROOM_ACCESS
   CASE_OPENING
-  MARKET_SALE // seller receives ST from market (delayed)
-  MARKET_PURCHASE // buyer pays ST on market
-  HANDLE_CREATE // user pays to register a username handle
-  REFERRAL_REWARD // bonus for inviter or invitee
-  TIP // peer-to-peer tip
-  COINFLIP_WIN // winner receives pot from coinflip
-  COINFLIP_LOSS // loser's wager deducted
-  DAILY_REWARD // daily login streak reward
+  MARKET_SALE      // seller receives ST from market (delayed)
+  MARKET_PURCHASE  // buyer pays ST on market
+  HANDLE_CREATE    // user pays to register a username handle
+  REFERRAL_REWARD  // bonus for inviter or invitee
+  TIP              // peer-to-peer tip
+  COINFLIP_WIN     // winner receives pot from coinflip
+  COINFLIP_LOSS    // loser's wager deducted
+  DAILY_REWARD     // daily login streak reward
+  INVESTMENT_BUY   // user buys stock shares
+  INVESTMENT_SELL  // user sells stock shares
+  AUCTION_REFUND   // outbid refund
 }
 
 model Teacher {
@@ -374,6 +378,7 @@ model MarketListing {
   stDueAt  DateTime? @map("st_due_at") // when to pay seller (soldAt + 2h)
   stPaidAt DateTime? @map("st_paid_at") // null = pending payout
 
+  note      String?  @map("note") // optional note from seller
   createdAt DateTime @default(now()) @map("created_at")
 
   bids Bid[]
@@ -455,4 +460,46 @@ model ChatMessage {
 
   @@index([createdAt])
   @@map("chat_messages")
+}
+
+// ── Investments ──────────────────────────────────────────────────────────────
+
+model Stock {
+  id           String        @id @default(cuid())
+  name         String
+  symbol       String        @unique
+  currentPrice Decimal       @db.Decimal(18, 6) @map("current_price")
+  lastPrice    Decimal       @default(0) @db.Decimal(18, 6) @map("last_price")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  history      StockPriceHistory[]
+  investments  UserInvestment[]
+
+  @@map("stocks")
+}
+
+model StockPriceHistory {
+  id        String   @id @default(cuid())
+  stockId   String   @map("stock_id")
+  stock     Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  price     Decimal  @db.Decimal(18, 6)
+  timestamp DateTime @default(now())
+
+  @@index([stockId, timestamp])
+  @@map("stock_price_history")
+}
+
+model UserInvestment {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stockId   String   @map("stock_id")
+  stock     Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(18, 6) // Total ST invested
+  shares    Decimal  @db.Decimal(18, 6) // Number of shares owned
+  avgPrice  Decimal  @db.Decimal(18, 6) // Average purchase price
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, stockId])
+  @@map("user_investments")
 }

@@ -26,6 +26,7 @@ export default function MiningPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
+  const [hasBoost, setHasBoost] = useState(false);
   const { t } = useI18n();
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,6 +46,9 @@ export default function MiningPage() {
       }
     }).catch(() => {});
     api.mining.stats().then(setStats).catch(() => {});
+    api.stRoom.session().then((s: any) => {
+      if (s.hasActiveSession) setHasBoost(true);
+    }).catch(() => {});
   }, [user]);
 
   // Timer tick
@@ -53,7 +57,8 @@ export default function MiningPage() {
       timerRef.current = setInterval(() => {
         setElapsedSeconds(prev => {
           const next = prev + 1;
-          setEstimatedReward(next * ST_PER_SECOND);
+          const multiplier = hasBoost ? 2 : 1;
+          setEstimatedReward(next * ST_PER_SECOND * multiplier);
           return next;
         });
       }, 1000);
@@ -158,6 +163,11 @@ export default function MiningPage() {
                 <span className={`w-2 h-2 rounded-full ${isMining ? 'bg-st-emerald animate-pulse' : 'bg-text-muted'}`} />
                 {isMining ? t.mining.active : t.mining.inactive}
               </div>
+              {hasBoost && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter bg-st-gold text-black ml-2 shadow-[0_0_15px_rgba(251,191,36,0.4)] animate-bounce-subtle">
+                  🔥 2X BOOST
+                </div>
+              )}
             </div>
 
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mt-3">{t.mining.title}</h1>

@@ -36,9 +36,8 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
   try {
     return await rawRequest<T>(endpoint, options);
   } catch (error: any) {
-    const isAuthEndpoint = ['/auth/refresh', '/auth/login', '/auth/register'].includes(endpoint);
+    const isAuthEndpoint = ['/auth/refresh', '/auth/login', '/auth/register', '/auth/me'].includes(endpoint);
     if (error?.message?.includes('Neplatný nebo vypršelý token') && !isAuthEndpoint) {
-      // Queue all concurrent 401s behind a single refresh
       if (!refreshPromise) {
         refreshPromise = rawRequest<any>('/auth/refresh', { method: 'POST' })
           .finally(() => { refreshPromise = null; });
@@ -129,7 +128,7 @@ export const api = {
     session: () => request<any>('/st-room/session'),
     buy: (body: { teacherId: string }) => request<any>('/st-room/buy', { method: 'POST', body }),
     redeemPass: (body: { teacherId: string }) => request<any>('/st-room/redeem-pass', { method: 'POST', body }),
-    earlyExit: () => request<any>('/st-room/early-exit', { method: 'POST', body: {} }),
+    earlyExit: () => request<{ success: boolean; message: string }>('/st-room/early-exit', { method: 'POST' }),
   },
 
   // ── Cases ──
@@ -194,6 +193,7 @@ export const api = {
     regeneratePassCode: () =>
       request<{ code: string; history: any[] }>('/admin/passcode/regenerate', { method: 'POST' }),
   },
+
   // ── Usernames ──
   usernames: {
     me: () => request<{ usernames: any[] }>('/usernames/me'),
@@ -214,30 +214,17 @@ export const api = {
     },
     getListing: (id: string) => request<{ listing: any }>(`/market/${id}`),
     my: () => request<{ listings: any[] }>('/market/my'),
-    create: (body: { type: string; price: string; passId?: string; usernameId?: string; isAuction?: boolean; durationHours?: number; minIncrement?: string }) =>
+    create: (body: { type: string; price: string; passId?: string; usernameId?: string; isAuction?: boolean; durationHours?: number; minIncrement?: string; note?: string }) =>
       request<{ listing: any }>('/market', { method: 'POST', body }),
     buy: (id: string) => request<{ listing: any; message: string }>(`/market/${id}/buy`, { method: 'POST' }),
     bid: (id: string, amount: string) => request<{ listing: any; message: string }>(`/market/${id}/bid`, { method: 'POST', body: { amount } }),
     cancel: (id: string) => request<{ success: boolean }>(`/market/${id}`, { method: 'DELETE' }),
   },
+
+  // ── Activity ──
   activity: {
     list: () => request<{ events: any[] }>('/activity'),
     feed: () => request<any>('/activity'),
-  },
-
-  // ── Public Profiles ──
-  users: {
-    profile: (handle: string) => request<{ profile: any }>(`/users/profile/${handle}`),
-    recordReferralClick: (username: string) =>
-      request<{ success: boolean }>(`/users/referral-click/${username}`, { method: 'POST' }),
-    tip: (handle: string, amount: string, message?: string) => 
-      request<{ message: string; balance: string }>(`/users/tip/${handle}`, { method: 'POST', body: { amount, message } }),
-  },
-
-  // ── Terminal ──
-  terminal: {
-    access: () => request<any>('/terminal/access'),
-    command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
   },
 
   // ── Coinflip ──
@@ -261,8 +248,31 @@ export const api = {
       request<any>('/rewards/title', { method: 'POST', body: { title } }),
   },
 
+  // ── Chat ──
   chat: {
     messages: () => request<any>('/chat'),
     send: (message: string) => request<any>('/chat/send', { method: 'POST', body: { message } }),
+  },
+
+  // ── Invest ──
+  invest: {
+    stocks: () => request<{ stocks: any[] }>('/invest/stocks'),
+    buy: (stockId: string, amount: string) => request<any>('/invest/buy', { method: 'POST', body: { stockId, amount } }),
+    sell: (stockId: string, shares: string) => request<any>('/invest/sell', { method: 'POST', body: { stockId, shares } }),
+  },
+
+  // ── Public Profiles ──
+  users: {
+    profile: (handle: string) => request<{ profile: any }>(`/users/profile/${handle}`),
+    recordReferralClick: (username: string) =>
+      request<{ success: boolean }>(`/users/referral-click/${username}`, { method: 'POST' }),
+    tip: (handle: string, amount: string, message?: string) => 
+      request<{ message: string; balance: string }>(`/users/tip/${handle}`, { method: 'POST', body: { amount, message } }),
+  },
+
+  // ── Terminal ──
+  terminal: {
+    access: () => request<any>('/terminal/access'),
+    command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
   },
 };
