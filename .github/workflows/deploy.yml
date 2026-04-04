@@ -1,0 +1,39 @@
+name: Remote Deployment
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to OCI VPS via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: 141.147.53.229
+          username: ubuntu
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "🚀 Starting deployment on VPS..."
+            cd ~/stpoints
+            
+            echo "📡 Pulling latest changes from GitHub..."
+            git reset --hard origin/main
+            git pull origin main
+            
+            echo "📦 Updating Backend..."
+            cd backend
+            npm install --production
+            npx prisma generate
+            
+            echo "📦 Updating Frontend..."
+            cd ../frontend
+            npm install
+            npm run build
+            
+            echo "🔄 Restarting Services with PM2..."
+            cd ..
+            pm2 restart all
+            
+            echo "✅ Deployment Successful!"
