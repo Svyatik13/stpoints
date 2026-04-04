@@ -74,7 +74,21 @@ npm install
 npm run build
 echo "✅ Frontend built"
 
-# 10. Set up PM2 ecosystem
+# 10. Install Nginx & Certbot
+echo "📦 Installing Nginx and Certbot..."
+sudo apt install -y nginx certbot python3-certbot-nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+echo "✅ Nginx & Certbot installed"
+
+# 11. Firewall Setup
+echo "🛡️ Configuring Firewall..."
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+echo "y" | sudo ufw enable
+echo "✅ Firewall active"
+
+# 12. Set up PM2 ecosystem
 cd ~/stpoints
 cat > ecosystem.config.js << 'PMEOF'
 module.exports = {
@@ -89,7 +103,7 @@ module.exports = {
       },
       instances: 1,
       autorestart: true,
-      max_memory_restart: '500M',
+      max_memory_restart: '800M',
     },
     {
       name: 'stpoints-frontend',
@@ -101,7 +115,7 @@ module.exports = {
       },
       instances: 1,
       autorestart: true,
-      max_memory_restart: '500M',
+      max_memory_restart: '800M',
     },
   ],
 };
@@ -109,21 +123,51 @@ PMEOF
 
 echo "✅ PM2 ecosystem configured"
 
-# 11. Start services
-echo "🚀 Starting services..."
+# 13. Nginx Configuration
+echo "📦 Configuring Nginx..."
+DOMAIN="stpoints.fun"
+IP=$(curl -s ifconfig.me)
+sudo tee /etc/nginx/sites-available/stpoints << EOF
+server {
+    listen 80 default_server;
+    server_name $DOMAIN www.$DOMAIN $IP;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    location /api {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF
+
+sudo ln -sf /etc/nginx/sites-available/stpoints /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl restart nginx
+echo "✅ Nginx configured"
+
+# 14. Start services
+echo "🚀 Starting services with PM2..."
 pm2 start ecosystem.config.js
 pm2 save
 pm2 startup | tail -1 | bash 2>/dev/null || true
 
 echo ""
 echo "═══════════════════════════════════════════"
-echo "  ⚡ ST-Points is LIVE!"
+echo "  ⚡ ST-Points is Provisioned!"
 echo ""
-echo "  Backend:  http://localhost:4000"
-echo "  Frontend: http://localhost:3000"
-echo ""
-echo "  PM2 Commands:"
-echo "    pm2 status        — check processes"
-echo "    pm2 logs          — view all logs"
-echo "    pm2 restart all   — restart everything"
+echo "  Next Steps:"
+echo "  1. Run: sudo certbot --nginx -d stpoints.fun -d www.stpoints.fun"
+echo "  2. Point your Domain A records to this IP."
 echo "═══════════════════════════════════════════"

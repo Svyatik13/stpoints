@@ -35,26 +35,37 @@ app.set('trust proxy', 1);
 // ── Security ──
 app.use(helmet());
 
-// SUPER-DASHBOARD CORS: Force trust for production domain
+// CORS Configuration
+const allowedOrigins = [
+  env.frontendUrl,
+  'http://141.147.53.229',
+  'http://stpoints.fun',
+  'https://stpoints.fun',
+  'http://localhost:3000'
+];
+
 app.use(cors({
   origin: (origin, callback) => {
-    // In production, we trust anything from our domain. If origin is missing (same-origin), we allow it.
-    const isProd = env.nodeEnv === 'production';
+    // allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    const isAllowed = origin === env.frontendUrl || origin.includes('stpoints.fun') || !isProd;
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      origin.includes('stpoints.fun') || 
+                      env.nodeEnv !== 'production';
     
     if (isAllowed) {
       callback(null, true);
     } else {
       console.warn(`[CORS Blocked] Origin: ${origin}`);
-      callback(new Error('Přístup zamítnut (CORS)'));
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      callback(new Error(msg), false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-XSRF-TOKEN', 'X-CSRF-Token'],
 }));
+
 
 // ── Parsing ──
 app.use(express.json({ limit: '10kb' }));
