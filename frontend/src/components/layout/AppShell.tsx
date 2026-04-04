@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/layout/Navbar';
 import ActivityTicker from '@/components/layout/ActivityTicker';
+import ChatSidebar from '@/components/chat/ChatSidebar';
 import { api } from '@/lib/api';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -11,10 +12,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <img src="/logo.png" alt="ST-Points Logo" className="w-16 h-16 object-contain mx-auto mb-4 animate-pulse drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" />
-          <p className="text-text-secondary text-sm">Načítání systému...</p>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-20 h-20 relative">
+            <div className="absolute inset-0 border-4 border-st-cyan/20 rounded-full animate-pulse"></div>
+            <div className="absolute inset-0 border-t-4 border-st-cyan rounded-full animate-spin"></div>
+          </div>
+          <div className="flex flex-col items-center gap-1.5">
+            <p className="text-st-cyan/50 text-[10px] uppercase tracking-[0.2em] font-black animate-pulse">Loading</p>
+            <h1 className="text-2xl font-black tracking-tight text-white/90">ST-POINTS</h1>
+          </div>
         </div>
       </div>
     );
@@ -24,7 +31,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Navbar />
       {user && <div className="fixed top-[60px] md:top-[52px] left-0 right-0 z-40"><ActivityTicker /></div>}
-      <main className={user ? 'pt-[120px] md:pt-[88px] pb-8 px-4 sm:px-6' : ''}>
+      <ChatSidebar />
+      <main className={user ? 'pt-[120px] md:pt-[88px] pb-8 px-4 sm:px-6 transition-all duration-300' : ''}>
         <div className="max-w-7xl mx-auto">
           {children}
         </div>

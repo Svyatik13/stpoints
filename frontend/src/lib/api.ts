@@ -260,7 +260,9 @@ export const api = {
     setTitle: (title: string | null) =>
       request<any>('/rewards/title', { method: 'POST', body: { title } }),
   },
+
+  chat: {
+    messages: () => request<any>('/chat'),
+    send: (message: string) => request<any>('/chat/send', { method: 'POST', body: { message } }),
+  },
 };
-
-
-

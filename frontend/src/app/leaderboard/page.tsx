@@ -10,15 +10,23 @@ import { useI18n } from '@/lib/i18n';
 interface LeaderboardEntry {
   rank: number;
   username: string;
+  activeTitle: string | null;
   value: string;
-  createdAt?: string;
 }
+
+const CATEGORIES = [
+  { id: 'balance',  label: 'Wealth',    icon: '💰' },
+  { id: 'mining',   label: 'Mining',    icon: '⛏️' },
+  { id: 'tips',     label: 'Giving',    icon: '💝' },
+  { id: 'gambling', label: 'Gambling',  icon: '🎰' },
+];
 
 export default function LeaderboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState('balance');
   const { t } = useI18n();
 
   useEffect(() => {
@@ -28,11 +36,11 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    api.leaderboard.get('balance', 50)
-      .then(data => setEntries(data.leaderboard))
+    api.leaderboard.get(category, 50)
+      .then(data => setEntries(data.leaderboard || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, category]);
 
   if (!user) return null;
 
@@ -48,7 +56,7 @@ export default function LeaderboardPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">🏆 {t.leaderboard.title}</h1>
             <p className="text-text-secondary text-sm mt-1">
-              {t.leaderboard.subtitle}
+              Global rankings of the top ST-Points users
             </p>
           </div>
           {myRank > 0 && (
@@ -57,6 +65,24 @@ export default function LeaderboardPage() {
               <p className="text-st-gold font-mono font-bold text-lg">#{myRank}</p>
             </div>
           )}
+        </div>
+
+        {/* Categories Tabs */}
+        <div className="flex overflow-x-auto gap-2 p-1 glass-card-static no-scrollbar">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setCategory(cat.id)}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                category === cat.id 
+                  ? 'bg-st-cyan/20 text-st-cyan border border-st-cyan/30' 
+                  : 'text-text-muted hover:text-white hover:bg-white/5 border border-transparent'
+              }`}
+            >
+              <span>{cat.icon}</span>
+              {cat.label}
+            </button>
+          ))}
         </div>
 
 
@@ -97,8 +123,13 @@ export default function LeaderboardPage() {
                         <p className={`font-bold ${sizes[idx]} ${isMe ? 'text-st-cyan' : ''}`}>
                           {e.username}
                         </p>
+                        {e.activeTitle && (
+                          <span className="text-[10px] font-bold uppercase tracking-tighter px-1.5 py-0.5 rounded border border-current opacity-70 mb-2 inline-block">
+                            {e.activeTitle}
+                          </span>
+                        )}
                         <p className="font-mono font-bold text-sm mt-1" style={{ color: '#00e8ff' }}>
-                          {parseFloat(e.value).toFixed(4)} ST
+                          {parseFloat(e.value).toFixed(2)} ST
                         </p>
                       </div>
                     );
@@ -122,12 +153,16 @@ export default function LeaderboardPage() {
                         <div className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-xs font-bold text-text-secondary">
                           {e.username.charAt(0).toUpperCase()}
                         </div>
-                        <span className={`font-semibold text-sm ${isMe ? 'text-st-cyan' : 'text-text-primary'}`}>
-                          {e.username} {isMe && <span className="text-xs text-text-muted">{t.leaderboard.you}</span>}
+                        <span className={`font-semibold text-sm ${isMe ? 'text-st-cyan' : 'text-text-primary'} flex flex-col`}>
+                          <span className="flex items-center gap-2">
+                            {e.username} 
+                            {isMe && <span className="text-[10px] bg-st-cyan/20 text-st-cyan px-1.5 py-0.5 rounded">YOU</span>}
+                          </span>
+                          {e.activeTitle && <span className="text-[9px] text-text-muted uppercase tracking-tighter">{e.activeTitle}</span>}
                         </span>
                       </div>
                       <span className="font-mono font-semibold text-sm" style={{ color: '#00e8ff' }}>
-                        {parseFloat(e.value).toFixed(4)} ST
+                        {parseFloat(e.value).toFixed(2)} ST
                       </span>
                     </div>
                   );

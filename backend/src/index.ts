@@ -26,6 +26,7 @@ import usersRoutes from './routes/users.routes';
 import activityRoutes from './routes/activity.routes';
 import coinflipRoutes from './routes/coinflip.routes';
 import rewardsRoutes from './routes/rewards.routes';
+import chatRoutes from './routes/chat.routes';
 
 import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
 
@@ -103,6 +104,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/coinflip', coinflipRoutes);
 app.use('/api/rewards', rewardsRoutes);
+app.use('/api/chat', chatRoutes);
 
 
 // ── 404 ──
