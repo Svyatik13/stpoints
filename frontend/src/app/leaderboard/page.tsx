@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 import { useI18n } from '@/lib/i18n';
+import TitleBadge from '@/components/common/TitleBadge';
 
 interface LeaderboardEntry {
   rank: number;
@@ -16,7 +17,7 @@ interface LeaderboardEntry {
 
 const CATEGORIES = [
   { id: 'balance',  label: 'Wealth',    icon: '💰' },
-  { id: 'mining',   label: 'Mining',    icon: '⛏️' },
+  { id: 'mining',   label: 'Mining',    icon: '⛏' },
   { id: 'tips',     label: 'Giving',    icon: '💝' },
   { id: 'gambling', label: 'Gambling',  icon: '🎰' },
 ];
@@ -123,11 +124,9 @@ export default function LeaderboardPage() {
                         <p className={`font-bold ${sizes[idx]} ${isMe ? 'text-st-cyan' : ''}`}>
                           {e.username}
                         </p>
-                        {e.activeTitle && (
-                          <span className="text-[10px] font-bold uppercase tracking-tighter px-1.5 py-0.5 rounded border border-current opacity-70 mb-2 inline-block">
-                            {e.activeTitle}
-                          </span>
-                        )}
+                        <div className="mt-2">
+                          <TitleBadge titleKey={e.activeTitle} />
+                        </div>
                         <p className="font-mono font-bold text-sm mt-1" style={{ color: '#00e8ff' }}>
                           {parseFloat(e.value).toFixed(2)} ST
                         </p>
@@ -157,10 +156,11 @@ export default function LeaderboardPage() {
                           <span className="flex items-center gap-2">
                             {e.username} 
                             {isMe && <span className="text-[10px] bg-st-cyan/20 text-st-cyan px-1.5 py-0.5 rounded">YOU</span>}
+                            <TitleBadge titleKey={e.activeTitle} />
                           </span>
-                          {e.activeTitle && <span className="text-[9px] text-text-muted uppercase tracking-tighter">{e.activeTitle}</span>}
                         </span>
                       </div>
+
                       <span className="font-mono font-semibold text-sm" style={{ color: '#00e8ff' }}>
                         {parseFloat(e.value).toFixed(2)} ST
                       </span>

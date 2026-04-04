@@ -113,6 +113,8 @@ export const TITLES: Record<string, { label: string; color: string; icon: string
   dedicated:  { label: 'Dedicated',  color: '#f97316', icon: '🔥',  description: '7-denní streak' },
   collector:  { label: 'Collector',  color: '#8b5cf6', icon: '📦',  description: '100+ cases otevřeno' },
   trader:     { label: 'Trader',     color: '#14b8a6', icon: '📈',  description: '20+ tržních obchodů' },
+  lord:       { label: 'Lord',       color: '#facc15', icon: '💍',  description: 'Zůstatek 5000+ ST' },
+  god:        { label: 'God',        color: '#f472b6', icon: '🎇',  description: 'Zůstatek 25000+ ST' },
   og:         { label: 'OG',         color: '#ef4444', icon: '👑',  description: 'Jeden z prvních uživatelů' },
 };
 
@@ -143,6 +145,8 @@ export async function getTitles(req: Request, res: Response) {
   const unlocked: string[] = [];
   if (totalMined >= 100) unlocked.push('miner');
   if (balance >= 1000) unlocked.push('whale');
+  if (balance >= 5000) unlocked.push('lord');
+  if (balance >= 25000) unlocked.push('god');
   if (daysSinceCreation >= 30) unlocked.push('veteran');
   if (coinflipStats >= 50) unlocked.push('gambler');
   if (transferStats >= 100) unlocked.push('generous');

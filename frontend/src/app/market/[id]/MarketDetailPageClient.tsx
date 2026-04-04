@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 import Link from 'next/link';
 import { formatDistanceToNowStrict, format } from 'date-fns';
-import { cs } from 'date-fns/locale';
+import { cs } from 'date-fns/locale/cs';
 import { useToast } from '@/components/ui/Toast';
 
 export default function MarketDetailPageClient({ id }: { id: string }) {

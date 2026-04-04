@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import TitleBadge from '@/components/common/TitleBadge';
 
 interface Message {
   id: string;
@@ -103,13 +104,7 @@ export default function ChatSidebar() {
           {messages.map((msg) => (
             <div key={msg.id} className="group">
               <div className="flex items-baseline gap-1.5 mb-0.5">
-                {msg.user.activeTitle && (
-                  <span className="text-[10px] font-bold uppercase tracking-tighter px-1.5 py-0.5 rounded border border-current opacity-70"
-                    style={{ color: '#06b6d4' }} // simplified color logic for now
-                  >
-                    {msg.user.activeTitle}
-                  </span>
-                )}
+                <TitleBadge titleKey={msg.user.activeTitle} />
                 <span className="text-sm font-bold text-white/90">
                   {msg.user.username}
                 </span>
