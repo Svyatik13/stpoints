@@ -155,7 +155,7 @@ export async function sellStock(req: Request, res: Response, next: NextFunction)
           type: 'INVESTMENT_SELL',
           amount: payoutAmount,
           receiverId: userId,
-          senderId: userId,
+          senderId: null, // Money comes from system
           balanceBefore: balance,
           balanceAfter: newBalance,
           description: `Prodej ${sharesToSell.toString()} ks ${stock.symbol} (@${currentPrice.toString()} ST)`,

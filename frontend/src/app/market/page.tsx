@@ -12,7 +12,7 @@ import Link from 'next/link';
 type MarketTab = 'browse' | 'invest';
 
 export default function MarketPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
   
   const [activeTab, setActiveTab] = useState<MarketTab>('browse');
@@ -119,6 +119,7 @@ export default function MarketPage() {
         setSellShares('');
       }
       loadData();
+      refreshUser().catch(() => {});
     } catch (e: any) { toast(e.message, true); }
     finally { setLoading(false); }
   };
