@@ -79,7 +79,7 @@ export async function createGame(req: Request, res: Response) {
 // POST /api/coinflip/join/:id
 export async function joinGame(req: Request, res: Response) {
   const userId = (req as any).userId;
-  const { id } = req.params;
+  const id = req.params.id as string;
 
   const game = await prisma.coinflipGame.findUnique({
     where: { id },
@@ -171,7 +171,8 @@ export async function joinGame(req: Request, res: Response) {
     });
 
     // Emit activity event
-    const winnerName = creatorWins ? game.creator.username : joiner.username;
+    const creatorUsername = game.creator.username;
+    const winnerName = creatorWins ? creatorUsername : joiner.username;
     await tx.activityEvent.create({
       data: {
         type: 'COINFLIP',
@@ -199,7 +200,7 @@ export async function joinGame(req: Request, res: Response) {
 // POST /api/coinflip/cancel/:id
 export async function cancelGame(req: Request, res: Response) {
   const userId = (req as any).userId;
-  const { id } = req.params;
+  const id = req.params.id as string;
 
   const game = await prisma.coinflipGame.findUnique({ where: { id } });
   if (!game) throw new AppError('Hra nenalezena.', 404);
