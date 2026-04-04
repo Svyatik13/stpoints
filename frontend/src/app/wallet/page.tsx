@@ -111,23 +111,62 @@ export default function WalletPage() {
 
   const balance = parseFloat(user.balance);
 
+  // ── Daily Streak State ──
+  const [streakData, setStreakData] = useState<{ streak: number; canClaim: boolean; currentDay: number; nextReward: number; rewards: number[] } | null>(null);
+  const [claimingStreak, setClaimingStreak] = useState(false);
+  const [streakClaimed, setStreakClaimed] = useState(false);
+
+  // ── USDT Price ──
+  const [usdtRate, setUsdtRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Load streak data
+    api.rewards.streak().then(setStreakData).catch(() => {});
+    // Load simulated USDT rate (1 ST = 0.01 USDT as base, or fetch from settings)
+    api.wallet.price().then((data: any) => {
+      setUsdtRate(data?.priceUsd ?? 0.01);
+    }).catch(() => setUsdtRate(0.01));
+  }, []);
+
+  async function handleClaimStreak() {
+    setClaimingStreak(true);
+    try {
+      const res = await api.rewards.claimDaily();
+      setStreakData(prev => prev ? { ...prev, canClaim: false, streak: res.streak, currentDay: res.day } : prev);
+      setStreakClaimed(true);
+      toast('success', `🔥 Streak den ${res.day}: +${res.reward} ST!`);
+      setTimeout(() => setStreakClaimed(false), 3000);
+    } catch (err: any) {
+      toast('error', err.message || 'Chyba při vyzvedávání odměny.');
+    } finally {
+      setClaimingStreak(false);
+    }
+  }
+
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
 
-        {/* Balance Card — Clean & Minimal */}
+        {/* Balance Card */}
         <div className="glass-card-static p-8 sm:p-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 -m-20 w-48 h-48 bg-st-cyan/8 rounded-full blur-3xl pointer-events-none"></div>
 
           <p className="text-text-muted text-xs font-medium tracking-widest uppercase mb-3">
             Zůstatek
           </p>
-          <div className="flex items-baseline gap-3 mb-6">
+          <div className="flex items-baseline gap-3 mb-1">
             <span className="text-5xl sm:text-6xl font-black font-mono tracking-tighter text-st-cyan drop-shadow-[0_0_20px_rgba(6,182,212,0.3)]">
               {balance.toFixed(2)}
             </span>
             <span className="text-text-muted text-xl font-semibold tracking-wider">ST</span>
           </div>
+
+          {/* USDT equivalent */}
+          {usdtRate !== null && (
+            <p className="text-text-muted text-sm font-mono mb-5">
+              ≈ <span className="text-st-emerald font-semibold">${(balance * usdtRate).toFixed(4)}</span> USDT
+            </p>
+          )}
 
           {walletAddress && (
             <p className="text-xs text-text-muted font-mono mb-6">
@@ -146,6 +185,65 @@ export default function WalletPage() {
             Provést Převod
           </button>
         </div>
+
+        {/* Daily Streak */}
+        {streakData && (
+          <div className="glass-card p-6 border-st-gold/15 relative overflow-hidden">
+            <div className="absolute top-0 right-0 -m-16 w-40 h-40 bg-st-gold/5 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-bold flex items-center gap-2">
+                  🔥 Denní Streak
+                  {streakData.streak > 0 && (
+                    <span className="text-xs font-bold bg-st-gold/20 text-st-gold px-2 py-0.5 rounded-full">
+                      {streakData.streak} {streakData.streak === 1 ? 'den' : streakData.streak < 5 ? 'dny' : 'dní'}
+                    </span>
+                  )}
+                </h3>
+                <p className="text-text-muted text-xs mt-0.5">
+                  Přihlaste se každý den a sbírejte odměny!
+                </p>
+              </div>
+              
+              <button
+                onClick={handleClaimStreak}
+                disabled={!streakData.canClaim || claimingStreak}
+                className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
+                  streakData.canClaim
+                    ? 'bg-gradient-to-r from-st-gold/30 to-st-gold/15 border border-st-gold/40 text-st-gold hover:from-st-gold/40 hover:to-st-gold/25'
+                    : 'bg-white/5 border border-white/5 text-text-muted cursor-not-allowed'
+                }`}
+              >
+                {claimingStreak ? '⏳...' : streakData.canClaim ? `🎁 Vyzvednout +${streakData.nextReward} ST` : '✅ Vyzvednuto'}
+              </button>
+            </div>
+
+            {/* 7-day progress */}
+            <div className="grid grid-cols-7 gap-1.5">
+              {streakData.rewards.map((reward, i) => {
+                const dayNum = i + 1;
+                const isCompleted = dayNum <= streakData.streak;
+                const isCurrent = dayNum === streakData.streak + 1;
+                return (
+                  <div
+                    key={i}
+                    className={`text-center py-2 px-1 rounded-lg border text-xs transition-all ${
+                      isCompleted
+                        ? 'bg-st-gold/15 border-st-gold/30 text-st-gold'
+                        : isCurrent
+                          ? 'bg-st-cyan/10 border-st-cyan/30 text-st-cyan'
+                          : 'bg-white/3 border-white/5 text-text-muted'
+                    }`}
+                  >
+                    <p className="font-bold">{isCompleted ? '✓' : `D${dayNum}`}</p>
+                    <p className="font-mono text-[10px] mt-0.5">{reward}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Recent Transactions */}
         <div className="glass-card-static p-6">

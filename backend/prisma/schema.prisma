@@ -8,40 +8,49 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String   @map("password_hash")
-  balance      Decimal  @default(0) @db.Decimal(18, 6)
-  role         Role     @default(USER)
-  isActive     Boolean  @default(true) @map("is_active")
-  address      String?  @unique @map("wallet_address") // 42-char hexadecimal wallet address
+  id              String    @id @default(cuid())
+  username        String    @unique
+  passwordHash    String    @map("password_hash")
+  balance         Decimal   @default(0) @db.Decimal(18, 6)
+  role            Role      @default(USER)
+  isActive        Boolean   @default(true) @map("is_active")
+  address         String?   @unique @map("wallet_address") // 42-char hexadecimal wallet address
   lastActiveAt    DateTime? @map("last_active_at")
   miningStartedAt DateTime? @map("mining_started_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  sentTransactions     Transaction[] @relation("sender")
-  receivedTransactions Transaction[] @relation("receiver")
+  // Daily streak
+  loginStreak       Int       @default(0) @map("login_streak")
+  lastLoginRewardAt DateTime? @map("last_login_reward_at")
+
+  // Title system
+  activeTitle String? @map("active_title") // e.g. "miner", "whale", "veteran"
+
+  sentTransactions     Transaction[]     @relation("sender")
+  receivedTransactions Transaction[]     @relation("receiver")
   miningChallenges     MiningChallenge[]
-  giveawaysCreated     Giveaway[] @relation("giveawayCreator")
+  giveawaysCreated     Giveaway[]        @relation("giveawayCreator")
   giveawayEntries      GiveawayEntry[]
   giveawayWins         GiveawayWinner[]
   stRoomSessions       StRoomSession[]
   caseOpenings         CaseOpening[]
   userPasses           UserPass[]
   usernames            Username[]
-  marketListingsSold   MarketListing[] @relation("marketSeller")
-  marketListingsBought MarketListing[] @relation("marketBuyer")
+  marketListingsSold   MarketListing[]   @relation("marketSeller")
+  marketListingsBought MarketListing[]   @relation("marketBuyer")
 
-  bids                 Bid[]
-
+  bids             Bid[]
+  coinflipsCreated CoinflipGame[] @relation("coinflipCreator")
+  coinflipsJoined  CoinflipGame[] @relation("coinflipJoiner")
+  chatMessages     ChatMessage[]
 
   // Referrals
-  referrerId          String?        @map("referrer_id")
-  referrer            User?          @relation("UserReferrals", fields: [referrerId], references: [id])
-  referredUsers       User[]         @relation("UserReferrals")
-  referralCount       Int            @default(0) @map("referral_count")
-  referralClicks      Int            @default(0) @map("referral_clicks")
+  referrerId     String? @map("referrer_id")
+  referrer       User?   @relation("UserReferrals", fields: [referrerId], references: [id])
+  referredUsers  User[]  @relation("UserReferrals")
+  referralCount  Int     @default(0) @map("referral_count")
+  referralClicks Int     @default(0) @map("referral_clicks")
 
   @@map("users")
 }
@@ -52,22 +61,22 @@ enum Role {
 }
 
 model Transaction {
-  id            String          @id @default(cuid())
-  type          TransactionType
-  amount        Decimal         @db.Decimal(18, 6)
-  description   String?
+  id          String          @id @default(cuid())
+  type        TransactionType
+  amount      Decimal         @db.Decimal(18, 6)
+  description String?
 
-  senderId      String?         @map("sender_id")
-  sender        User?           @relation("sender", fields: [senderId], references: [id])
+  senderId String? @map("sender_id")
+  sender   User?   @relation("sender", fields: [senderId], references: [id])
 
-  receiverId    String          @map("receiver_id")
-  receiver      User            @relation("receiver", fields: [receiverId], references: [id])
+  receiverId String @map("receiver_id")
+  receiver   User   @relation("receiver", fields: [receiverId], references: [id])
 
-  balanceBefore Decimal         @db.Decimal(18, 6) @map("balance_before")
-  balanceAfter  Decimal         @db.Decimal(18, 6) @map("balance_after")
+  balanceBefore Decimal @map("balance_before") @db.Decimal(18, 6)
+  balanceAfter  Decimal @map("balance_after") @db.Decimal(18, 6)
   metadata      Json?
 
-  createdAt     DateTime        @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([receiverId, createdAt])
   @@index([senderId, createdAt])
@@ -83,19 +92,22 @@ enum TransactionType {
   SYSTEM_DEBIT
   ST_ROOM_ACCESS
   CASE_OPENING
-  MARKET_SALE      // seller receives ST from market (delayed)
-  MARKET_PURCHASE  // buyer pays ST on market
-  HANDLE_CREATE    // user pays to register a username handle
-  REFERRAL_REWARD  // bonus for inviter or invitee
-  TIP              // peer-to-peer tip
+  MARKET_SALE // seller receives ST from market (delayed)
+  MARKET_PURCHASE // buyer pays ST on market
+  HANDLE_CREATE // user pays to register a username handle
+  REFERRAL_REWARD // bonus for inviter or invitee
+  TIP // peer-to-peer tip
+  COINFLIP_WIN // winner receives pot from coinflip
+  COINFLIP_LOSS // loser's wager deducted
+  DAILY_REWARD // daily login streak reward
 }
 
 model Teacher {
-  id        String         @id @default(cuid())
-  name      String         @unique
-  rarity    TeacherRarity  @default(COMMON)
-  isActive  Boolean        @default(true) @map("is_active")
-  createdAt DateTime       @default(now()) @map("created_at")
+  id        String        @id @default(cuid())
+  name      String        @unique
+  rarity    TeacherRarity @default(COMMON)
+  isActive  Boolean       @default(true) @map("is_active")
+  createdAt DateTime      @default(now()) @map("created_at")
 
   stRoomSessions StRoomSession[]
 
@@ -111,15 +123,15 @@ enum TeacherRarity {
 }
 
 model StRoomSession {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  teacherId String   @map("teacher_id")
-  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  
-  cost      Decimal  @db.Decimal(18, 6)
-  
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  teacherId String  @map("teacher_id")
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  cost Decimal @db.Decimal(18, 6)
+
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -128,24 +140,24 @@ model StRoomSession {
 }
 
 model MiningChallenge {
-  id             String          @id @default(cuid())
-  userId         String          @map("user_id")
-  user           User            @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
 
-  prefix         String
-  difficulty     Int
-  target         String
+  prefix     String
+  difficulty Int
+  target     String
 
   status         ChallengeStatus @default(PENDING)
   nonce          BigInt?
   resultHash     String?         @map("result_hash")
   hashesComputed Int?            @map("hashes_computed")
 
-  reward         Decimal?        @db.Decimal(18, 6)
+  reward Decimal? @db.Decimal(18, 6)
 
-  issuedAt       DateTime        @default(now()) @map("issued_at")
-  expiresAt      DateTime        @map("expires_at")
-  solvedAt       DateTime?       @map("solved_at")
+  issuedAt  DateTime  @default(now()) @map("issued_at")
+  expiresAt DateTime  @map("expires_at")
+  solvedAt  DateTime? @map("solved_at")
 
   @@index([userId, status])
   @@index([expiresAt])
@@ -160,47 +172,47 @@ enum ChallengeStatus {
 }
 
 model Giveaway {
-  id              String          @id @default(cuid())
-  title           String
-  prizePool       Decimal         @db.Decimal(18, 6)
-  winnerCount     Int             @map("winner_count")
-  distribution    Distribution    @default(EQUAL)
-  status          GiveawayStatus  @default(ACTIVE)
-  
-  createdBy       String          @map("created_by")
-  creator         User            @relation("giveawayCreator", fields: [createdBy], references: [id])
-  
-  endsAt          DateTime        @map("ends_at")
-  completedAt     DateTime?       @map("completed_at")
-  
-  participants    GiveawayEntry[]
-  winners         GiveawayWinner[]
-  
-  createdAt       DateTime        @default(now()) @map("created_at")
+  id           String         @id @default(cuid())
+  title        String
+  prizePool    Decimal        @db.Decimal(18, 6)
+  winnerCount  Int            @map("winner_count")
+  distribution Distribution   @default(EQUAL)
+  status       GiveawayStatus @default(ACTIVE)
+
+  createdBy String @map("created_by")
+  creator   User   @relation("giveawayCreator", fields: [createdBy], references: [id])
+
+  endsAt      DateTime  @map("ends_at")
+  completedAt DateTime? @map("completed_at")
+
+  participants GiveawayEntry[]
+  winners      GiveawayWinner[]
+
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("giveaways")
 }
 
 model GiveawayEntry {
-  id          String    @id @default(cuid())
-  giveawayId  String    @map("giveaway_id")
-  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id])
-  joinedAt    DateTime  @default(now()) @map("joined_at")
-  
+  id         String   @id @default(cuid())
+  giveawayId String   @map("giveaway_id")
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  joinedAt   DateTime @default(now()) @map("joined_at")
+
   @@unique([giveawayId, userId])
   @@map("giveaway_entries")
 }
 
 model GiveawayWinner {
-  id          String    @id @default(cuid())
-  giveawayId  String    @map("giveaway_id")
-  giveaway    Giveaway  @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id])
-  place       Int
-  amount      Decimal   @db.Decimal(18, 6)
+  id         String   @id @default(cuid())
+  giveawayId String   @map("giveaway_id")
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  place      Int
+  amount     Decimal  @db.Decimal(18, 6)
 
   @@map("giveaway_winners")
 }
@@ -261,8 +273,8 @@ model CaseOpening {
   case         Case     @relation(fields: [caseId], references: [id])
   itemId       String   @map("item_id")
   item         CaseItem @relation(fields: [itemId], references: [id])
-  costPaid     Decimal  @db.Decimal(18, 6) @map("cost_paid")
-  rewardAmount Decimal? @db.Decimal(18, 6) @map("reward_amount")
+  costPaid     Decimal  @map("cost_paid") @db.Decimal(18, 6)
+  rewardAmount Decimal? @map("reward_amount") @db.Decimal(18, 6)
   rewardType   String   @map("reward_type")
   createdAt    DateTime @default(now()) @map("created_at")
 
@@ -272,12 +284,12 @@ model CaseOpening {
 }
 
 model UserPass {
-  id          String    @id @default(cuid())
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isUsed      Boolean   @default(false) @map("is_used")
-  usedAt      DateTime? @map("used_at")
-  obtainedAt  DateTime  @default(now()) @map("obtained_at")
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isUsed     Boolean   @default(false) @map("is_used")
+  usedAt     DateTime? @map("used_at")
+  obtainedAt DateTime  @default(now()) @map("obtained_at")
 
   @@index([userId])
   @@map("user_passes")
@@ -294,8 +306,8 @@ model SystemSetting {
 model PassCodeLog {
   id        String   @id @default(cuid())
   code      String
-  type      String   // 'USED' | 'ADMIN_CHANGED'
-  usedBy    String?  @map("used_by")   // username
+  type      String // 'USED' | 'ADMIN_CHANGED'
+  usedBy    String?  @map("used_by") // username
   userId    String?  @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -306,15 +318,15 @@ model PassCodeLog {
 // ── Usernames ────────────────────────────────────────────────────────────────
 
 model Username {
-  id           String    @id @default(cuid())
-  handle       String    @unique // e.g. "vial", "svt"
-  ownerId      String    @map("owner_id")
-  owner        User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  canSellAt    DateTime  @map("can_sell_at")  // purchasedAt + 24h
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  handle    String   @unique // e.g. "vial", "svt"
+  ownerId   String   @map("owner_id")
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  canSellAt DateTime @map("can_sell_at") // purchasedAt + 24h
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  listing      MarketListing? @relation("listingUsername")
+  listing MarketListing? @relation("listingUsername")
 
   @@index([ownerId])
   @@index([handle])
@@ -335,36 +347,36 @@ enum ListingStatus {
 }
 
 model MarketListing {
-  id           String        @id @default(cuid())
-  type         ListingType
-  price        Decimal       @db.Decimal(18, 6)
-  status       ListingStatus @default(ACTIVE)
+  id     String        @id @default(cuid())
+  type   ListingType
+  price  Decimal       @db.Decimal(18, 6)
+  status ListingStatus @default(ACTIVE)
 
   // Auction fields
-  isAuction    Boolean       @default(false) @map("is_auction")
-  startingPrice Decimal?     @db.Decimal(18, 6) @map("starting_price")
-  minIncrement  Decimal?     @db.Decimal(18, 6) @map("min_increment")
-  endsAt        DateTime?    @map("ends_at")
-  currentHighestBid Decimal? @db.Decimal(18, 6) @map("current_highest_bid")
+  isAuction         Boolean   @default(false) @map("is_auction")
+  startingPrice     Decimal?  @map("starting_price") @db.Decimal(18, 6)
+  minIncrement      Decimal?  @map("min_increment") @db.Decimal(18, 6)
+  endsAt            DateTime? @map("ends_at")
+  currentHighestBid Decimal?  @map("current_highest_bid") @db.Decimal(18, 6)
 
-  sellerId     String        @map("seller_id")
-  seller       User          @relation("marketSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerId String @map("seller_id")
+  seller   User   @relation("marketSeller", fields: [sellerId], references: [id], onDelete: Cascade)
 
   // What is for sale
-  passId       String?       @map("pass_id")        // UserPass id
-  usernameId   String?       @unique @map("username_id")  // Username id
-  username     Username?     @relation("listingUsername", fields: [usernameId], references: [id], onDelete: Cascade)
+  passId     String?   @map("pass_id") // UserPass id
+  usernameId String?   @unique @map("username_id") // Username id
+  username   Username? @relation("listingUsername", fields: [usernameId], references: [id], onDelete: Cascade)
 
   // Purchase / Winner
-  buyerId      String?       @map("buyer_id")
-  buyer        User?         @relation("marketBuyer", fields: [buyerId], references: [id])
-  soldAt       DateTime?     @map("sold_at")
-  stDueAt      DateTime?     @map("st_due_at")  // when to pay seller (soldAt + 2h)
-  stPaidAt     DateTime?     @map("st_paid_at") // null = pending payout
+  buyerId  String?   @map("buyer_id")
+  buyer    User?     @relation("marketBuyer", fields: [buyerId], references: [id])
+  soldAt   DateTime? @map("sold_at")
+  stDueAt  DateTime? @map("st_due_at") // when to pay seller (soldAt + 2h)
+  stPaidAt DateTime? @map("st_paid_at") // null = pending payout
 
-  createdAt    DateTime      @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  bids         Bid[]
+  bids Bid[]
 
   @@index([status, type])
   @@index([stDueAt, stPaidAt])
@@ -373,31 +385,74 @@ model MarketListing {
 }
 
 model Bid {
-  id           String        @id @default(cuid())
-  listingId    String        @map("listing_id")
-  listing      MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  id        String        @id @default(cuid())
+  listingId String        @map("listing_id")
+  listing   MarketListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
-  bidderId     String        @map("bidder_id")
-  bidder       User          @relation(fields: [bidderId], references: [id], onDelete: Cascade)
+  bidderId String @map("bidder_id")
+  bidder   User   @relation(fields: [bidderId], references: [id], onDelete: Cascade)
 
-  amount       Decimal       @db.Decimal(18, 6)
-  createdAt    DateTime      @default(now()) @map("created_at")
+  amount    Decimal  @db.Decimal(18, 6)
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([listingId])
   @@index([bidderId])
   @@map("market_bids")
 }
 
-
-
 // ── Activity Feed ────────────────────────────────────────────────────────────
 
 model ActivityEvent {
   id        String   @id @default(cuid())
-  type      String   // "BID", "STAKE", "WIN", "TIP"
-  payload   Json     // { username: "vial", amount: 50, item: "@handle" }
+  type      String // "BID", "WIN", "TIP", "COINFLIP", "CASE", "STREAK"
+  payload   Json // { username: "vial", amount: 50, item: "@handle" }
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([createdAt])
   @@map("activity_events")
+}
+
+// ── Coinflip ─────────────────────────────────────────────────────────────────
+
+enum CoinflipStatus {
+  WAITING // creator placed wager, waiting for opponent
+  FLIPPING // opponent joined, coin is being flipped
+  FINISHED // game resolved
+  CANCELLED // creator cancelled before anyone joined
+}
+
+model CoinflipGame {
+  id     String         @id @default(cuid())
+  amount Decimal        @db.Decimal(18, 6) // wager per player
+  status CoinflipStatus @default(WAITING)
+  side   String         @default("heads") // creator's chosen side
+  result String? // "heads" or "tails"
+
+  creatorId String @map("creator_id")
+  creator   User   @relation("coinflipCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  joinerId String? @map("joiner_id")
+  joiner   User?   @relation("coinflipJoiner", fields: [joinerId], references: [id], onDelete: Cascade)
+
+  winnerId String? @map("winner_id")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  @@index([status])
+  @@index([creatorId])
+  @@map("coinflip_games")
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String   @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("chat_messages")
 }

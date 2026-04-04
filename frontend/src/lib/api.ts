@@ -222,6 +222,7 @@ export const api = {
   },
   activity: {
     list: () => request<{ events: any[] }>('/activity'),
+    feed: () => request<any>('/activity'),
   },
 
   // ── Public Profiles ──
@@ -237,6 +238,27 @@ export const api = {
   terminal: {
     access: () => request<any>('/terminal/access'),
     command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
+  },
+
+  // ── Coinflip ──
+  coinflip: {
+    create: (body: { amount: number | string; side: string }) =>
+      request<any>('/coinflip/create', { method: 'POST', body }),
+    join: (id: string) =>
+      request<any>(`/coinflip/join/${id}`, { method: 'POST' }),
+    cancel: (id: string) =>
+      request<any>(`/coinflip/cancel/${id}`, { method: 'POST' }),
+    games: () => request<any>('/coinflip/games'),
+    history: () => request<any>('/coinflip/history'),
+  },
+
+  // ── Rewards ──
+  rewards: {
+    streak: () => request<any>('/rewards/streak'),
+    claimDaily: () => request<any>('/rewards/daily-claim', { method: 'POST' }),
+    titles: () => request<any>('/rewards/titles'),
+    setTitle: (title: string | null) =>
+      request<any>('/rewards/title', { method: 'POST', body: { title } }),
   },
 };
 

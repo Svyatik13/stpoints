@@ -24,6 +24,8 @@ import usernameRoutes from './routes/username.routes';
 import marketRoutes from './routes/market.routes';
 import usersRoutes from './routes/users.routes';
 import activityRoutes from './routes/activity.routes';
+import coinflipRoutes from './routes/coinflip.routes';
+import rewardsRoutes from './routes/rewards.routes';
 
 import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
 
@@ -99,6 +101,8 @@ app.use('/api/usernames', usernameRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/coinflip', coinflipRoutes);
+app.use('/api/rewards', rewardsRoutes);
 
 
 // ── 404 ──

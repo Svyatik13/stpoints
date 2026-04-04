@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { NAV_ITEMS, ADMIN_NAV_ITEMS } from '@/lib/constants';
+import { NAV_ITEMS, GAMBLING_ITEMS, MARKET_ITEMS, ADMIN_NAV_ITEMS } from '@/lib/constants';
 import { useI18n } from '@/lib/i18n';
 
 export default function Navbar() {
@@ -12,7 +12,9 @@ export default function Navbar() {
   const pathname = usePathname();
   const { locale, t, setLocale } = useI18n();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [gamblingOpen, setGamblingOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const gamblingRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -20,17 +22,30 @@ export default function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
+      if (gamblingRef.current && !gamblingRef.current.contains(e.target as Node)) {
+        setGamblingOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // Close dropdown on route change
+  // Close dropdowns on route change
   useEffect(() => {
     setDropdownOpen(false);
+    setGamblingOpen(false);
   }, [pathname]);
 
   if (!user) return null;
+
+  const isGamblingActive = GAMBLING_ITEMS.some(item => pathname === item.href);
+
+  // All items for mobile nav
+  const allMobileItems = [
+    ...NAV_ITEMS,
+    ...GAMBLING_ITEMS,
+    ...MARKET_ITEMS,
+  ];
 
   return (
     <nav className="glass-card-static fixed top-0 left-0 right-0 z-50 px-6 py-3">
@@ -44,7 +59,7 @@ export default function Navbar() {
         </Link>
 
         {/* Nav Links */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-1">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
@@ -55,6 +70,48 @@ export default function Navbar() {
               <span>{item.label}</span>
             </Link>
           ))}
+
+          {/* Gambling Dropdown */}
+          <div className="relative" ref={gamblingRef}>
+            <button
+              onClick={() => setGamblingOpen(prev => !prev)}
+              className={`nav-link flex items-center gap-1 ${isGamblingActive ? 'active' : ''}`}
+            >
+              <span>🎰</span>
+              <span>Gambling</span>
+              <svg className={`w-3 h-3 text-text-muted transition-transform ${gamblingOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {gamblingOpen && (
+              <div className="absolute left-0 top-full mt-2 w-44 rounded-xl border border-glass-border bg-[#0c1222] shadow-2xl py-1 animate-fade-up z-[60]">
+                {GAMBLING_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-white/[0.06] ${pathname === item.href ? 'text-st-gold' : 'text-text-primary'}`}
+                  >
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Market */}
+          {MARKET_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-link ${pathname === item.href ? 'active' : ''}`}
+            >
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+
+          {/* Admin */}
           {user.role === 'ADMIN' && ADMIN_NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
@@ -143,7 +200,7 @@ export default function Navbar() {
 
       {/* Mobile Nav */}
       <div className="md:hidden flex items-center gap-1 mt-3 overflow-x-auto pb-1">
-        {NAV_ITEMS.map((item) => (
+        {allMobileItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}

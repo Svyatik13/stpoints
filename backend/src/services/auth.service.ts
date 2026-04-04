@@ -246,6 +246,9 @@ export async function getCurrentUser(userId: string) {
       address: true,
       createdAt: true,
       lastActiveAt: true,
+      activeTitle: true,
+      loginStreak: true,
+      referralCount: true,
     },
   });
 

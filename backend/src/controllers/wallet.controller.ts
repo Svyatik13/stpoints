@@ -52,8 +52,12 @@ export async function getPrice(_req: Request, res: Response, next: NextFunction)
     const price = Math.max(1.00, BASE_PRICE * scarcityFactor + activityBonus + hourSeed);
     const change24h = ((activityBonus + hourSeed) / BASE_PRICE) * 100;
 
+    const CZK_TO_USD = 0.042; // approximate CZK to USD rate
+    const priceUsd = price * CZK_TO_USD;
+
     res.json({
       price: price.toFixed(4),
+      priceUsd: priceUsd.toFixed(6),
       change24h: change24h.toFixed(2),
       totalSupply: totalSupply.toFixed(2),
       holders: userCount,

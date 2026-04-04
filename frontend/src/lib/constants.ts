@@ -2,13 +2,23 @@ export const APP_NAME = 'ST-Points';
 export const APP_DOMAIN = 'stpoints.fun';
 export const ST_ROOM_COST = 50;
 
+// Main nav items (always visible)
 export const NAV_ITEMS = [
   { href: '/wallet', label: 'Peněženka', icon: '💎' },
   { href: '/mining', label: 'Těžba', icon: '⛏️' },
   { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
-  { href: '/cases', label: 'Cases', icon: '📦' },
-  { href: '/market', label: 'Tržiště', icon: '🏪' },
   { href: '/st-room', label: 'ST-ROOM', icon: '🔐' },
+] as const;
+
+// Gambling section — shown as a dropdown
+export const GAMBLING_ITEMS = [
+  { href: '/cases', label: 'Cases', icon: '📦' },
+  { href: '/coinflip', label: 'Coinflip', icon: '🪙' },
+] as const;
+
+// Market is its own item
+export const MARKET_ITEMS = [
+  { href: '/market', label: 'Tržiště', icon: '🏪' },
 ] as const;
 
 export const ADMIN_NAV_ITEMS = [
@@ -28,6 +38,9 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   MARKET_PURCHASE: 'Tržiště',
   HANDLE_CREATE: 'Handle',
   REFERRAL_REWARD: 'Affiliate',
+  COINFLIP_WIN: 'Coinflip',
+  COINFLIP_LOSS: 'Coinflip',
+  DAILY_REWARD: 'Streak',
 };
 
 export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
@@ -43,5 +56,20 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
   MARKET_PURCHASE: 'badge-red',
   HANDLE_CREATE: 'badge-cyan',
   REFERRAL_REWARD: 'badge-emerald',
+  COINFLIP_WIN: 'badge-gold',
+  COINFLIP_LOSS: 'badge-red',
+  DAILY_REWARD: 'badge-emerald',
 };
 
+// Activity feed event formatting
+export const ACTIVITY_ICONS: Record<string, string> = {
+  COINFLIP: '🪙',
+  CASE: '📦',
+  TIP: '💰',
+  TRANSFER: '💸',
+  MINING: '⛏️',
+  GIVEAWAY: '🎁',
+  STREAK: '🔥',
+  BID: '🔨',
+  WIN: '🏆',
+};
