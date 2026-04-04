@@ -148,16 +148,6 @@ export async function tipUser(req: Request, res: Response, next: NextFunction) {
       return { senderBalance: s.balance };
     });
 
-    // 4. Log activity
-    await logActivity('TIP', {
-      from: sender.username,
-      to: handle,
-      amount: parseFloat(amount),
-      message,
-    });
-
-
-
     res.json({ message: `Posláno ${amount} ST uživateli @${handle}!`, balance: result.senderBalance.toString() });
   } catch (error) { next(error); }
 }

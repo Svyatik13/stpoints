@@ -83,16 +83,6 @@ export async function claimDaily(req: Request, res: Response) {
       },
     });
 
-    // Emit activity event for streaks >= 3
-    if (newStreak >= 3) {
-      await tx.activityEvent.create({
-        data: {
-          type: 'STREAK',
-          payload: { username: user.username, streak: newStreak, amount: reward.toString() },
-        },
-      });
-    }
-
     // Auto-grant titles based on streak milestones
     if (newStreak >= 7 && !user.activeTitle) {
       await tx.user.update({

@@ -32,6 +32,8 @@ function formatEvent(event: ActivityEvent): string {
       return `🔥 ${p.username} má ${p.streak}-denní streak!`;
     case 'BID':
       return `🔨 ${p.username} nabídl ${parseFloat(p.amount).toFixed(2)} ST na ${p.item}`;
+    case 'MYTHIC_WIN':
+      return `✨ ${p.username} VYHRÁL MYTHIC PASS V ${p.caseName}!`;
     default:
       return `${icon} ${p.username || 'Někdo'} provedl akci`;
   }
@@ -47,6 +49,7 @@ function getEventColor(type: string): string {
     case 'GIVEAWAY': return '#eab308';
     case 'STREAK': return '#ef4444';
     case 'BID': return '#06b6d4';
+    case 'MYTHIC_WIN': return '#facc15';
     default: return '#9ca3af';
   }
 }

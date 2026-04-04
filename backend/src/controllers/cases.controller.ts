@@ -70,6 +70,14 @@ export async function openCase(req: Request, res: Response, next: NextFunction) 
       } else if (wonItem.type === 'MYTHIC_PASS') {
         // Grant a pass
         await tx.userPass.create({ data: { userId } });
+        
+        // Emit activity event for Mythic Pass
+        await tx.activityEvent.create({
+          data: {
+            type: 'MYTHIC_WIN',
+            payload: { username: user.username, caseName: caseData.name },
+          },
+        });
       }
 
       await tx.user.update({ where: { id: userId }, data: { balance: newBalance } });

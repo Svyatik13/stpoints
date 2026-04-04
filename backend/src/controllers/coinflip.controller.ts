@@ -170,20 +170,22 @@ export async function joinGame(req: Request, res: Response) {
       },
     });
 
-    // Emit activity event
-    const creatorUsername = game.creator.username;
-    const winnerName = creatorWins ? creatorUsername : joiner.username;
-    await tx.activityEvent.create({
-      data: {
-        type: 'COINFLIP',
-        payload: {
-          username: winnerName,
-          amount: payout.toString(),
-          wager: wager.toString(),
-          result,
+    // Emit activity event for big wins only (>= 10 ST)
+    if (payout.gte(10)) {
+      const creatorUsername = game.creator.username;
+      const winnerName = creatorWins ? creatorUsername : joiner.username;
+      await tx.activityEvent.create({
+        data: {
+          type: 'COINFLIP',
+          payload: {
+            username: winnerName,
+            amount: payout.toString(),
+            wager: wager.toString(),
+            result,
+          },
         },
-      },
-    });
+      });
+    }
 
     return updated;
   });
