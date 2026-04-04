@@ -20,7 +20,7 @@ function isYesterday(d1: Date, d2: Date): boolean {
 
 // GET /api/rewards/streak
 export async function getStreak(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
   const now = new Date();
@@ -39,7 +39,7 @@ export async function getStreak(req: Request, res: Response) {
 
 // POST /api/rewards/daily-claim
 export async function claimDaily(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   const now = new Date();
 
@@ -128,7 +128,7 @@ export const TITLES: Record<string, { label: string; color: string; icon: string
 
 // GET /api/rewards/titles
 export async function getTitles(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
   // Compute which titles this user has unlocked
@@ -172,7 +172,7 @@ export async function getTitles(req: Request, res: Response) {
 
 // POST /api/rewards/title
 export async function setTitle(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
   const { title } = req.body;
 
   // null means remove title

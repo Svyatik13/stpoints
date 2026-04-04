@@ -15,7 +15,7 @@ function calculateGasFee(amount: Decimal): Decimal {
 
 // POST /api/coinflip/create
 export async function createGame(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
   const { amount, side } = req.body;
 
   const wager = parseFloat(amount);
@@ -78,7 +78,7 @@ export async function createGame(req: Request, res: Response) {
 
 // POST /api/coinflip/join/:id
 export async function joinGame(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
   const id = req.params.id as string;
 
   const game = await prisma.coinflipGame.findUnique({
@@ -199,7 +199,7 @@ export async function joinGame(req: Request, res: Response) {
 
 // POST /api/coinflip/cancel/:id
 export async function cancelGame(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
   const id = req.params.id as string;
 
   const game = await prisma.coinflipGame.findUnique({ where: { id } });
@@ -257,7 +257,7 @@ export async function listGames(req: Request, res: Response) {
 
 // GET /api/coinflip/history
 export async function gameHistory(req: Request, res: Response) {
-  const userId = (req as any).userId;
+  const userId = req.user!.userId;
 
   const games = await prisma.coinflipGame.findMany({
     where: {
