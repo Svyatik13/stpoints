@@ -14,10 +14,13 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+  rememberMe: z.boolean().optional(),
 });
 
-function setCookies(res: Response, tokens: authService.AuthTokens) {
+function setCookies(res: Response, tokens: authService.AuthTokens, rememberMe: boolean = false) {
   const isProduction = env.nodeEnv === 'production';
+  
+  // Access token is always short-lived
   res.cookie('access_token', tokens.accessToken, {
     httpOnly: true, 
     secure: isProduction, 
@@ -25,11 +28,17 @@ function setCookies(res: Response, tokens: authService.AuthTokens) {
     maxAge: 15 * 60 * 1000, 
     path: '/',
   });
+
+  // Refresh token duration depends on rememberMe
+  const refreshTokenMaxAge = rememberMe 
+    ? 30 * 24 * 60 * 60 * 1000 // 30 days
+    : 24 * 60 * 60 * 1000;      // 24 hours (fallback)
+
   res.cookie('refresh_token', tokens.refreshToken, {
     httpOnly: true, 
     secure: isProduction, 
     sameSite: isProduction ? 'strict' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
+    maxAge: refreshTokenMaxAge, 
     path: '/',
   });
 }
@@ -60,7 +69,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
   try {
     const validated = loginSchema.parse(req.body);
     const { user, tokens } = await authService.loginUser(validated);
-    setCookies(res, tokens);
+    setCookies(res, tokens, validated.rememberMe);
     res.json({ user });
   } catch (error) {
     if (error instanceof z.ZodError) {
