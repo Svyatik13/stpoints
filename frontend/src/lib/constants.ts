@@ -8,7 +8,6 @@ export const NAV_ITEMS = [
   { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
   { href: '/cases', label: 'Cases', icon: '📦' },
   { href: '/market', label: 'Tržiště', icon: '🏪' },
-  { href: '/vault', label: 'Trezor', icon: '🏦' },
   { href: '/st-room', label: 'ST-ROOM', icon: '🔐' },
 ] as const;
 
@@ -21,6 +20,7 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   GIVEAWAY: 'ST-Drop',
   ADMIN_GRANT: 'Admin',
   TRANSFER: 'Převod',
+  TIP: 'Spropitné',
   SYSTEM_DEBIT: 'Systém',
   ST_ROOM_ACCESS: 'ST-ROOM',
   CASE_OPENING: 'Case',
@@ -35,6 +35,7 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
   GIVEAWAY: 'badge-gold',
   ADMIN_GRANT: 'badge-emerald',
   TRANSFER: 'badge-cyan',
+  TIP: 'badge-emerald',
   SYSTEM_DEBIT: 'badge-red',
   ST_ROOM_ACCESS: 'badge-purple',
   CASE_OPENING: 'badge-gold',
@@ -43,3 +44,4 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
   HANDLE_CREATE: 'badge-cyan',
   REFERRAL_REWARD: 'badge-emerald',
 };
+

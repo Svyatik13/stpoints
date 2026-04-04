@@ -33,9 +33,8 @@ model User {
   marketListingsSold   MarketListing[] @relation("marketSeller")
   marketListingsBought MarketListing[] @relation("marketBuyer")
 
-  vaultStakes          VaultStake[]
-  achievements         UserAchievement[]
   bids                 Bid[]
+
 
   // Referrals
   referrerId          String?        @map("referrer_id")
@@ -88,9 +87,6 @@ enum TransactionType {
   MARKET_PURCHASE  // buyer pays ST on market
   HANDLE_CREATE    // user pays to register a username handle
   REFERRAL_REWARD  // bonus for inviter or invitee
-  VAULT_LOCK       // user locks ST in vault
-  VAULT_UNLOCK     // user unlocks ST from vault (includes yield)
-  AUCTION_REFUND   // refund for outbid user
   TIP              // peer-to-peer tip
 }
 
@@ -392,60 +388,7 @@ model Bid {
   @@map("market_bids")
 }
 
-// ── Vault (Staking) ────────────────────────────────────────────────────────
 
-enum VaultStakeStatus {
-  ACTIVE
-  UNLOCKED
-}
-
-model VaultStake {
-  id           String            @id @default(cuid())
-  userId       String            @map("user_id")
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  amount       Decimal           @db.Decimal(18, 6)
-  apy          Decimal           @db.Decimal(5, 2) // e.g. 10.00%
-  expectedYield Decimal          @db.Decimal(18, 6) @map("expected_yield")
-  
-  status       VaultStakeStatus  @default(ACTIVE)
-  
-  lockedAt     DateTime          @default(now()) @map("locked_at")
-  unlocksAt    DateTime          @map("unlocks_at")
-  unlockedAt   DateTime?         @map("unlocked_at")
-
-  @@index([userId, status])
-  @@index([unlocksAt])
-  @@map("vault_stakes")
-}
-
-// ── Achievements ─────────────────────────────────────────────────────────────
-
-model Achievement {
-  id          String   @id @default(cuid())
-  type        String   @unique // e.g. "MINING_MASTER", "WHALE"
-  label       String   // "Mining Master"
-  description String   // "Solve 50 mining challenges"
-  icon        String   // Emoji or icon name
-  rarity      String   @default("COMMON") // COMMON, RARE, EPIC, MYTHIC
-  
-  users       UserAchievement[]
-
-  @@map("achievements")
-}
-
-model UserAchievement {
-  id            String      @id @default(cuid())
-  userId        String      @map("user_id")
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievementId String      @map("achievement_id")
-  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
-  
-  earnedAt      DateTime    @default(now()) @map("earned_at")
-
-  @@unique([userId, achievementId])
-  @@map("user_achievements")
-}
 
 // ── Activity Feed ────────────────────────────────────────────────────────────
 

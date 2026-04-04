@@ -4,9 +4,10 @@ import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import * as authService from '../services/auth.service';
+import * as transferService from '../services/transfer.service';
 import { logActivity } from '../services/activity.service';
 import { TransactionType } from '@prisma/client';
-import { checkAndGrantAchievement } from '../services/achievement.service';
 
 // GET /users/profile/:handle — public profile
 export async function getPublicProfile(req: Request, res: Response, next: NextFunction) {
@@ -39,32 +40,6 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
       orderBy: { createdAt: 'asc' },
     });
 
-    // Get user's earned achievements
-    const earned = await prisma.userAchievement.findMany({
-      where: { userId: user.id },
-      include: { achievement: true },
-      orderBy: { earnedAt: 'desc' },
-    });
-    const earnedTypes = new Set(earned.map(e => e.achievement.type));
-
-    // Get ALL achievements in the system
-    const allAchievements = await prisma.achievement.findMany({ orderBy: { rarity: 'asc' } });
-
-    // Merge: earned ones get full data, locked ones show requirements
-    const badges = allAchievements.map(a => {
-      const userAch = earned.find(e => e.achievement.type === a.type);
-      return {
-        id: a.id,
-        type: a.type,
-        label: a.label,
-        description: a.description,
-        icon: userAch ? a.icon : '???',
-        rarity: a.rarity,
-        earned: !!userAch,
-        earnedAt: userAch?.earnedAt || null,
-      };
-    });
-
     res.json({
       profile: {
         username: user.username,
@@ -72,9 +47,6 @@ export async function getPublicProfile(req: Request, res: Response, next: NextFu
         address: user.address,
         joinedAt: user.createdAt,
         handles,
-        badges,
-        earnedCount: earned.length,
-        totalCount: allAchievements.length,
       },
     });
   } catch (error) { next(error); }
@@ -126,9 +98,13 @@ export async function tipUser(req: Request, res: Response, next: NextFunction) {
     const tipAmount = new Decimal(amount);
     const sender = await prisma.user.findUniqueOrThrow({ where: { id: senderId } });
 
-    if (sender.balance.lessThan(tipAmount)) {
-      throw new AppError('Nedostatečný zůstatek pro spropitné.', 400);
+    const gasFee = new Decimal(transferService.calculateGasFee(amount));
+    const totalCost = tipAmount.add(gasFee);
+
+    if (sender.balance.lessThan(totalCost)) {
+      throw new AppError(`Nedostatečný zůstatek pro spropitné vč. poplatku ${gasFee.toString()} ST.`, 400);
     }
+
 
     // Find receiver
     const username = await prisma.username.findFirst({
@@ -144,8 +120,9 @@ export async function tipUser(req: Request, res: Response, next: NextFunction) {
       // 1. Deduct from sender
       const s = await tx.user.update({
         where: { id: senderId },
-        data: { balance: { decrement: tipAmount } },
+        data: { balance: { decrement: totalCost } },
       });
+
 
       // 2. Add to receiver
       const r = await tx.user.update({
@@ -158,14 +135,15 @@ export async function tipUser(req: Request, res: Response, next: NextFunction) {
         data: {
           type: TransactionType.TIP,
           amount: tipAmount,
-          description: `Spropitné pro @${handle}${message ? `: ${message}` : ''}`,
+          description: `Spropitné pro @${handle}${message ? `: ${message}` : ''} (poplatek: ${gasFee.toString()} ST)`,
           senderId,
           receiverId: receiver.id,
           balanceBefore: sender.balance,
           balanceAfter: s.balance,
-          metadata: { message, recipientHandle: handle },
+          metadata: { message, recipientHandle: handle, fee: gasFee.toString() },
         },
       });
+
 
       return { senderBalance: s.balance };
     });
@@ -178,9 +156,7 @@ export async function tipUser(req: Request, res: Response, next: NextFunction) {
       message,
     });
 
-    // 5. Check achievements
-    await checkAndGrantAchievement(senderId, 'TIPPING_GENEROUS');
-    await checkAndGrantAchievement(senderId, 'WHALE');
+
 
     res.json({ message: `Posláno ${amount} ST uživateli @${handle}!`, balance: result.senderBalance.toString() });
   } catch (error) { next(error); }

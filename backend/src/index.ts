@@ -23,11 +23,9 @@ import profileRoutes from './routes/profile.routes';
 import usernameRoutes from './routes/username.routes';
 import marketRoutes from './routes/market.routes';
 import usersRoutes from './routes/users.routes';
-import vaultRoutes from './routes/vault.routes';
-import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
 import activityRoutes from './routes/activity.routes';
-import { seedAchievements } from './services/achievement.service';
-import { processVaultPayouts } from './controllers/vault.controller';
+
+import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -100,8 +98,8 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/usernames', usernameRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/users', usersRoutes);
-app.use('/api/vault', vaultRoutes);
 app.use('/api/activity', activityRoutes);
+
 
 // ── 404 ──
 app.use((_req, res) => {
@@ -129,9 +127,7 @@ app.listen(env.port, async () => {
 
   // Seed default data if empty
   await seedDefaults().catch(e => logger.error('Seed defaults failed:', e));
-  
-  // Seed achievements
-  await seedAchievements().catch(e => logger.error('Seed achievements failed:', e));
+
 
   // Background jobs: run after a short delay for DB stability
   setTimeout(async () => {
@@ -140,13 +136,10 @@ app.listen(env.port, async () => {
       setInterval(processPendingPayouts, 5 * 60 * 1000);
       await processPendingPayouts();
       
-      // Vault payouts job: check for unlocked stakes every minute
-      setInterval(processVaultPayouts, 60 * 1000);
-      await processVaultPayouts();
-      
       // Auction settlement job: check for expired auctions every minute
       setInterval(processExpiredAuctions, 60 * 1000);
       await processExpiredAuctions();
+
       
       logger.success('✅ Background jobs initialized.');
     } catch (e) {

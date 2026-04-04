@@ -238,13 +238,7 @@ export const api = {
     access: () => request<any>('/terminal/access'),
     command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
   },
-  
-  // ── Vault ──
-  vault: {
-    get: () => request<{ stakes: any[] }>('/vault'),
-    stake: (body: { amount: string | number; durationDays: number }) => 
-      request<any>('/vault/stake', { method: 'POST', body }),
-    earlyUnstake: (id: string) => request<any>(`/vault/unstake/${id}`, { method: 'POST' }),
-  },
 };
+
+
 
