@@ -17,23 +17,23 @@ const loginSchema = z.object({
 });
 
 function setCookies(res: Response, tokens: authService.AuthTokens) {
-  // Temporarily disable 'secure' while using IP (HTTP) to prevent session loss
-  // We will re-enable this once SSL/HTTPS is configured for the domain.
+  const isProduction = env.nodeEnv === 'production';
   res.cookie('access_token', tokens.accessToken, {
     httpOnly: true, 
-    secure: false, // Changed from isProduction to allow HTTP on IP
-    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility on IP
+    secure: isProduction, 
+    sameSite: isProduction ? 'strict' : 'lax',
     maxAge: 15 * 60 * 1000, 
     path: '/',
   });
   res.cookie('refresh_token', tokens.refreshToken, {
     httpOnly: true, 
-    secure: false, // Changed from isProduction to allow HTTP on IP
-    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility on IP
+    secure: isProduction, 
+    sameSite: isProduction ? 'strict' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, 
     path: '/',
   });
 }
+
 
 
 export async function register(req: Request, res: Response, next: NextFunction) {
