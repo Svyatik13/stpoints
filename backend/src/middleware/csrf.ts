@@ -19,8 +19,14 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   const isOurDomain = (str?: string) => {
     if (!str) return false;
     const lower = str.toLowerCase();
-    return lower.includes('stpoints.fun') || lower.includes('localhost') || lower.includes('127.0.0.1');
+    return (
+      lower.includes('stpoints.fun') || 
+      lower.includes('localhost') || 
+      lower.includes('127.0.0.1') || 
+      lower.includes('141.147.53.229')
+    );
   };
+
 
   // In production, we are strict but allow all our subdomains.
   // In development, we allow localhost but ALSO our production domain (to prevent lockouts).
