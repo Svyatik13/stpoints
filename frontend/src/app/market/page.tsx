@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { cs } from 'date-fns/locale/cs';
+import Link from 'next/link';
 
 type MarketTab = 'browse' | 'invest';
 
@@ -42,8 +43,8 @@ export default function MarketPage() {
   const [investAmount, setInvestAmount] = useState('');
   const [sellShares, setSellShares] = useState('');
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     try {
       if (activeTab === 'invest') {
         const res = await api.invest.stocks();
@@ -53,21 +54,30 @@ export default function MarketPage() {
         const type = filterType === 'ALL' ? undefined : filterType;
         const [listRes, handleRes, passRes] = await Promise.all([
           api.market.list(type, filterMode, sort === 'RECENT' ? undefined : sort),
-          api.usernames.me(),
-          api.cases.passes(),
+          api.usernames.me().catch(() => ({ usernames: [] })),
+          api.cases.passes().catch(() => ({ passes: [] })),
         ]);
         setListings(listRes.listings);
         setMyHandles(handleRes.usernames);
         setMyPasses(passRes.passes ?? []);
       }
     } catch (e: any) {
-      if (!e.message.includes('401')) setError(e.message);
+      if (!e.message?.includes('401')) setError(e.message);
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, [activeTab, filterType, filterMode, sort, activeStockId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { 
+    loadData(true); 
+
+    // Polling interval: 10 seconds for a "Live" experience
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [loadData]);
 
   // Toast helper
   const toast = (msg: string, isErr = false) => {
@@ -143,7 +153,15 @@ export default function MarketPage() {
         <div className="glass-card-static p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black tracking-tight text-white mb-1">Tržiště & Investice</h1>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-3xl font-black tracking-tight text-white space-x-2">
+                  <span>Tržiště & Investice</span>
+                </h1>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-st-emerald/10 border border-st-emerald/20 rounded-full shrink-0">
+                  <span className="w-1.5 h-1.5 bg-st-emerald rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                  <span className="text-[10px] font-black text-st-emerald uppercase tracking-wider">Live</span>
+                </div>
+              </div>
               <p className="text-text-secondary text-sm">Obchoduj s itemy nebo investuj své ST do akcií</p>
             </div>
             <button onClick={() => setShowSell(true)} className="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2">
@@ -200,9 +218,10 @@ export default function MarketPage() {
                             fill="none"
                             stroke={isUp ? '#34d399' : '#f87171'}
                             strokeWidth="2"
-                            points={s.history.slice().reverse().map((p: any, i: number) => {
-                              const min = Math.min(...s.history.map((h: any) => parseFloat(h.price)));
-                              const max = Math.max(...s.history.map((h: any) => parseFloat(h.price)));
+                            points={s.history?.slice().reverse().map((p: any, i: number) => {
+                              const prices = s.history.map((h: any) => parseFloat(h.price));
+                              const min = Math.min(...prices);
+                              const max = Math.max(...prices);
                               const range = max - min || 1;
                               const x = (i / (s.history.length - 1)) * 300;
                               const y = 48 - ((parseFloat(p.price) - min) / range) * 40;
@@ -234,7 +253,7 @@ export default function MarketPage() {
                       </defs>
                       <path
                         fill="url(#chartGradient)"
-                        d={`M 0 200 ${activeStock.history.slice().reverse().map((p: any, i: number) => {
+                        d={`M 0 200 ${activeStock.history?.slice().reverse().map((p: any, i: number) => {
                           const prices = activeStock.history.map((h: any) => parseFloat(h.price));
                           const min = Math.min(...prices);
                           const max = Math.max(...prices);
@@ -250,7 +269,7 @@ export default function MarketPage() {
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        points={activeStock.history.slice().reverse().map((p: any, i: number) => {
+                        points={activeStock.history?.slice().reverse().map((p: any, i: number) => {
                           const prices = activeStock.history.map((h: any) => parseFloat(h.price));
                           const min = Math.min(...prices);
                           const max = Math.max(...prices);
@@ -386,7 +405,7 @@ export default function MarketPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.03]">
-                    {loading ? (
+                    {loading && listings.length === 0 ? (
                       <tr><td colSpan={5} className="py-20 text-center text-text-muted font-bold text-xs uppercase tracking-widest">Načítám data...</td></tr>
                     ) : listings.length === 0 ? (
                       <tr><td colSpan={5} className="py-20 text-center text-text-muted font-bold text-xs uppercase tracking-widest">Žádné inzeráty.</td></tr>
@@ -429,9 +448,11 @@ export default function MarketPage() {
                             <TimeLeft endsAt={l.endsAt} />
                           </td>
                           <td className="px-6 py-5 text-right">
-                            <button className="px-4 py-2 bg-white/5 border border-white/10 group-hover:bg-st-cyan group-hover:text-black group-hover:border-st-cyan rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-                              Zobrazit
-                            </button>
+                            <div className="flex justify-end">
+                               <button className="px-4 py-2 bg-white/5 border border-white/10 group-hover:bg-st-cyan group-hover:text-black group-hover:border-st-cyan rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                                Zobrazit
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))

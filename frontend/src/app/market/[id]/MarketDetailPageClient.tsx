@@ -21,19 +21,27 @@ export default function MarketDetailPageClient({ id }: { id: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchListing();
+    fetchListing(true); // Initial load
+
+    const interval = setInterval(() => {
+      fetchListing(false); // Background refresh
+    }, 5000); // 5 seconds polling for details
+
+    return () => clearInterval(interval);
   }, [id]);
 
-  async function fetchListing() {
-    setLoading(true);
+  async function fetchListing(showLoading = true) {
+    if (showLoading) setLoading(true);
     try {
       const res = await api.market.getListing(id);
       setListing(res.listing);
     } catch (e: any) {
-      toast('error', e.message);
-      router.push('/market');
+      if (showLoading) {
+        toast('error', e.message);
+        router.push('/market');
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }
 
@@ -128,10 +136,16 @@ export default function MarketDetailPageClient({ id }: { id: string }) {
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-xl ${listing.type === 'USERNAME' ? 'bg-gradient-to-br from-st-cyan/20 to-st-cyan/5 border border-st-cyan/30' : 'bg-gradient-to-br from-st-purple/20 to-st-purple/5 border border-st-purple/30'}`}>
                   {listing.type === 'USERNAME' ? '👤' : '🎫'}
                 </div>
-                <div>
-                  <h1 className="text-3xl font-black text-white">
-                    {listing.type === 'USERNAME' ? `@${listing.username?.handle}` : 'Mythic Pass'}
-                  </h1>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-black text-white">
+                      {listing.type === 'USERNAME' ? `@${listing.username?.handle}` : 'Mythic Pass'}
+                    </h1>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-st-emerald/10 border border-st-emerald/20 rounded-full">
+                      <span className="w-1.5 h-1.5 bg-st-emerald rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                      <span className="text-[10px] font-black text-st-emerald uppercase tracking-wider">Live</span>
+                    </div>
+                  </div>
                   <p className="text-st-gold font-bold">
                     {listing.status === 'SOLD' ? 'Prodané' : listing.isAuction ? 'Aukce' : 'Kup Teď'}
                   </p>
