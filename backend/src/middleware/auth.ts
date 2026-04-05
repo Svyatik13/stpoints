@@ -13,7 +13,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   const token = req.cookies?.access_token;
 
   if (!token) {
-    res.status(401).json({ error: 'Přístup odepřen. Přihlaste se.' });
+    res.status(401).json({ error: 'Přístup odepřen. Přihlaste se.', code: 'UNAUTHORIZED' });
     return;
   }
 
@@ -22,7 +22,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     req.user = payload;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Neplatný nebo vypršelý token.' });
+    res.status(401).json({ error: 'Neplatný nebo vypršelý token.', code: 'TOKEN_EXPIRED' });
     return;
   }
 }

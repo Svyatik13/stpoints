@@ -36,8 +36,10 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
   try {
     return await rawRequest<T>(endpoint, options);
   } catch (error: any) {
-    const isAuthEndpoint = ['/auth/refresh', '/auth/login', '/auth/register', '/auth/me'].includes(endpoint);
-    if (error?.message?.includes('Neplatný nebo vypršelý token') && !isAuthEndpoint) {
+    const isRefreshEndpoint = endpoint === '/auth/refresh';
+    const isTokenError = error?.code === 'TOKEN_EXPIRED' || error?.message?.includes('token');
+
+    if (isTokenError && !isRefreshEndpoint) {
       if (!refreshPromise) {
         refreshPromise = rawRequest<any>('/auth/refresh', { method: 'POST' })
           .finally(() => { refreshPromise = null; });

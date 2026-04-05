@@ -23,8 +23,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { user } = await api.auth.me();
       setUser(user);
-    } catch {
-      setUser(null);
+    } catch (error: any) {
+      // Only clear user if it's a definitive auth error
+      if (error?.code === 'UNAUTHORIZED' || error?.code === 'TOKEN_EXPIRED') {
+        setUser(null);
+      }
+      // Log error for debugging but don't force logout on 500/network error
+      console.error('Refresh user failed:', error);
     }
   }, []);
 
