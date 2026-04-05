@@ -145,14 +145,55 @@ export default function MarketPage() {
   const availPasses = myPasses.filter((p: any) => !p.isUsed);
   const sellableHandles = myHandles.filter((h: any) => new Date() >= new Date(h.canSellAt));
 
+  function StockTicker({ stocks }: { stocks: any[] }) {
+    return (
+      <div className="w-full bg-black/40 border-y border-white/5 py-2 overflow-hidden select-none mb-6">
+        <div className="flex whitespace-nowrap animate-ticker hover:[animation-play-state:paused]">
+          {[...stocks, ...stocks].map((s, i) => {
+            const change = parseFloat(s.currentPrice) - parseFloat(s.lastPrice);
+            const isUp = change >= 0;
+            return (
+              <div key={`${s.id}-${i}`} className="inline-flex items-center gap-2 px-6 border-r border-white/5">
+                <span className="text-[10px] font-black text-white/50 tracking-widest">{s.symbol}</span>
+                <span className="font-mono text-xs font-bold text-white">{parseFloat(s.currentPrice).toFixed(2)}</span>
+                <span className={`font-mono text-[10px] font-bold ${isUp ? 'text-emerald-400' : 'text-st-red'}`}>
+                  {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(4)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function Sparkline({ history, isUp }: { history: any[], isUp: boolean }) {
+    if (!history || history.length < 2) return null;
+    const prices = history.map((h: any) => parseFloat(h.price));
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min || 1;
+    const points = history.slice(-20).map((p: any, i: number) => {
+      const x = (i / 19) * 100;
+      const y = 30 - ((parseFloat(p.price) - min) / range) * 25;
+      return `${x},${y}`;
+    }).join(' ');
+
+    return (
+      <svg className="w-24 h-8" viewBox="0 0 100 30">
+        <polyline fill="none" stroke={isUp ? '#10b981' : '#ef4444'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+      </svg>
+    );
+  }
+
   if (!user) return null;
 
   return (
     <AppShell>
       <div className="space-y-6 animate-fade-up">
         {/* Header & Tabs */}
-        <div className="glass-card-static p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="glass-card-static p-6 pb-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-3xl font-black tracking-tight text-white space-x-2">
@@ -165,96 +206,147 @@ export default function MarketPage() {
               </div>
               <p className="text-text-secondary text-sm">Obchoduj s itemy nebo investuj své ST do akcií</p>
             </div>
-            <button onClick={() => setShowSell(true)} className="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2">
+            <button onClick={() => setShowSell(true)} className="btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
               <span>+</span> Vystavit
             </button>
           </div>
 
-          <div className="flex gap-2 mt-6">
+          <div className="flex gap-2 border-b border-white/5">
             <button 
               onClick={() => setActiveTab('browse')} 
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'browse' ? 'bg-st-cyan/20 text-st-cyan border border-st-cyan/30' : 'text-text-secondary hover:text-white'}`}
+              className={`px-6 py-3 text-sm font-black transition-all relative ${activeTab === 'browse' ? 'text-st-cyan' : 'text-text-secondary hover:text-white'}`}
             >
-              🔎 Procházet
+              🔎 PROCHÁZET
+              {activeTab === 'browse' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-st-cyan shadow-[0_0_10px_rgba(6,182,212,0.8)]" />}
             </button>
             <button 
               onClick={() => setActiveTab('invest')} 
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'invest' ? 'bg-st-gold/20 text-st-gold border border-st-gold/30' : 'text-text-secondary hover:text-white'}`}
+              className={`px-6 py-3 text-sm font-black transition-all relative ${activeTab === 'invest' ? 'text-st-gold' : 'text-text-secondary hover:text-white'}`}
             >
-              📈 Investice
+              📈 INVESTICE
+              {activeTab === 'invest' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-st-gold shadow-[0_0_10px_rgba(251,191,36,0.8)]" />}
             </button>
           </div>
         </div>
 
-        {error && <div className="glass-card-static p-4 border-red-500/30 border text-red-400 text-sm">{error}</div>}
-        {success && <div className="glass-card-static p-4 border-emerald-500/30 border text-emerald-400 text-sm">✅ {success}</div>}
+        {activeTab === 'invest' && stocks.length > 0 && <StockTicker stocks={stocks} />}
+
+        {error && <div className="glass-card-static p-4 border-red-500/30 border text-red-400 text-sm mx-6">{error}</div>}
+        {success && <div className="glass-card-static p-4 border-emerald-500/30 border text-emerald-400 text-sm mx-6">✅ {success}</div>}
 
         {activeTab === 'invest' ? (
           /* INVESTMENT TAB */
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {stocks.map(s => {
-                  const change = parseFloat(s.currentPrice) - parseFloat(s.lastPrice);
-                  const isUp = change >= 0;
-                  return (
-                    <button 
-                      key={s.id} 
-                      onClick={() => setActiveStockId(s.id)}
-                      className={`glass-card-static p-5 text-left transition-all hover:border-st-cyan/40 ${activeStockId === s.id ? 'ring-2 ring-st-cyan/50' : ''}`}
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <p className="font-mono font-black text-st-gold text-xl tracking-tighter">{s.symbol}</p>
-                          <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">{s.name}</p>
-                        </div>
-                        <div className={`text-right ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
-                          <p className="font-mono font-black text-lg">{parseFloat(s.currentPrice).toFixed(2)}</p>
-                          <p className="text-[10px] font-bold">{isUp ? '▲' : '▼'} {Math.abs(change).toFixed(4)}</p>
-                        </div>
-                      </div>
-                      <div className="h-12 w-full flex items-end">
-                        <svg className="w-full h-full" preserveAspectRatio="none">
-                          <polyline
-                            fill="none"
-                            stroke={isUp ? '#34d399' : '#f87171'}
-                            strokeWidth="2"
-                            points={s.history?.slice().reverse().map((p: any, i: number) => {
-                              const prices = s.history.map((h: any) => parseFloat(h.price));
-                              const min = Math.min(...prices);
-                              const max = Math.max(...prices);
-                              const range = max - min || 1;
-                              const x = (i / (s.history.length - 1)) * 300;
-                              const y = 48 - ((parseFloat(p.price) - min) / range) * 40;
-                              return `${x},${y}`;
-                            }).join(' ')}
-                          />
-                        </svg>
-                      </div>
-                    </button>
-                  );
-                })}
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 px-1">
+            <div className="xl:col-span-3 space-y-6">
+              {/* Professional Table */}
+              <div className="glass-card-static overflow-hidden rounded-2xl border border-white/5">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/5 bg-white/[0.02]">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Symbol</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Aktuální Cena</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Změna</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Trend (24h)</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted text-right">Akce</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.03]">
+                      {stocks.map(s => {
+                        const change = parseFloat(s.currentPrice) - parseFloat(s.lastPrice);
+                        const isUp = change >= 0;
+                        const changePercent = (change / parseFloat(s.lastPrice)) * 100;
+                        
+                        return (
+                          <tr 
+                            key={s.id} 
+                            onClick={() => setActiveStockId(s.id)}
+                            className={`hover:bg-white/[0.02] transition-colors cursor-pointer group ${activeStockId === s.id ? 'bg-white/[0.04]' : ''}`}
+                          >
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center font-black text-xs text-st-gold">
+                                  {s.symbol[0]}
+                                </div>
+                                <div>
+                                  <p className="font-black text-white text-base tracking-tighter">{s.symbol}</p>
+                                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{s.name}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5">
+                              <p className="font-mono font-black text-white text-lg">
+                                {parseFloat(s.currentPrice).toLocaleString('cs-CZ', { minimumFractionDigits: 2 })} ST
+                              </p>
+                            </td>
+                            <td className="px-6 py-5">
+                              <div className={`flex items-center gap-1.5 font-mono font-black text-sm ${isUp ? 'text-emerald-400' : 'text-st-red'}`}>
+                                <span>{isUp ? '▲' : '▼'}</span>
+                                <span>{Math.abs(changePercent).toFixed(2)}%</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5">
+                               <Sparkline history={s.history} isUp={isUp} />
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <button className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeStockId === s.id ? 'bg-st-gold text-black' : 'bg-white/5 border border-white/10 text-white group-hover:border-st-gold/50'}`}>
+                                Vybrat
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               {activeStock && (
-                <div className="glass-card-static p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-black">
-                      <span className="text-st-gold tracking-tighter">{activeStock.symbol}</span>
-                      <span className="text-text-muted text-sm font-bold ml-3 uppercase tracking-widest">{activeStock.name} (LIVE)</span>
-                    </h2>
+                <div className="glass-card-static p-8 border-st-gold/20">
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                         <h2 className="text-4xl font-black text-white tracking-tighter">{activeStock.symbol}</h2>
+                         <div className="px-3 py-1 bg-st-gold/10 border border-st-gold/20 rounded-lg text-[10px] font-black text-st-gold uppercase tracking-widest">
+                           {activeStock.name}
+                         </div>
+                      </div>
+                      <p className="text-text-muted text-xs font-bold uppercase tracking-widest">Technická analýza & live vývoj ceny</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Aktuální Kurz</p>
+                      <p className="text-4xl font-mono font-black text-st-gold">
+                        {parseFloat(activeStock.currentPrice).toLocaleString('cs-CZ', { minimumFractionDigits: 4 })} ST
+                      </p>
+                    </div>
                   </div>
-                  <div className="h-72 bg-black/30 rounded-2xl p-4 border border-glass-border relative overflow-hidden">
+
+                  <div className="h-80 bg-black/40 rounded-3xl p-6 border border-white/5 relative group">
+                    <div className="absolute top-4 left-6 z-10 flex gap-4">
+                        <div className="flex flex-col">
+                           <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">24h Max</span>
+                           <span className="text-xs font-mono font-bold text-emerald-400">
+                             {Math.max(...(activeStock.history?.map((h: any) => parseFloat(h.price)) || [0])).toFixed(2)}
+                           </span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">24h Min</span>
+                           <span className="text-xs font-mono font-bold text-st-red">
+                             {Math.min(...(activeStock.history?.map((h: any) => parseFloat(h.price)) || [0])).toFixed(2)}
+                           </span>
+                        </div>
+                    </div>
+
                     <svg className="w-full h-full" viewBox="0 0 800 200" preserveAspectRatio="none">
                       <defs>
                         <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.2" />
-                          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                          <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
                         </linearGradient>
                       </defs>
                       <path
                         fill="url(#chartGradient)"
-                        d={`M 0 200 ${activeStock.history?.slice().reverse().map((p: any, i: number) => {
+                        d={`M 0 200 ${activeStock.history?.map((p: any, i: number) => {
                           const prices = activeStock.history.map((h: any) => parseFloat(h.price));
                           const min = Math.min(...prices);
                           const max = Math.max(...prices);
@@ -263,14 +355,15 @@ export default function MarketPage() {
                           const y = 180 - ((parseFloat(p.price) - min) / range) * 160;
                           return `L ${x} ${y}`;
                         }).join(' ')} L 800 200 Z`}
+                        className="transition-all duration-500"
                       />
                       <polyline
                         fill="none"
-                        stroke="#06b6d4"
+                        stroke="#fbbf24"
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        points={activeStock.history?.slice().reverse().map((p: any, i: number) => {
+                        points={activeStock.history?.map((p: any, i: number) => {
                           const prices = activeStock.history.map((h: any) => parseFloat(h.price));
                           const min = Math.min(...prices);
                           const max = Math.max(...prices);
@@ -279,6 +372,7 @@ export default function MarketPage() {
                           const y = 180 - ((parseFloat(p.price) - min) / range) * 160;
                           return `${x},${y}`;
                         }).join(' ')}
+                        className="transition-all duration-500"
                       />
                     </svg>
                   </div>
@@ -287,70 +381,103 @@ export default function MarketPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="glass-card-static p-6">
-                <div className="flex gap-1 bg-black/40 p-1 rounded-xl mb-6 border border-white/5">
-                  <button onClick={() => setTradeMode('buy')} className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${tradeMode === 'buy' ? 'bg-st-cyan text-black' : 'text-text-muted hover:text-white'}`}>NAKOUPIT</button>
-                  <button onClick={() => setTradeMode('sell')} className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${tradeMode === 'sell' ? 'bg-st-red text-white' : 'text-text-muted hover:text-white'}`}>PRODAT</button>
+              <div className="glass-card-static p-6 border-white/10">
+                <div className="flex gap-1 bg-black/60 p-1.5 rounded-2xl mb-8 border border-white/5">
+                  <button onClick={() => setTradeMode('buy')} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${tradeMode === 'buy' ? 'bg-st-gold text-black shadow-[0_0_15px_rgba(251,191,36,0.3)]' : 'text-text-muted hover:text-white'}`}>NAKOUPIT</button>
+                  <button onClick={() => setTradeMode('sell')} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${tradeMode === 'sell' ? 'bg-st-red text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'text-text-muted hover:text-white'}`}>PRODAT</button>
                 </div>
 
                 {activeStock ? (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-text-muted font-bold uppercase tracking-widest">Cena:</span>
-                      <span className="font-mono text-st-gold font-black text-xl">{parseFloat(activeStock.currentPrice).toFixed(2)} ST</span>
+                  <div className="space-y-6">
+                    <div className="p-4 bg-white/[0.03] rounded-2xl border border-white/5">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">Tržní Cena:</span>
+                        <span className="font-mono text-st-gold font-black text-lg">{parseFloat(activeStock.currentPrice).toFixed(2)} ST</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">Dostupný Zůstatek:</span>
+                        <span className="font-mono text-white font-bold text-xs">{parseFloat(user.balance).toLocaleString()} ST</span>
+                      </div>
                     </div>
 
                     {tradeMode === 'buy' ? (
-                      <div>
-                        <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest block mb-2">Částka v ST</label>
-                        <input type="number" value={investAmount} onChange={e => setInvestAmount(e.target.value)} className="glass-input text-lg font-mono" placeholder="0.00" />
-                        <p className="text-[9px] text-text-muted mt-2 font-bold uppercase">Obdržíte cca: {(parseFloat(investAmount) / parseFloat(activeStock.currentPrice) || 0).toFixed(4)} akcií</p>
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-text-muted font-black uppercase tracking-widest block px-1">Částka k investici (ST)</label>
+                        <div className="relative">
+                           <input type="number" value={investAmount} onChange={e => setInvestAmount(e.target.value)} className="glass-input text-xl font-mono py-4 pr-12" placeholder="0.00" />
+                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-text-muted">ST</span>
+                        </div>
+                        <div className="flex justify-between px-1">
+                           <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Odhadem obdržíte:</p>
+                           <p className="text-[9px] text-st-cyan font-black uppercase tracking-wider">{(parseFloat(investAmount) / parseFloat(activeStock.currentPrice) || 0).toFixed(6)} {activeStock.symbol}</p>
+                        </div>
                       </div>
                     ) : (
-                      <div>
-                        <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest block mb-2">Počet akcií k prodeji</label>
-                        <input type="number" value={sellShares} onChange={e => setSellShares(e.target.value)} className="glass-input text-lg font-mono" placeholder="0.0" />
-                        <p className="text-[9px] text-text-muted mt-2 font-bold uppercase">Získáte cca: {(parseFloat(sellShares) * parseFloat(activeStock.currentPrice) || 0).toFixed(2)} ST</p>
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-text-muted font-black uppercase tracking-widest block px-1">Množství k prodeji ({activeStock.symbol})</label>
+                        <div className="relative">
+                           <input type="number" value={sellShares} onChange={e => setSellShares(e.target.value)} className="glass-input text-xl font-mono py-4 pr-12" placeholder="0.0" />
+                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-text-muted">ks</span>
+                        </div>
+                        <div className="flex justify-between px-1">
+                           <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Odhadem získáte:</p>
+                           <p className="text-[9px] text-emerald-400 font-black uppercase tracking-wider">{(parseFloat(sellShares) * parseFloat(activeStock.currentPrice) || 0).toFixed(2)} ST</p>
+                        </div>
                       </div>
                     )}
 
                     <button 
                       onClick={handleStockTrade} 
-                      disabled={loading}
-                      className={`w-full py-4 rounded-xl font-black text-sm tracking-widest transition-all ${tradeMode === 'buy' ? 'bg-st-cyan text-black shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:scale-[1.02]' : 'bg-st-red text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:scale-[1.02]'}`}
+                      disabled={loading || (tradeMode === 'buy' ? !investAmount : !sellShares)}
+                      className={`w-full py-5 rounded-2xl font-black text-sm tracking-widest transition-all ${tradeMode === 'buy' ? 'bg-st-gold text-black shadow-[0_0_30px_rgba(251,191,36,0.3)] hover:scale-[1.02]' : 'bg-st-red text-white shadow-[0_0_30px_rgba(239,68,68,0.3)] hover:scale-[1.02]'} disabled:opacity-50 disabled:scale-100 disabled:shadow-none`}
                     >
-                      {loading ? 'ZPRACOVÁVÁM...' : tradeMode === 'buy' ? `KOUPIT ${activeStock.symbol}` : `PRODAT ${activeStock.symbol}`}
+                      {loading ? 'ZPRACOVÁVÁM...' : tradeMode === 'buy' ? `POTVRDIT NÁKUP` : `POTVRDIT PRODEJ`}
                     </button>
                   </div>
-                ) : <p className="text-center text-text-muted py-8 text-xs font-bold uppercase">Zvolte akcii</p>}
+                ) : <div className="py-12 text-center space-y-3">
+                      <div className="text-4xl">📊</div>
+                      <p className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">Vyberte symbol k obchodování</p>
+                    </div>}
               </div>
 
-              <div className="glass-card-static p-6 bg-st-cyan/5">
-                <h3 className="font-black text-[10px] uppercase tracking-widest mb-4 text-text-muted">Můj podíl ({activeStock?.symbol})</h3>
+              <div className="glass-card-static p-6 bg-gradient-to-br from-white/[0.03] to-transparent border-white/10">
+                <h3 className="font-black text-[10px] uppercase tracking-widest mb-6 text-text-muted flex items-center justify-between">
+                  <span>Moje Portfolio</span>
+                  <span className="text-st-gold">{activeStock?.symbol}</span>
+                </h3>
                 {activeStock?.investments?.[0] ? (
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-text-muted font-bold">Vlastněno:</span>
-                      <span className="font-mono text-white font-bold">{parseFloat(activeStock.investments[0].shares).toFixed(4)} ks</span>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-xs items-center">
+                      <span className="text-text-muted font-bold uppercase tracking-wider text-[10px]">Vlastněno</span>
+                      <span className="font-mono text-white font-black text-sm">{parseFloat(activeStock.investments[0].shares).toFixed(4)} ks</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-text-muted font-bold">Investice:</span>
-                      <span className="font-mono text-white font-bold">{parseFloat(activeStock.investments[0].amount).toFixed(2)} ST</span>
+                    <div className="flex justify-between text-xs items-center border-t border-white/5 pt-3">
+                      <span className="text-text-muted font-bold uppercase tracking-wider text-[10px]">Nákupní Hodnota</span>
+                      <span className="font-mono text-white font-bold">{parseFloat(activeStock.investments[0].amount).toLocaleString()} ST</span>
                     </div>
                     {(() => {
                       const value = parseFloat(activeStock.investments[0].shares) * parseFloat(activeStock.currentPrice);
                       const profit = value - parseFloat(activeStock.investments[0].amount);
+                      const profitPercent = (profit / parseFloat(activeStock.investments[0].amount)) * 100;
+                      
                       return (
-                        <div className={`p-3 rounded-xl border mt-4 ${profit >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-st-red/10 border-st-red/20'}`}>
-                          <p className="text-[10px] font-black uppercase text-text-muted mb-1">Zisk / Ztráta</p>
-                          <p className={`text-lg font-mono font-black ${profit >= 0 ? 'text-emerald-400' : 'text-st-red'}`}>
-                            {profit >= 0 ? '+' : ''}{profit.toFixed(4)} ST
+                        <div className={`p-4 rounded-2xl border-2 mt-6 ${profit >= 0 ? 'bg-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]' : 'bg-st-red/5 border-st-red/20'}`}>
+                          <div className="flex justify-between items-center mb-1">
+                             <p className="text-[10px] font-black uppercase text-text-muted tracking-widest">Zisk / Ztráta</p>
+                             <span className={`text-[10px] font-black ${profit >= 0 ? 'text-emerald-400' : 'text-st-red'}`}>
+                               {profit >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%
+                             </span>
+                          </div>
+                          <p className={`text-2xl font-mono font-black ${profit >= 0 ? 'text-emerald-400' : 'text-st-red'} tracking-tighter`}>
+                            {profit >= 0 ? '+' : ''}{profit.toFixed(4)} <span className="text-xs">ST</span>
                           </p>
                         </div>
                       );
                     })()}
                   </div>
-                ) : <p className="text-center py-4 text-text-muted text-[10px] font-bold uppercase">Žádná investice</p>}
+                ) : <div className="py-6 text-center">
+                      <p className="text-text-muted text-[10px] font-black uppercase tracking-wider">Aktuálně nedržíte žádné akcie {activeStock?.symbol}</p>
+                    </div>}
               </div>
             </div>
           </div>
