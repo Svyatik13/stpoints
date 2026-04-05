@@ -194,6 +194,40 @@ export const api = {
       request<{ code: string; history: any[] }>('/admin/passcode'),
     regeneratePassCode: () =>
       request<{ code: string; history: any[] }>('/admin/passcode/regenerate', { method: 'POST' }),
+    // ═══ NEW ═══
+    // User Detail
+    getUserDetail: (userId: string) =>
+      request<any>(`/admin/user/${userId}/detail`),
+    // Broadcast
+    getBroadcast: () =>
+      request<{ message: string | null; updatedAt: string | null }>('/admin/broadcast'),
+    setBroadcast: (message: string) =>
+      request<any>('/admin/broadcast', { method: 'POST', body: { message } }),
+    clearBroadcast: () =>
+      request<any>('/admin/broadcast', { method: 'DELETE' }),
+    // Market Control
+    getMarketStocks: () =>
+      request<any>('/admin/market-control/stocks'),
+    setStockPrice: (stockId: string, price: string) =>
+      request<any>('/admin/market-control/set-price', { method: 'POST', body: { stockId, price } }),
+    toggleTrading: (paused: boolean) =>
+      request<any>('/admin/market-control/toggle-trading', { method: 'POST', body: { paused } }),
+    // Audit Log
+    getAuditLog: (page: number = 1) =>
+      request<any>(`/admin/audit-log?page=${page}&limit=30`),
+    // Coinflip
+    getCoinflips: (status?: string) =>
+      request<any>(`/admin/coinflips${status ? `?status=${status}` : ''}`),
+    cancelCoinflip: (gameId: string) =>
+      request<any>(`/admin/coinflips/${gameId}/cancel`, { method: 'POST' }),
+    // Case Stats
+    getCaseStats: () =>
+      request<any>('/admin/cases/stats'),
+    // Bulk Grant
+    bulkGrant: (body: { amount: string; reason: string; filter: string }) =>
+      request<any>('/admin/bulk-grant', { method: 'POST', body }),
+    // Export
+    exportUsersCSV: () => `${API_BASE}/admin/users/export`,
   },
 
   // ── Usernames ──

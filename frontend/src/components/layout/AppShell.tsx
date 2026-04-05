@@ -1,14 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/layout/Navbar';
-import ActivityTicker from '@/components/layout/ActivityTicker';
 import ChatSidebar from '@/components/chat/ChatSidebar';
-import { api } from '@/lib/api';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const [broadcast, setBroadcast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetch(`${window.location.origin}/api/broadcast`).then(r => r.json()).then(d => setBroadcast(d.message)).catch(() => {});
+    }
+  }, [user]);
   
   if (loading) {
     return (
@@ -31,7 +36,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Navbar />
       <ChatSidebar />
-      <main className={user ? 'pt-[80px] md:pt-[72px] pb-8 px-4 sm:px-6 transition-all duration-300' : ''}>
+      {broadcast && (
+        <div className="fixed top-[64px] md:top-[56px] left-0 right-0 z-40 bg-gradient-to-r from-st-gold/20 via-st-gold/10 to-st-gold/20 border-b border-st-gold/20 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-2">
+            <span className="text-st-gold text-sm">📢</span>
+            <p className="text-st-gold text-sm font-medium">{broadcast}</p>
+            <button onClick={() => setBroadcast(null)} className="ml-2 text-st-gold/50 hover:text-st-gold text-xs">✕</button>
+          </div>
+        </div>
+      )}
+      <main className={user ? `${broadcast ? 'pt-[112px] md:pt-[100px]' : 'pt-[80px] md:pt-[72px]'} pb-8 px-4 sm:px-6 transition-all duration-300` : ''}>
         <div className="max-w-7xl mx-auto">
           {children}
         </div>

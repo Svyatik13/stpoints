@@ -363,3 +363,401 @@ export async function regeneratePassCode(req: Request, res: Response, next: Next
     res.json({ code, history });
   } catch (error) { next(error); }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── NEW ADMIN ENDPOINTS ──
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Helper: log admin action
+async function logAdminAction(adminId: string, action: string, details: Record<string, any> = {}) {
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: adminId }, select: { username: true } });
+    await prisma.activityEvent.create({
+      data: {
+        type: 'ADMIN_ACTION',
+        payload: { admin: admin?.username || adminId, action, ...details, timestamp: new Date().toISOString() },
+      },
+    });
+  } catch {}
+}
+
+// ── User Detail ──
+export async function getUserDetail(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { userId } = z.object({ userId: z.string() }).parse(req.params);
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        id: true, username: true, balance: true, role: true, isActive: true,
+        address: true, lastActiveAt: true, createdAt: true, activeTitle: true,
+        loginStreak: true, lastLoginRewardAt: true, referralCount: true,
+        _count: {
+          select: {
+            miningChallenges: true, giveawayWins: true, caseOpenings: true,
+            investments: true, coinflipsCreated: true, chatMessages: true,
+            sentTransactions: true, receivedTransactions: true, userPasses: true,
+            usernames: true,
+          },
+        },
+      },
+    });
+
+    // Recent transactions (last 20)
+    const transactions = await prisma.transaction.findMany({
+      where: { OR: [{ senderId: userId }, { receiverId: userId }] },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, type: true, amount: true, description: true, createdAt: true },
+    });
+
+    // Active investments
+    const investments = await prisma.userInvestment.findMany({
+      where: { userId },
+      include: { stock: { select: { symbol: true, name: true, currentPrice: true } } },
+    });
+
+    // Recent mining (last 10)
+    const mining = await prisma.miningChallenge.findMany({
+      where: { userId },
+      orderBy: { issuedAt: 'desc' },
+      take: 10,
+      select: { id: true, status: true, reward: true, issuedAt: true, solvedAt: true },
+    });
+
+    res.json({
+      user: { ...user, balance: user.balance.toString() },
+      transactions: transactions.map(t => ({ ...t, amount: t.amount.toString() })),
+      investments: investments.map(i => ({
+        ...i,
+        amount: i.amount.toString(),
+        shares: i.shares.toString(),
+        avgPrice: i.avgPrice.toString(),
+        stock: { ...i.stock, currentPrice: i.stock.currentPrice.toString() },
+      })),
+      mining: mining.map(m => ({ ...m, reward: m.reward?.toString() || null })),
+    });
+  } catch (error) { next(error); }
+}
+
+// ── Broadcast Message ──
+export async function getBroadcast(req: Request, res: Response, next: NextFunction) {
+  try {
+    const setting = await prisma.systemSetting.findUnique({ where: { key: 'broadcast_message' } });
+    res.json({ message: setting?.value || null, updatedAt: setting?.updatedAt || null });
+  } catch (error) { next(error); }
+}
+
+export async function setBroadcast(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { message } = z.object({ message: z.string().min(1).max(500) }).parse(req.body);
+    await prisma.systemSetting.upsert({
+      where: { key: 'broadcast_message' },
+      update: { value: message },
+      create: { key: 'broadcast_message', value: message },
+    });
+    await logAdminAction(req.user!.userId, 'BROADCAST_SET', { message });
+    logger.info(`ADMIN: Broadcast set: "${message}"`);
+    res.json({ success: true, message });
+  } catch (error) { next(error); }
+}
+
+export async function clearBroadcast(req: Request, res: Response, next: NextFunction) {
+  try {
+    await prisma.systemSetting.deleteMany({ where: { key: 'broadcast_message' } });
+    await logAdminAction(req.user!.userId, 'BROADCAST_CLEARED');
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
+// ── Market Control ──
+export async function getMarketControlStocks(req: Request, res: Response, next: NextFunction) {
+  try {
+    const stocks = await prisma.stock.findMany({
+      include: {
+        _count: { select: { investments: true } },
+      },
+    });
+
+    // Get total invested per stock
+    const stocksWithDetails = await Promise.all(stocks.map(async (stock) => {
+      const totalInvested = await prisma.userInvestment.aggregate({
+        where: { stockId: stock.id },
+        _sum: { amount: true, shares: true },
+      });
+      return {
+        ...stock,
+        currentPrice: stock.currentPrice.toString(),
+        lastPrice: stock.lastPrice.toString(),
+        totalInvested: totalInvested._sum.amount?.toString() || '0',
+        totalShares: totalInvested._sum.shares?.toString() || '0',
+        investorCount: stock._count.investments,
+      };
+    }));
+
+    // Check if trading is paused
+    const pauseSetting = await prisma.systemSetting.findUnique({ where: { key: 'trading_paused' } });
+
+    res.json({ stocks: stocksWithDetails, tradingPaused: pauseSetting?.value === 'true' });
+  } catch (error) { next(error); }
+}
+
+export async function setStockPrice(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { stockId, price } = z.object({
+      stockId: z.string(),
+      price: z.string().refine(v => parseFloat(v) > 0, 'Price must be positive'),
+    }).parse(req.body);
+
+    const stock = await prisma.stock.findUniqueOrThrow({ where: { id: stockId } });
+    const newPrice = new Decimal(price);
+
+    await prisma.$transaction([
+      prisma.stock.update({
+        where: { id: stockId },
+        data: { currentPrice: newPrice, lastPrice: stock.currentPrice },
+      }),
+      prisma.stockPriceHistory.create({
+        data: { stockId, price: newPrice },
+      }),
+    ]);
+
+    await logAdminAction(req.user!.userId, 'STOCK_PRICE_SET', { stock: stock.symbol, oldPrice: stock.currentPrice.toString(), newPrice: price });
+    logger.info(`ADMIN: Stock ${stock.symbol} price set to ${price}`);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
+export async function toggleTrading(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { paused } = z.object({ paused: z.boolean() }).parse(req.body);
+    await prisma.systemSetting.upsert({
+      where: { key: 'trading_paused' },
+      update: { value: String(paused) },
+      create: { key: 'trading_paused', value: String(paused) },
+    });
+    await logAdminAction(req.user!.userId, paused ? 'TRADING_PAUSED' : 'TRADING_RESUMED');
+    logger.info(`ADMIN: Trading ${paused ? 'PAUSED' : 'RESUMED'}`);
+    res.json({ success: true, paused });
+  } catch (error) { next(error); }
+}
+
+// ── Audit Log ──
+export async function getAuditLog(req: Request, res: Response, next: NextFunction) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 30, 100);
+
+    const [events, total] = await Promise.all([
+      prisma.activityEvent.findMany({
+        where: { type: 'ADMIN_ACTION' },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.activityEvent.count({ where: { type: 'ADMIN_ACTION' } }),
+    ]);
+
+    res.json({ events, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  } catch (error) { next(error); }
+}
+
+// ── Coinflip Oversight ──
+export async function getCoinflipsAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const status = (req.query.status as string) || 'all';
+    const where: any = {};
+    if (status === 'WAITING') where.status = 'WAITING';
+    if (status === 'FINISHED') where.status = 'FINISHED';
+
+    const games = await prisma.coinflipGame.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        creator: { select: { username: true } },
+        joiner: { select: { username: true } },
+      },
+    });
+
+    const stats = await prisma.coinflipGame.groupBy({
+      by: ['status'],
+      _count: true,
+      _sum: { amount: true },
+    });
+
+    res.json({
+      games: games.map(g => ({ ...g, amount: g.amount.toString() })),
+      stats: stats.map(s => ({ status: s.status, count: s._count, totalAmount: s._sum.amount?.toString() || '0' })),
+    });
+  } catch (error) { next(error); }
+}
+
+export async function forceCancelCoinflip(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { gameId } = z.object({ gameId: z.string() }).parse(req.params);
+
+    const game = await prisma.coinflipGame.findUniqueOrThrow({ where: { id: gameId } });
+    if (game.status !== 'WAITING') {
+      return res.status(400).json({ error: 'Lze zrušit pouze čekající hry.' });
+    }
+
+    const wager = new Decimal(game.amount.toString());
+
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUniqueOrThrow({ where: { id: game.creatorId } });
+      const balance = new Decimal(user.balance.toString());
+      await tx.user.update({
+        where: { id: game.creatorId },
+        data: { balance: { increment: wager } },
+      });
+      await tx.transaction.create({
+        data: {
+          type: 'COINFLIP_WIN',
+          amount: wager,
+          receiverId: game.creatorId,
+          balanceBefore: balance,
+          balanceAfter: balance.add(wager),
+          description: 'Admin: Vrácení sázky (hra zrušena adminem)',
+          metadata: { gameId, action: 'admin_cancel' },
+        },
+      });
+      await tx.coinflipGame.update({ where: { id: gameId }, data: { status: 'CANCELLED' } });
+    });
+
+    await logAdminAction(req.user!.userId, 'COINFLIP_CANCELLED', { gameId, amount: wager.toString() });
+    logger.info(`ADMIN: Coinflip ${gameId} force-cancelled, refunded ${wager} ST`);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
+// ── Case Statistics ──
+export async function getCaseStats(req: Request, res: Response, next: NextFunction) {
+  try {
+    const cases = await prisma.case.findMany({
+      include: {
+        _count: { select: { openings: true } },
+        items: { select: { id: true, label: true, type: true, amount: true, weight: true } },
+      },
+    });
+
+    const casesWithStats = await Promise.all(cases.map(async (c) => {
+      // Revenue from this case
+      const revenue = await prisma.caseOpening.aggregate({
+        where: { caseId: c.id },
+        _sum: { costPaid: true },
+      });
+
+      // Rewards paid out
+      const rewards = await prisma.caseOpening.aggregate({
+        where: { caseId: c.id },
+        _sum: { rewardAmount: true },
+      });
+
+      // Most won item
+      const topItem = await prisma.caseOpening.groupBy({
+        by: ['itemId'],
+        where: { caseId: c.id },
+        _count: true,
+        orderBy: { _count: { itemId: 'desc' } },
+        take: 1,
+      });
+
+      const topItemInfo = topItem[0]
+        ? c.items.find(i => i.id === topItem[0].itemId)
+        : null;
+
+      return {
+        id: c.id,
+        name: c.name,
+        price: c.price.toString(),
+        isDaily: c.isDaily,
+        isActive: c.isActive,
+        totalOpenings: c._count.openings,
+        revenue: revenue._sum.costPaid?.toString() || '0',
+        rewardsPaid: rewards._sum.rewardAmount?.toString() || '0',
+        topItem: topItemInfo ? { label: topItemInfo.label, count: topItem[0]._count } : null,
+        itemCount: c.items.length,
+      };
+    }));
+
+    res.json({ cases: casesWithStats });
+  } catch (error) { next(error); }
+}
+
+// ── Bulk Grant ──
+export async function bulkGrant(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { amount, reason, filter } = z.object({
+      amount: z.string().refine(v => parseFloat(v) > 0, 'Must be positive'),
+      reason: z.string().min(1).max(200),
+      filter: z.enum(['all', 'active_24h', 'active_7d']),
+    }).parse(req.body);
+
+    const grantAmount = new Decimal(amount);
+    const now = Date.now();
+
+    const where: any = { role: { not: 'ADMIN' as const } };
+    if (filter === 'active_24h') where.lastActiveAt = { gte: new Date(now - 24 * 60 * 60 * 1000) };
+    if (filter === 'active_7d') where.lastActiveAt = { gte: new Date(now - 7 * 24 * 60 * 60 * 1000) };
+
+    const users = await prisma.user.findMany({ where, select: { id: true, balance: true, username: true } });
+
+    let granted = 0;
+    for (const u of users) {
+      const currentBalance = new Decimal(u.balance.toString());
+      const newBalance = currentBalance.add(grantAmount);
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: u.id }, data: { balance: newBalance } }),
+        prisma.transaction.create({
+          data: {
+            type: 'ADMIN_GRANT',
+            amount: grantAmount,
+            receiverId: u.id,
+            balanceBefore: currentBalance,
+            balanceAfter: newBalance,
+            description: `Bulk Grant: ${reason}`,
+            metadata: { grantedBy: req.user!.userId, reason, filter },
+          },
+        }),
+      ]);
+      granted++;
+    }
+
+    await logAdminAction(req.user!.userId, 'BULK_GRANT', { amount, reason, filter, usersAffected: granted });
+    logger.info(`ADMIN: Bulk grant ${amount} ST to ${granted} users (filter: ${filter})`);
+    res.json({ success: true, usersAffected: granted, totalAmount: grantAmount.mul(granted).toString() });
+  } catch (error) { next(error); }
+}
+
+// ── Export Users CSV ──
+export async function exportUsersCSV(req: Request, res: Response, next: NextFunction) {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true, username: true, balance: true, role: true, isActive: true,
+        lastActiveAt: true, createdAt: true, loginStreak: true,
+        _count: { select: { miningChallenges: true, giveawayWins: true, caseOpenings: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const header = 'Username,Balance,Role,Active,LastActive,Created,LoginStreak,MiningCount,GiveawayWins,CaseOpenings\n';
+    const rows = users.map(u => [
+      u.username,
+      u.balance.toString(),
+      u.role,
+      u.isActive ? 'Yes' : 'No',
+      u.lastActiveAt?.toISOString() || '',
+      u.createdAt.toISOString(),
+      u.loginStreak,
+      u._count.miningChallenges,
+      u._count.giveawayWins,
+      u._count.caseOpenings,
+    ].join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=stpoints_users.csv');
+    res.send(header + rows);
+  } catch (error) { next(error); }
+}

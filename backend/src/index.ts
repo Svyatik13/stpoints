@@ -90,6 +90,15 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// ── Public Broadcast (no auth required) ──
+import prisma from './config/database';
+app.get('/api/broadcast', async (_req, res) => {
+  try {
+    const setting = await prisma.systemSetting.findUnique({ where: { key: 'broadcast_message' } });
+    res.json({ message: setting?.value || null });
+  } catch { res.json({ message: null }); }
+});
+
 // ── API Routes ──
 app.use('/api/auth', authRoutes);
 app.use('/api/mining', miningRoutes);

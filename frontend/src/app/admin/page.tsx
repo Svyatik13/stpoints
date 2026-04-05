@@ -5,35 +5,31 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
-
-interface SystemStats {
-  totalUsers: number;
-  activeUsers24h: number;
-  totalBalance: string;
-  totalMined: string;
-  totalGiveaways: string;
-  giveawayCount: number;
-  recentTransactions24h: number;
-}
+import AdminSidebar, { AdminSection } from './components/AdminSidebar';
+import DashboardSection from './components/DashboardSection';
+import BroadcastSection from './components/BroadcastSection';
+import MarketControlSection from './components/MarketControlSection';
+import CoinflipSection from './components/CoinflipSection';
+import CaseStatsSection from './components/CaseStatsSection';
+import AuditLogSection from './components/AuditLogSection';
+import UserDetailModal from './components/UserDetailModal';
 
 interface AdminUser {
-  id: string;
-  username: string;
-  balance: string;
-  role: string;
-  address: string;
-  isActive: boolean;
-  lastActiveAt: string | null;
-  createdAt: string;
-  miningCount: number;
-  giveawayCount: number;
+  id: string; username: string; balance: string; role: string;
+  address: string; isActive: boolean; lastActiveAt: string | null;
+  createdAt: string; miningCount: number; giveawayCount: number;
 }
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<'dashboard' | 'users' | 'giveaway' | 'teachers' | 'cases'>('dashboard');
-  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [section, setSection] = useState<AdminSection>('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+  const [passCode, setPassCode] = useState<any>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Users state
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [userPage, setUserPage] = useState(1);
@@ -41,73 +37,46 @@ export default function AdminPage() {
   const [grantModal, setGrantModal] = useState<AdminUser | null>(null);
   const [grantAmount, setGrantAmount] = useState('');
   const [grantReason, setGrantReason] = useState('');
-  const [giveawayResult, setGiveawayResult] = useState<any>(null);
+  const [detailUser, setDetailUser] = useState<string | null>(null);
+  const [bulkModal, setBulkModal] = useState(false);
+  const [bulkAmount, setBulkAmount] = useState('');
+  const [bulkReason, setBulkReason] = useState('');
+  const [bulkFilter, setBulkFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Giveaway state
+  const [gaTitle, setGaTitle] = useState('');
+  const [gaPool, setGaPool] = useState('');
+  const [gaWinners, setGaWinners] = useState('');
+  const [gaDist, setGaDist] = useState<'EQUAL'|'WEIGHTED'>('EQUAL');
+  const [gaTime, setGaTime] = useState('');
+
+  // Teachers state
   const [teachers, setTeachers] = useState<any[]>([]);
   const [newTeacherName, setNewTeacherName] = useState('');
+
   // Cases state
   const [cases, setCases] = useState<any[]>([]);
   const [expandedCase, setExpandedCase] = useState<string | null>(null);
   const [newCase, setNewCase] = useState({ name: '', description: '', price: '10', isDaily: false });
-  const [editingCase, setEditingCase] = useState<any | null>(null);
+  const [editingCase, setEditingCase] = useState<any>(null);
   const [newItem, setNewItem] = useState<Record<string, { type: string; label: string; amount: string; weight: string }>>({});
   const [editingItem, setEditingItem] = useState<Record<string, { label: string; amount: string; weight: string }>>({});
 
-  // PassCode state
-  const [passCode, setPassCode] = useState<{ code: string; history: any[] } | null>(null);
-  const [passCodeLoading, setPassCodeLoading] = useState(false);
-
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'ADMIN')) {
-      router.replace('/wallet');
-    }
+    if (!authLoading && (!user || user.role !== 'ADMIN')) router.replace('/wallet');
   }, [user, authLoading, router]);
 
-  const loadStats = useCallback(async () => {
-    try {
-      const data = await api.admin.stats();
-      setStats(data);
-    } catch {}
-  }, []);
-
+  const loadStats = useCallback(async () => { try { const d = await api.admin.stats(); setStats(d); } catch {} }, []);
+  const loadPassCode = useCallback(async () => { try { const d = await api.admin.getPassCode(); setPassCode(d); } catch {} }, []);
   const loadUsers = useCallback(async () => {
-    try {
-      const data = await api.admin.users(userPage, 15, userSearch);
-      setUsers(data.users);
-      setUserTotal(data.pagination.total);
-    } catch {}
+    try { const d = await api.admin.users(userPage, 15, userSearch); setUsers(d.users); setUserTotal(d.pagination.total); } catch {}
   }, [userPage, userSearch]);
-
-  const loadTeachers = useCallback(async () => {
-    try {
-      const data = await api.admin.teachers();
-      setTeachers(data.teachers);
-    } catch {}
-  }, []);
-
-  const loadCases = useCallback(async () => {
-    try {
-      const data = await api.admin.getCases();
-      setCases(data.cases || []);
-    } catch {}
-  }, []);
-
-  const loadPassCode = useCallback(async () => {
-    try {
-      const data = await api.admin.getPassCode();
-      setPassCode(data);
-    } catch {}
-  }, []);
+  const loadTeachers = useCallback(async () => { try { const d = await api.admin.teachers(); setTeachers(d.teachers); } catch {} }, []);
+  const loadCases = useCallback(async () => { try { const d = await api.admin.getCases(); setCases(d.cases || []); } catch {} }, []);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
-      loadStats();
-      loadUsers();
-      loadTeachers();
-      loadCases();
-      loadPassCode();
-    }
+    if (user?.role === 'ADMIN') { loadStats(); loadUsers(); loadTeachers(); loadCases(); loadPassCode(); }
   }, [user, loadStats, loadUsers, loadTeachers, loadCases, loadPassCode]);
 
   function showMessage(type: 'success' | 'error', text: string) {
@@ -120,812 +89,320 @@ export default function AdminPage() {
     setActionLoading(true);
     try {
       await api.admin.grant({ userId: grantModal.id, amount: grantAmount, reason: grantReason });
-      showMessage('success', `${grantAmount} ST přiděleno uživateli ${grantModal.username}`);
-      setGrantModal(null);
-      setGrantAmount('');
-      setGrantReason('');
-      loadUsers();
-      loadStats();
-    } catch (err: any) {
-      showMessage('error', err.message);
-    }
+      showMessage('success', `${grantAmount} ST → ${grantModal.username}`);
+      setGrantModal(null); setGrantAmount(''); setGrantReason('');
+      loadUsers(); loadStats();
+    } catch (err: any) { showMessage('error', err.message); }
     setActionLoading(false);
   }
 
-  async function handleToggleActive(u: AdminUser) {
-    try {
-      await api.admin.toggleActive({ userId: u.id });
-      showMessage('success', `${u.username} ${u.isActive ? 'zablokován' : 'odblokován'}`);
-      loadUsers();
-    } catch (err: any) {
-      showMessage('error', err.message);
-    }
-  }
-
-  async function handleSetRole(u: AdminUser, role: string) {
-    try {
-      await api.admin.setRole({ userId: u.id, role });
-      showMessage('success', `${u.username} → ${role}`);
-      loadUsers();
-    } catch (err: any) {
-      showMessage('error', err.message);
-    }
-  }
-
-  async function handleDeleteUser(u: AdminUser) {
-    if (!window.confirm(`OPRAVDU chcete TRVALE SMAZAT z celého systému uživatele ${u.username}? Tato akce smaže i všechny jeho transakce, těžby a drops.`)) return;
+  async function handleBulkGrant() {
+    if (!bulkAmount || !bulkReason) return;
     setActionLoading(true);
     try {
-      await api.admin.deleteUser(u.id);
-      showMessage('success', `Uživatel ${u.username} byl trvale smazán ze všeho.`);
-      loadUsers();
-      loadStats();
-    } catch (err: any) {
-      showMessage('error', err.message);
-    }
-    setActionLoading(false);
-  }
-
-  const [gaTitle, setGaTitle] = useState('');
-  const [gaPool, setGaPool] = useState('');
-  const [gaWinners, setGaWinners] = useState('');
-  const [gaDist, setGaDist] = useState<'EQUAL'|'WEIGHTED'>('EQUAL');
-  const [gaTime, setGaTime] = useState('');
-
-  async function handleCreateGiveaway() {
-    setActionLoading(true);
-    try {
-      await api.admin.createGiveaway({
-        title: gaTitle,
-        prizePool: gaPool,
-        winnerCount: parseInt(gaWinners),
-        distribution: gaDist,
-        durationMinutes: parseInt(gaTime)
-      });
-      showMessage('success', 'Giveaway přidán!');
-      setGaTitle('');
-      setGaPool('');
-      setGaWinners('');
-      setGaTime('');
-      loadStats();
-    } catch (err: any) {
-      showMessage('error', err.message);
-    }
-    setActionLoading(false);
-  }
-
-  async function handleForceDraw(giveawayId: string) {
-    setActionLoading(true);
-    try {
-      await api.admin.drawGiveaway({ giveawayId });
-      showMessage('success', 'ST-Drop byl úspěšně vyhodnocen.');
-      loadStats();
-      // A quick reload workaround since we don't fetch giveaways array in admin page yet
-    } catch (err: any) {
-      showMessage('error', err.message);
-    }
+      const r = await api.admin.bulkGrant({ amount: bulkAmount, reason: bulkReason, filter: bulkFilter });
+      showMessage('success', `${bulkAmount} ST → ${r.usersAffected} uživatelů`);
+      setBulkModal(false); setBulkAmount(''); setBulkReason('');
+      loadUsers(); loadStats();
+    } catch (err: any) { showMessage('error', err.message); }
     setActionLoading(false);
   }
 
   if (!user || user.role !== 'ADMIN') return null;
 
-  const tabs = [
-    { id: 'dashboard' as const, label: '📊 Dashboard', },
-    { id: 'users' as const, label: '👥 Uživatelé', },
-    { id: 'giveaway' as const, label: '🎁 Giveaway', },
-    { id: 'teachers' as const, label: '🧑‍🏫 Učitelé', },
-    { id: 'cases' as const, label: '📦 Cases', },
-  ];
-
   return (
     <AppShell>
-      <div className="space-y-6 animate-fade-up">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">⚙️ Admin Panel</h1>
-            <p className="text-text-secondary text-sm mt-1">ZČU Central Node — Správa systému</p>
-          </div>
-          <div className="badge badge-red text-xs">ADMIN</div>
-        </div>
+      <div className="flex gap-4 min-h-[calc(100vh-80px)]">
+        <AdminSidebar active={section} onChange={setSection} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-        {/* Message Toast */}
-        {message && (
-          <div className={`glass-card-static p-4 animate-fade-up ${message.type === 'success' ? 'border-st-emerald/30' : 'border-st-red/30'}`}
-            style={{ borderColor: message.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }}
-          >
-            <p className={`text-sm font-medium ${message.type === 'success' ? 'text-st-emerald' : 'text-st-red'}`}>
-              {message.type === 'success' ? '✅' : '❌'} {message.text}
-            </p>
-          </div>
-        )}
-
-        {/* Tab Bar */}
-        <div className="flex gap-2">
-          {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                tab === t.id
-                  ? 'bg-st-cyan-dim text-st-cyan border border-st-cyan/20'
-                  : 'bg-white/[0.04] text-text-secondary hover:bg-white/[0.08] border border-transparent'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ═══ DASHBOARD TAB ═══ */}
-        {tab === 'dashboard' && stats && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Uživatelé', value: stats.totalUsers, icon: '👥', color: 'text-st-cyan' },
-                { label: 'Aktivní (24h)', value: stats.activeUsers24h, icon: '🟢', color: 'text-st-emerald' },
-                { label: 'Transakce (24h)', value: stats.recentTransactions24h, icon: '📈', color: 'text-st-purple' },
-                { label: 'ST-Drops', value: stats.giveawayCount, icon: '🎁', color: 'text-st-gold' },
-              ].map(s => (
-                <div key={s.label} className="glass-card-static p-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span>{s.icon}</span>
-                    <span className="text-text-muted text-xs uppercase tracking-wider">{s.label}</span>
-                  </div>
-                  <p className={`text-3xl font-bold font-mono ${s.color}`}>{s.value}</p>
-                </div>
-              ))}
+        <div className="flex-1 min-w-0 space-y-5 animate-fade-up">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">⚙️ Admin Panel</h1>
+              <p className="text-text-secondary text-sm mt-0.5">ZČU Central Node — Správa systému</p>
             </div>
+            <div className="badge badge-red text-xs">ADMIN</div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { label: 'Celkový Zůstatek', value: `${parseFloat(stats.totalBalance).toFixed(4)} ST`, color: 'text-st-cyan' },
-                { label: 'Celkem Odtěženo', value: `${parseFloat(stats.totalMined).toFixed(4)} ST`, color: 'text-st-purple' },
-                { label: 'Celkem Giveaway', value: `${parseFloat(stats.totalGiveaways).toFixed(4)} ST`, color: 'text-st-gold' },
-              ].map(s => (
-                <div key={s.label} className="glass-card-static p-5">
-                  <p className="text-text-muted text-xs uppercase tracking-wider mb-2">{s.label}</p>
-                  <p className={`text-2xl font-bold font-mono ${s.color}`}>{s.value}</p>
-                </div>
-              ))}
+          {/* Toast */}
+          {message && (
+            <div className={`glass-card-static p-3 animate-fade-up ${message.type === 'success' ? 'border-st-emerald/30' : 'border-st-red/30'}`}
+              style={{ borderColor: message.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }}>
+              <p className={`text-sm font-medium ${message.type === 'success' ? 'text-st-emerald' : 'text-st-red'}`}>
+                {message.type === 'success' ? '✅' : '❌'} {message.text}
+              </p>
             </div>
+          )}
 
-            {/* ── Pass Code Card ── */}
-            <div className="glass-card p-6 space-y-4" style={{ borderColor: 'rgba(168,85,247,0.25)' }}>
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-st-purple-dim flex items-center justify-center text-xl">🔐</div>
-                  <div>
-                    <p className="font-bold text-sm">Přístupový kód</p>
-                    <p className="text-text-muted text-xs">Jednorázový — po použití se automaticky změní</p>
-                  </div>
-                </div>
-                <button
-                  onClick={async () => {
-                    setPassCodeLoading(true);
-                    try {
-                      const data = await api.admin.regeneratePassCode();
-                      setPassCode(data);
-                      showMessage('success', `Nový kód: ${data.code}`);
-                    } catch (err: any) { showMessage('error', err.message); }
-                    setPassCodeLoading(false);
-                  }}
-                  disabled={passCodeLoading}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-st-purple-dim text-st-purple font-semibold hover:bg-st-purple/20 transition-colors disabled:opacity-40"
-                >🔄 Vygenerovat nový</button>
+          {/* ═══ DASHBOARD ═══ */}
+          {section === 'dashboard' && (
+            <DashboardSection stats={stats} passCode={passCode} onMessage={showMessage} onRefresh={() => { loadStats(); loadPassCode(); }} />
+          )}
+
+          {/* ═══ BROADCAST ═══ */}
+          {section === 'broadcast' && <BroadcastSection onMessage={showMessage} />}
+
+          {/* ═══ MARKET CONTROL ═══ */}
+          {section === 'market' && <MarketControlSection onMessage={showMessage} />}
+
+          {/* ═══ COINFLIP ═══ */}
+          {section === 'coinflip' && <CoinflipSection onMessage={showMessage} />}
+
+          {/* ═══ CASE STATS ═══ */}
+          {section === 'case-stats' && <CaseStatsSection onMessage={showMessage} />}
+
+          {/* ═══ AUDIT LOG ═══ */}
+          {section === 'audit' && <AuditLogSection />}
+
+          {/* ═══ USERS ═══ */}
+          {section === 'users' && (
+            <div className="space-y-4">
+              <div className="flex gap-3 flex-wrap">
+                <input type="text" placeholder="Hledat uživatele..." value={userSearch} onChange={e => { setUserSearch(e.target.value); setUserPage(1); }} className="glass-input flex-1 min-w-[200px]" />
+                <button onClick={loadUsers} className="btn-secondary px-4">🔍</button>
+                <button onClick={() => setBulkModal(true)} className="px-4 py-2 text-xs rounded-xl bg-st-purple-dim text-st-purple font-semibold">💰 Bulk Grant</button>
+                <a href={api.admin.exportUsersCSV()} target="_blank" rel="noreferrer" className="px-4 py-2 text-xs rounded-xl bg-st-emerald-dim text-st-emerald font-semibold flex items-center gap-1">📥 Export CSV</a>
               </div>
-              {passCode ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-black/30 border border-st-purple/30 rounded-xl p-4 text-center">
-                    <p className="text-4xl font-black font-mono tracking-[0.3em] text-st-purple" style={{ textShadow: '0 0 20px rgba(168,85,247,0.5)' }}>
-                      {passCode.code}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(passCode.code); showMessage('success', 'Kód zkopírován!'); }}
-                    className="px-3 py-2 text-xs rounded-xl bg-white/5 text-text-muted hover:text-text-primary hover:bg-white/10 transition-colors"
-                  >📋</button>
-                </div>
-              ) : (
-                <div className="h-16 rounded-xl bg-black/20 animate-pulse" />
-              )}
-              {passCode?.history && passCode.history.length > 0 && (
-                <div>
-                  <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Posledních 5 kódů</p>
-                  <div className="space-y-1">
-                    {passCode.history.map((h: any, i: number) => (
-                      <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.03] text-xs">
-                        <span className="font-mono text-text-muted w-16 flex-shrink-0 tracking-widest">{h.code}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${h.type === 'ADMIN_CHANGED' ? 'bg-st-gold-dim text-st-gold' : 'bg-st-cyan-dim text-st-cyan'}`}>
-                          {h.type === 'ADMIN_CHANGED' ? '🔑 Admin' : '✓ Použit'}
-                        </span>
-                        <span className="text-text-secondary flex-1 truncate">{h.usedBy || '—'}</span>
-                        <span className="text-text-muted flex-shrink-0">{new Date(h.createdAt).toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* ═══ USERS TAB ═══ */}
-        {tab === 'users' && (
-          <div className="space-y-4">
-            {/* Search */}
-            <div className="flex gap-3">
-              <input
-                type="text"
-                placeholder="Hledat uživatele..."
-                value={userSearch}
-                onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
-                className="glass-input flex-1"
-              />
-              <button onClick={loadUsers} className="btn-secondary px-4">🔍</button>
-            </div>
-
-            {/* User Table */}
-            <div className="glass-card-static overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-glass-border">
-                      <th className="text-left p-4 text-text-muted text-xs uppercase tracking-wider">Uživatel</th>
-                      <th className="text-right p-4 text-text-muted text-xs uppercase tracking-wider">Zůstatek</th>
-                      <th className="text-center p-4 text-text-muted text-xs uppercase tracking-wider">Role</th>
-                      <th className="text-center p-4 text-text-muted text-xs uppercase tracking-wider">Těžba</th>
-                      <th className="text-right p-4 text-text-muted text-xs uppercase tracking-wider">Akce</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(u => (
-                      <tr key={u.id} className="border-b border-glass-border/50 hover:bg-white/[0.02] transition-colors">
-                        <td className="p-4">
-                          <div className="flex flex-col">
+              <div className="glass-card-static overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-glass-border">
+                        <th className="text-left p-4 text-text-muted text-xs uppercase tracking-wider">Uživatel</th>
+                        <th className="text-right p-4 text-text-muted text-xs uppercase tracking-wider">Zůstatek</th>
+                        <th className="text-center p-4 text-text-muted text-xs uppercase tracking-wider">Role</th>
+                        <th className="text-center p-4 text-text-muted text-xs uppercase tracking-wider">Těžba</th>
+                        <th className="text-right p-4 text-text-muted text-xs uppercase tracking-wider">Akce</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(u => (
+                        <tr key={u.id} className="border-b border-glass-border/50 hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => setDetailUser(u.id)}>
+                          <td className="p-4">
                             <p className="font-semibold flex items-center gap-2">
                               {u.username}
                               {!u.isActive && <span className="badge badge-red text-[9px]">BAN</span>}
                             </p>
-                            {u.address && (
-                              <button 
-                                onClick={() => { navigator.clipboard.writeText(u.address); showMessage('success', 'Adresa zkopírována'); }}
-                                className="text-[10px] text-text-muted font-mono hover:text-st-cyan transition-colors text-left"
-                                title={u.address}
-                              >
-                                {u.address.slice(0, 6)}...{u.address.slice(-4)} 📋
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4 text-right">
-                          <span className="font-mono font-semibold text-st-cyan">{parseFloat(u.balance).toFixed(6)} ST</span>
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className={`badge ${u.role === 'ADMIN' ? 'badge-red' : 'badge-cyan'} text-[10px]`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="p-4 text-center font-mono text-text-secondary">
-                          {u.miningCount}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2 justify-end">
-                            <button
-                              onClick={() => setGrantModal(u)}
-                              className="px-3 py-1.5 text-xs rounded-lg bg-st-gold-dim text-st-gold hover:bg-st-gold/20 transition-colors font-semibold"
-                              title="Přidělit ST"
-                            >
-                              💰
-                            </button>
-                            <button
-                              onClick={() => handleToggleActive(u)}
-                              className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-colors ${
-                                u.isActive
-                                  ? 'bg-st-red-dim text-st-red hover:bg-st-red/20'
-                                  : 'bg-st-emerald-dim text-st-emerald hover:bg-st-emerald/20'
-                              }`}
-                              title={u.isActive ? 'Zablokovat' : 'Odblokovat'}
-                            >
-                              {u.isActive ? '🚫' : '✅'}
-                            </button>
-                            <button
-                              onClick={() => handleSetRole(u, u.role === 'ADMIN' ? 'USER' : 'ADMIN')}
-                              className="px-3 py-1.5 text-xs rounded-lg bg-st-purple-dim text-st-purple hover:bg-st-purple/20 transition-colors font-semibold"
-                              title="Změnit roli"
-                            >
-                              {u.role === 'ADMIN' ? '👤' : '👑'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(u)}
-                              className="px-3 py-1.5 text-xs rounded-lg bg-st-red-dim text-st-red hover:bg-st-red/20 transition-colors font-semibold"
-                              title="Trvale smazat"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className="flex items-center justify-between p-4 border-t border-glass-border">
-                <p className="text-text-muted text-xs">Celkem: {userTotal} uživatelů</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setUserPage(p => Math.max(1, p - 1))}
-                    disabled={userPage <= 1}
-                    className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-30"
-                  >
-                    ← Zpět
-                  </button>
-                  <span className="text-text-secondary text-xs py-1.5 px-2">Strana {userPage}</span>
-                  <button
-                    onClick={() => setUserPage(p => p + 1)}
-                    disabled={users.length < 15}
-                    className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-30"
-                  >
-                    Další →
-                  </button>
+                          </td>
+                          <td className="p-4 text-right"><span className="font-mono font-semibold text-st-cyan">{parseFloat(u.balance).toFixed(4)} ST</span></td>
+                          <td className="p-4 text-center"><span className={`badge ${u.role === 'ADMIN' ? 'badge-red' : 'badge-cyan'} text-[10px]`}>{u.role}</span></td>
+                          <td className="p-4 text-center font-mono text-text-secondary">{u.miningCount}</td>
+                          <td className="p-4" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <button onClick={() => setGrantModal(u)} className="px-2.5 py-1.5 text-xs rounded-lg bg-st-gold-dim text-st-gold" title="Přidělit ST">💰</button>
+                              <button onClick={async () => { try { await api.admin.toggleActive({ userId: u.id }); showMessage('success', `${u.username} ${u.isActive ? 'BAN' : 'UNBAN'}`); loadUsers(); } catch (e:any) { showMessage('error', e.message); }}}
+                                className={`px-2.5 py-1.5 text-xs rounded-lg ${u.isActive ? 'bg-st-red-dim text-st-red' : 'bg-st-emerald-dim text-st-emerald'}`}>{u.isActive ? '🚫' : '✅'}</button>
+                              <button onClick={async () => { try { await api.admin.setRole({ userId: u.id, role: u.role === 'ADMIN' ? 'USER' : 'ADMIN' }); showMessage('success', `${u.username} → ${u.role === 'ADMIN' ? 'USER' : 'ADMIN'}`); loadUsers(); } catch (e:any) { showMessage('error', e.message); }}}
+                                className="px-2.5 py-1.5 text-xs rounded-lg bg-st-purple-dim text-st-purple">{u.role === 'ADMIN' ? '👤' : '👑'}</button>
+                              <button onClick={async () => { if (!window.confirm(`SMAZAT ${u.username}?`)) return; try { await api.admin.deleteUser(u.id); showMessage('success', 'Smazáno'); loadUsers(); loadStats(); } catch (e:any) { showMessage('error', e.message); }}}
+                                className="px-2.5 py-1.5 text-xs rounded-lg bg-st-red-dim text-st-red">🗑️</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ═══ GIVEAWAY TAB ═══ */}
-        {tab === 'giveaway' && (
-          <div className="space-y-4">
-            <div className="glass-card p-6 glow-gold">
-              <h2 className="text-xl font-bold mb-4">🎰 Vytvořit ST-Drop</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Název</label>
-                  <input type="text" value={gaTitle} onChange={e => setGaTitle(e.target.value)} className="glass-input" placeholder="Např. Vánoční drop" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Celková Odměna (Pool ST)</label>
-                  <input type="number" step="0.000001" value={gaPool} onChange={e => setGaPool(e.target.value)} className="glass-input" placeholder="10.0" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Počet výherců</label>
-                  <input type="number" value={gaWinners} onChange={e => setGaWinners(e.target.value)} className="glass-input" placeholder="3" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Doba trvání (minuty)</label>
-                  <input type="number" value={gaTime} onChange={e => setGaTime(e.target.value)} className="glass-input" placeholder="60 (1 hodina)" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-text-secondary block mb-2">Rozdělení odměny</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm">
-                      <input type="radio" checked={gaDist === 'EQUAL'} onChange={() => setGaDist('EQUAL')} className="accent-st-gold" />
-                      Rovnoměrně (Všichni stejně)
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm">
-                      <input type="radio" checked={gaDist === 'WEIGHTED'} onChange={() => setGaDist('WEIGHTED')} className="accent-st-gold" />
-                      Odstupňovaně (1. místo bere víc)
-                    </label>
+                <div className="flex items-center justify-between p-4 border-t border-glass-border">
+                  <p className="text-text-muted text-xs">Celkem: {userTotal}</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setUserPage(p => Math.max(1, p - 1))} disabled={userPage <= 1} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-30">← Zpět</button>
+                    <span className="text-text-secondary text-xs py-1.5 px-2">Strana {userPage}</span>
+                    <button onClick={() => setUserPage(p => p + 1)} disabled={users.length < 15} className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-30">Další →</button>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={handleCreateGiveaway}
-                disabled={actionLoading || !gaTitle || !gaPool || !gaWinners || !gaTime}
-                className="btn-primary w-full text-lg py-3 disabled:opacity-50"
-              >
-                {actionLoading ? '⏳ Vytvářím...' : '🎁 Spustit nový ST-Drop'}
-              </button>
             </div>
-            
-            <div className="glass-card-static p-6">
-              <h3 className="font-bold mb-2">Jak to funguje?</h3>
-              <p className="text-text-secondary text-sm">
-                Nový ST-Drop se objeví na hlavní stránce /giveaways. Uživatelé musí přijít a ručně se přihlásit tlačítkem "Připojit se" (a musí být aktivní v posledních 24 hodinách). Jakmile odpočet vyprší, systém minutu po skončení automaticky rozlosuje výherce. Výsledky se ukážou v historii obou stran.
-              </p>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* ═══ TEACHERS TAB ═══ */}
-        {tab === 'teachers' && (
-          <div className="space-y-4">
-            <div className="glass-card p-6">
-              <h2 className="text-xl font-bold mb-4">🧑‍🏫 Správa Učitelů ST-ROOM</h2>
-              <div className="flex gap-3 mb-6">
-                <input
-                  type="text"
-                  placeholder="Jméno nového učitele..."
-                  value={newTeacherName}
-                  onChange={e => setNewTeacherName(e.target.value)}
-                  className="glass-input flex-1"
-                />
-                <button
-                  onClick={async () => {
-                    if (!newTeacherName.trim()) return;
-                    setActionLoading(true);
-                    try {
-                      await api.admin.addTeacher({ name: newTeacherName.trim() });
-                      showMessage('success', `Učitel ${newTeacherName} přidán!`);
-                      setNewTeacherName('');
-                      loadTeachers();
-                    } catch (err: any) { showMessage('error', err.message); }
-                    setActionLoading(false);
-                  }}
-                  disabled={actionLoading || !newTeacherName.trim()}
-                  className="btn-primary px-5 disabled:opacity-50"
-                >
-                  + Přidat
+          {/* ═══ GIVEAWAY ═══ */}
+          {section === 'giveaway' && (
+            <div className="space-y-4">
+              <div className="glass-card p-6 glow-gold">
+                <h2 className="text-xl font-bold mb-4">🎰 Vytvořit ST-Drop</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div><label className="text-sm font-medium text-text-secondary block mb-1">Název</label><input type="text" value={gaTitle} onChange={e => setGaTitle(e.target.value)} className="glass-input" placeholder="Vánoční drop" /></div>
+                  <div><label className="text-sm font-medium text-text-secondary block mb-1">Pool ST</label><input type="number" step="0.000001" value={gaPool} onChange={e => setGaPool(e.target.value)} className="glass-input" placeholder="10.0" /></div>
+                  <div><label className="text-sm font-medium text-text-secondary block mb-1">Výherců</label><input type="number" value={gaWinners} onChange={e => setGaWinners(e.target.value)} className="glass-input" placeholder="3" /></div>
+                  <div><label className="text-sm font-medium text-text-secondary block mb-1">Minuty</label><input type="number" value={gaTime} onChange={e => setGaTime(e.target.value)} className="glass-input" placeholder="60" /></div>
+                  <div className="md:col-span-2"><label className="text-sm font-medium text-text-secondary block mb-2">Rozdělení</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" checked={gaDist==='EQUAL'} onChange={()=>setGaDist('EQUAL')} className="accent-st-gold" /> Rovnoměrně</label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" checked={gaDist==='WEIGHTED'} onChange={()=>setGaDist('WEIGHTED')} className="accent-st-gold" /> Odstupňovaně</label>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={async () => { setActionLoading(true); try { await api.admin.createGiveaway({ title: gaTitle, prizePool: gaPool, winnerCount: parseInt(gaWinners), distribution: gaDist, durationMinutes: parseInt(gaTime) }); showMessage('success', 'ST-Drop vytvořen!'); setGaTitle(''); setGaPool(''); setGaWinners(''); setGaTime(''); loadStats(); } catch (e:any) { showMessage('error', e.message); } setActionLoading(false); }}
+                  disabled={actionLoading || !gaTitle || !gaPool || !gaWinners || !gaTime} className="btn-primary w-full text-lg py-3 disabled:opacity-50">
+                  {actionLoading ? '⏳' : '🎁'} Spustit ST-Drop
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {teachers.map(t => {
-                  const rarityColors: Record<string, string> = {
-                    COMMON: 'text-gray-400', RARE: 'text-st-emerald', EPIC: 'text-st-cyan', LEGENDARY: 'text-st-purple', MYTHIC: 'text-yellow-400'
-                  };
-                  const rarityCosts: Record<string, number> = { COMMON: 50, RARE: 65, EPIC: 75, LEGENDARY: 85, MYTHIC: 0 };
-                  return (
-                    <div key={t.id} className={`glass-card-static p-4 rounded-xl space-y-3 ${!t.isActive ? 'opacity-40' : ''}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-st-cyan-dim flex items-center justify-center text-st-cyan font-bold text-xs">
-                            {t.name.charAt(0)}
+            </div>
+          )}
+
+          {/* ═══ TEACHERS ═══ */}
+          {section === 'teachers' && (
+            <div className="space-y-4">
+              <div className="glass-card p-6">
+                <h2 className="text-xl font-bold mb-4">🧑‍🏫 Správa Učitelů</h2>
+                <div className="flex gap-3 mb-6">
+                  <input type="text" placeholder="Jméno učitele..." value={newTeacherName} onChange={e => setNewTeacherName(e.target.value)} className="glass-input flex-1" />
+                  <button onClick={async () => { if (!newTeacherName.trim()) return; setActionLoading(true); try { await api.admin.addTeacher({ name: newTeacherName.trim() }); showMessage('success', `${newTeacherName} přidán`); setNewTeacherName(''); loadTeachers(); } catch (e:any) { showMessage('error', e.message); } setActionLoading(false); }}
+                    disabled={actionLoading || !newTeacherName.trim()} className="btn-primary px-5 disabled:opacity-50">+ Přidat</button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {teachers.map(t => {
+                    const rc: Record<string,string> = { COMMON:'text-gray-400', RARE:'text-st-emerald', EPIC:'text-st-cyan', LEGENDARY:'text-st-purple', MYTHIC:'text-yellow-400' };
+                    return (
+                      <div key={t.id} className={`glass-card-static p-4 rounded-xl space-y-3 ${!t.isActive ? 'opacity-40' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-st-cyan-dim flex items-center justify-center text-st-cyan font-bold text-xs">{t.name.charAt(0)}</div>
+                            <div><p className="font-semibold text-sm">{t.name}</p><p className={`text-xs font-bold ${rc[t.rarity]||'text-gray-400'}`}>{t.rarity}</p></div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-sm">{t.name}</p>
-                            <p className={`text-xs font-bold ${rarityColors[t.rarity] || 'text-gray-400'}`}>
-                              {t.rarity} {t.rarity !== 'MYTHIC' ? `— ${rarityCosts[t.rarity]} ST` : '— Pass Only'}
-                            </p>
-                          </div>
+                          <button onClick={async () => { try { await api.admin.toggleTeacher({ teacherId: t.id }); loadTeachers(); } catch (e:any) { showMessage('error', e.message); }}}
+                            className={`px-2 py-1 text-[10px] rounded-lg font-semibold ${t.isActive ? 'bg-st-red-dim text-st-red' : 'bg-st-emerald-dim text-st-emerald'}`}>{t.isActive ? '🙈' : '👁️'}</button>
                         </div>
-                        <button
-                          onClick={async () => {
-                            try { await api.admin.toggleTeacher({ teacherId: t.id }); loadTeachers(); }
-                            catch (err: any) { showMessage('error', err.message); }
-                          }}
-                          className={`px-2 py-1 text-[10px] rounded-lg font-semibold transition-colors ${t.isActive ? 'bg-st-red-dim text-st-red' : 'bg-st-emerald-dim text-st-emerald'}`}
-                        >
-                          {t.isActive ? '🙈' : '👁️'}
-                        </button>
+                        <select value={t.rarity||'COMMON'} onChange={async (e) => { try { await api.admin.setTeacherRarity({ teacherId: t.id, rarity: e.target.value }); loadTeachers(); } catch (err:any) { showMessage('error', err.message); }}} className="glass-input text-xs w-full">
+                          <option value="COMMON">⬜ Common</option><option value="RARE">🟩 Rare</option><option value="EPIC">🟦 Epic</option><option value="LEGENDARY">🟪 Legendary</option><option value="MYTHIC">🌈 Mythic</option>
+                        </select>
                       </div>
-                      <select
-                        value={t.rarity || 'COMMON'}
-                        onChange={async (e) => {
-                          try {
-                            await api.admin.setTeacherRarity({ teacherId: t.id, rarity: e.target.value });
-                            showMessage('success', `${t.name} → ${e.target.value}`);
-                            loadTeachers();
-                          } catch (err: any) { showMessage('error', err.message); }
-                        }}
-                        className="glass-input text-xs w-full"
-                      >
-                        <option value="COMMON">⬜ Common — 50 ST</option>
-                        <option value="RARE">🟩 Rare — 65 ST</option>
-                        <option value="EPIC">🟦 Epic — 75 ST</option>
-                        <option value="LEGENDARY">🟪 Legendary — 85 ST</option>
-                        <option value="MYTHIC">🌈 Mythic — Pass Only</option>
-                      </select>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ═══ CASES TAB ═══ */}
-        {tab === 'cases' && (
-          <div className="space-y-4">
-            {/* Create new case */}
-            <div className="glass-card p-5">
-              <h3 className="font-bold mb-4 text-lg">➕ Přidat nový Case</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                <input className="glass-input text-sm" placeholder="Název (např. Premium Case)" value={newCase.name} onChange={e => setNewCase(p => ({...p, name: e.target.value}))} />
-                <input className="glass-input text-sm" placeholder="Cena v ST (0 = zdarma)" type="number" value={newCase.price} onChange={e => setNewCase(p => ({...p, price: e.target.value}))} />
+          {/* ═══ CASES ═══ */}
+          {section === 'cases' && (
+            <div className="space-y-4">
+              <div className="glass-card p-5">
+                <h3 className="font-bold mb-4 text-lg">➕ Přidat Case</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <input className="glass-input text-sm" placeholder="Název" value={newCase.name} onChange={e => setNewCase(p => ({...p, name: e.target.value}))} />
+                  <input className="glass-input text-sm" placeholder="Cena ST" type="number" value={newCase.price} onChange={e => setNewCase(p => ({...p, price: e.target.value}))} />
+                </div>
+                <input className="glass-input text-sm w-full mb-3" placeholder="Popis" value={newCase.description} onChange={e => setNewCase(p => ({...p, description: e.target.value}))} />
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={newCase.isDaily} onChange={e => setNewCase(p => ({...p, isDaily: e.target.checked}))} className="w-4 h-4" /> Denní</label>
+                  <button onClick={async () => { if (!newCase.name.trim()) return; setActionLoading(true); try { await api.admin.createCase({ name: newCase.name, description: newCase.description, price: newCase.price, isDaily: newCase.isDaily }); showMessage('success', `Case "${newCase.name}" přidán`); setNewCase({ name: '', description: '', price: '10', isDaily: false }); loadCases(); } catch (e:any) { showMessage('error', e.message); } setActionLoading(false); }}
+                    disabled={actionLoading || !newCase.name.trim()} className="btn-primary px-5 text-sm disabled:opacity-50 ml-auto">+ Přidat</button>
+                </div>
               </div>
-              <input className="glass-input text-sm w-full mb-3" placeholder="Popis (volitelný)" value={newCase.description} onChange={e => setNewCase(p => ({...p, description: e.target.value}))} />
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
-                  <input type="checkbox" checked={newCase.isDaily} onChange={e => setNewCase(p => ({...p, isDaily: e.target.checked}))} className="w-4 h-4" />
-                  Denní Case (zdarma 1× za den)
-                </label>
-                <button
-                  onClick={async () => {
-                    if (!newCase.name.trim()) return;
-                    setActionLoading(true);
-                    try {
-                      await api.admin.createCase({ name: newCase.name, description: newCase.description, price: newCase.price, isDaily: newCase.isDaily });
-                      showMessage('success', `Case "${newCase.name}" přidán!`);
-                      setNewCase({ name: '', description: '', price: '10', isDaily: false });
-                      loadCases();
-                    } catch (err: any) { showMessage('error', err.message); }
-                    setActionLoading(false);
-                  }}
-                  disabled={actionLoading || !newCase.name.trim()}
-                  className="btn-primary px-5 text-sm disabled:opacity-50 ml-auto"
-                >
-                  + Přidat Case
-                </button>
-              </div>
-            </div>
 
-            {/* Cases list */}
-            {cases.map(c => (
-              <div key={c.id} className="glass-card-static rounded-xl overflow-hidden">
-                {/* Case header */}
-                <div
-                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.03] transition-colors"
-                  onClick={() => setExpandedCase(expandedCase === c.id ? null : c.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">📦</span>
-                    <div>
-                      <p className="font-semibold text-sm">{c.name}</p>
-                      <p className="text-text-muted text-xs mt-0.5">
-                        {c.isDaily ? '🎁 Denní' : `💰 ${parseFloat(c.price).toFixed(0)} ST`}
-                        {' · '}{c.items.length} předmětů
-                        {' · '}{c._count?.openings ?? 0} otevření
-                        {c.isActive ? '' : ' · ⚫ Skrytý'}
-                      </p>
+              {cases.map(c => (
+                <div key={c.id} className="glass-card-static rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.03] transition-colors" onClick={() => setExpandedCase(expandedCase === c.id ? null : c.id)}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">📦</span>
+                      <div>
+                        <p className="font-semibold text-sm">{c.name}</p>
+                        <p className="text-text-muted text-xs">{c.isDaily ? '🎁 Denní' : `💰 ${parseFloat(c.price).toFixed(0)} ST`} · {c.items.length} předmětů · {c._count?.openings ?? 0}× otevřen{!c.isActive && ' · ⚫ Skrytý'}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.isActive ? 'bg-st-emerald-dim text-st-emerald' : 'bg-gray-500/20 text-gray-400'}`}>
-                      {c.isActive ? 'Aktivní' : 'Skrytý'}
-                    </span>
                     <span className="text-text-muted text-sm">{expandedCase === c.id ? '▲' : '▼'}</span>
                   </div>
-                </div>
 
-                {/* Expanded case editor */}
-                {expandedCase === c.id && (
-                  <div className="border-t border-white/5 p-5 space-y-5">
-                    {/* Edit case fields */}
-                    {editingCase?.id === c.id ? (
-                      <div className="space-y-3">
-                        <p className="text-xs font-bold text-text-muted uppercase tracking-wider">Upravit Case</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <input className="glass-input text-sm" placeholder="Název" value={editingCase.name} onChange={e => setEditingCase((p: any) => ({...p, name: e.target.value}))} />
-                          <input className="glass-input text-sm" placeholder="Cena ST" type="number" value={editingCase.price} onChange={e => setEditingCase((p: any) => ({...p, price: e.target.value}))} />
-                        </div>
-                        <input className="glass-input text-sm w-full" placeholder="Popis" value={editingCase.description || ''} onChange={e => setEditingCase((p: any) => ({...p, description: e.target.value}))} />
-                        <div className="flex items-center gap-4 flex-wrap">
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="checkbox" checked={editingCase.isDaily} onChange={e => setEditingCase((p: any) => ({...p, isDaily: e.target.checked}))} className="w-4 h-4" />
-                            Denní Case
-                          </label>
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="checkbox" checked={editingCase.isActive} onChange={e => setEditingCase((p: any) => ({...p, isActive: e.target.checked}))} className="w-4 h-4" />
-                            Aktivní (viditelný)
-                          </label>
-                          <div className="ml-auto flex gap-2">
-                            <button onClick={() => setEditingCase(null)} className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-text-muted">Zrušit</button>
-                            <button
-                              onClick={async () => {
-                                setActionLoading(true);
-                                try {
-                                  await api.admin.updateCase(c.id, { name: editingCase.name, description: editingCase.description, price: editingCase.price, isDaily: editingCase.isDaily, isActive: editingCase.isActive });
-                                  showMessage('success', 'Case upraven.');
-                                  setEditingCase(null);
-                                  loadCases();
-                                } catch (err: any) { showMessage('error', err.message); }
-                                setActionLoading(false);
-                              }}
-                              className="px-3 py-1.5 text-xs rounded-lg bg-st-cyan-dim text-st-cyan font-semibold"
-                            >💾 Uložit</button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
+                  {expandedCase === c.id && (
+                    <div className="border-t border-white/5 p-5 space-y-4">
                       <div className="flex items-center justify-between">
                         <p className="text-text-muted text-xs">{c.description || 'Bez popisu'}</p>
                         <div className="flex gap-2">
-                          <button onClick={() => setEditingCase({...c})} className="px-3 py-1.5 text-xs rounded-lg bg-st-cyan-dim text-st-cyan font-semibold">✏️ Upravit</button>
-                          <button
-                            onClick={async () => {
-                              if (!window.confirm(`Smazat case "${c.name}" a všechny jeho předměty?`)) return;
-                              try { await api.admin.deleteCase(c.id); loadCases(); showMessage('success', 'Case smazán.'); }
-                              catch (err: any) { showMessage('error', err.message); }
-                            }}
-                            className="px-3 py-1.5 text-xs rounded-lg bg-st-red-dim text-st-red font-semibold"
-                          >🗑️</button>
+                          <button onClick={async () => { try { await api.admin.updateCase(c.id, { isActive: !c.isActive }); loadCases(); } catch {} }} className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-text-muted">{c.isActive ? '🙈 Skrýt' : '👁️ Zobrazit'}</button>
+                          <button onClick={async () => { if (!window.confirm(`Smazat "${c.name}"?`)) return; try { await api.admin.deleteCase(c.id); loadCases(); showMessage('success', 'Smazáno'); } catch (e:any) { showMessage('error', e.message); }}} className="px-3 py-1.5 text-xs rounded-lg bg-st-red-dim text-st-red font-semibold">🗑️</button>
                         </div>
                       </div>
-                    )}
 
-                    {/* Items list */}
-                    <div>
-                      {/* Total % indicator */}
-                      {(() => {
-                        const totalS = c.items.reduce((s: number, i: any) => s + i.weight, 0);
-                        const diff = Math.abs(totalS - 100);
-                        const col = diff < 1 ? '#10b981' : diff < 15 ? '#f59e0b' : '#ef4444';
-                        return (
-                          <div className="flex items-center justify-between mb-3">
-                            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                              Předměty ({c.items.length})
-                            </p>
-                            <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full" style={{ color: col, background: `${col}18` }}>
-                              {diff < 1 ? '✓ Součet = 100 %' : `Součet = ${totalS} % (musí být 100)`}
-                            </span>
-                          </div>
-                        );
-                      })()}
+                      {/* Items */}
                       <div className="space-y-2">
                         {c.items.map((item: any) => {
-                          const totalWeight = c.items.reduce((s: number, i: any) => s + i.weight, 0);
-                          const pct = totalWeight > 0 ? ((item.weight / totalWeight) * 100).toFixed(1) : '0';
-                          const isMythic = item.type === 'MYTHIC_PASS';
-                          const isEd = !!editingItem[item.id];
-                          return isEd ? (
-                            /* ── Inline edit ── */
-                            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-st-cyan-dim border border-st-cyan/25 flex-wrap">
-                              <input className="glass-input text-xs flex-1 min-w-[110px]" placeholder="Popis"
-                                value={editingItem[item.id]?.label ?? item.label}
-                                onChange={e => setEditingItem(p => ({...p, [item.id]: {...p[item.id], label: e.target.value}}))} />
-                              <input className="glass-input text-xs w-24" placeholder="Množství ST" type="number"
-                                value={editingItem[item.id]?.amount ?? (item.amount || '')}
-                                onChange={e => setEditingItem(p => ({...p, [item.id]: {...p[item.id], amount: e.target.value}}))} />
-                              <div className="flex items-center gap-1">
-                                <input className="glass-input text-xs w-20" placeholder="Šance" type="number" min="0" max="100" step="0.1"
-                                  value={editingItem[item.id]?.weight ?? String(item.weight)}
-                                  onChange={e => setEditingItem(p => ({...p, [item.id]: {...p[item.id], weight: e.target.value}}))} />
-                                <span className="text-text-muted text-xs">%</span>
-                              </div>
-                              <div className="flex gap-1.5">
-                                <button disabled={actionLoading}
-                                  onClick={async () => {
-                                    const ei = editingItem[item.id]; if (!ei) return;
-                                    setActionLoading(true);
-                                    try {
-                                      await api.admin.updateCaseItem(item.id, { label: ei.label ?? item.label, amount: ei.amount || null, weight: Math.round(parseFloat(ei.weight ?? String(item.weight))) });
-                                      setEditingItem(p => { const n = {...p}; delete n[item.id]; return n; });
-                                      loadCases(); showMessage('success', 'Předmět upraven.');
-                                    } catch (err: any) { showMessage('error', err.message); }
-                                    setActionLoading(false);
-                                  }}
-                                  className="px-2.5 py-1.5 text-xs rounded-lg bg-st-emerald-dim text-st-emerald font-semibold disabled:opacity-40">💾</button>
-                                <button onClick={() => setEditingItem(p => { const n = {...p}; delete n[item.id]; return n; })}
-                                  className="px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-text-muted">✕</button>
-                              </div>
-                            </div>
-                          ) : (
-                            /* ── Normal row ── */
+                          const tw = c.items.reduce((s: number, i: any) => s + i.weight, 0);
+                          const pct = tw > 0 ? ((item.weight / tw) * 100).toFixed(1) : '0';
+                          return (
                             <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 group/item">
-                              <div className="relative w-16 h-6 rounded-md overflow-hidden bg-white/5 flex-shrink-0">
-                                <div className="absolute inset-y-0 left-0 rounded-md"
-                                  style={{ width: `${Math.min(parseFloat(pct), 100)}%`, background: isMythic ? '#ffd700' : '#06b6d4', opacity: 0.4 }} />
-                                <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold font-mono ${isMythic ? 'text-yellow-400' : 'text-st-cyan'}`}>{pct}%</span>
+                              <div className="relative w-14 h-5 rounded bg-white/5 flex-shrink-0 overflow-hidden">
+                                <div className="absolute inset-y-0 left-0 rounded" style={{ width: `${Math.min(parseFloat(pct), 100)}%`, background: item.type === 'MYTHIC_PASS' ? '#ffd700' : '#06b6d4', opacity: 0.4 }} />
+                                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold font-mono">{pct}%</span>
                               </div>
-                              <div className="flex-1 text-sm font-medium">{isMythic ? '🌈' : '💰'} {item.label}</div>
-                              <div className="text-text-muted text-xs">{item.amount ? `${parseFloat(item.amount).toFixed(0)} ST` : isMythic ? 'Pass' : '—'}</div>
-                              <div className="flex gap-1.5 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                                <button onClick={() => setEditingItem(p => ({...p, [item.id]: { label: item.label, amount: item.amount || '', weight: String(item.weight) }}))}
-                                  className="px-2 py-1 text-xs rounded-lg bg-st-cyan-dim text-st-cyan">✏️</button>
-                                <button onClick={async () => {
-                                    if (!window.confirm(`Smazat "${item.label}"?`)) return;
-                                    try { await api.admin.deleteCaseItem(item.id); loadCases(); }
-                                    catch (err: any) { showMessage('error', err.message); }
-                                  }}
-                                  className="px-2 py-1 text-xs rounded-lg bg-st-red-dim text-st-red">✕</button>
+                              <span className="flex-1 text-sm">{item.type === 'MYTHIC_PASS' ? '🌈' : '💰'} {item.label}</span>
+                              <span className="text-text-muted text-xs">{item.amount ? `${parseFloat(item.amount).toFixed(0)} ST` : 'Pass'}</span>
+                              <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                <button onClick={async () => { if (!window.confirm(`Smazat "${item.label}"?`)) return; try { await api.admin.deleteCaseItem(item.id); loadCases(); } catch {} }} className="px-1.5 py-0.5 text-xs rounded bg-st-red-dim text-st-red">✕</button>
                               </div>
                             </div>
                           );
                         })}
                       </div>
 
-                      {/* Add new item */}
-                      <div className="mt-3 p-4 rounded-xl border border-dashed border-white/10 space-y-3">
-                        <p className="text-xs text-text-muted font-semibold">+ Přidat předmět</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <select className="glass-input text-xs" value={newItem[c.id]?.type || 'ST_REWARD'}
-                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {label:'',amount:'',weight:''}), type: e.target.value}}))}>
-                            <option value="ST_REWARD">💰 ST odměna</option>
-                            <option value="MYTHIC_PASS">🌈 Mythic Pass</option>
-                          </select>
-                          <input className="glass-input text-xs" placeholder="Popis (např. 15 ST)"
-                            value={newItem[c.id]?.label || ''}
-                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',amount:'',weight:''}), label: e.target.value}}))} />
-                          <input className="glass-input text-xs" placeholder="Množství v ST (u Mythic prázdné)" type="number"
-                            value={newItem[c.id]?.amount || ''}
-                            onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',weight:''}), amount: e.target.value}}))} />
-                          <div className="flex items-center gap-2">
-                            <input className="glass-input text-xs flex-1" placeholder="Šance % (např. 25)" type="number" min="0" max="100" step="0.1"
-                              value={newItem[c.id]?.weight || ''}
-                              onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',amount:''}), weight: e.target.value}}))} />
-                            <span className="text-text-muted text-xs whitespace-nowrap">%</span>
-                          </div>
-                        </div>
-                        {(() => {
-                          const used = c.items.reduce((s: number, i: any) => s + i.weight, 0);
-                          const rem = +(100 - used).toFixed(1);
-                          return rem > 0.1 ? <p className="text-[11px] text-text-muted">💡 Zbývá přidělit <span className="text-st-cyan font-mono font-bold">{rem} %</span></p> : null;
-                        })()}
+                      {/* Add item */}
+                      <div className="flex gap-2 flex-wrap">
+                        <select className="glass-input text-xs" value={newItem[c.id]?.type || 'ST_REWARD'} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {label:'',amount:'',weight:''}), type: e.target.value}}))}>
+                          <option value="ST_REWARD">💰 ST</option><option value="MYTHIC_PASS">🌈 Pass</option>
+                        </select>
+                        <input className="glass-input text-xs flex-1 min-w-[100px]" placeholder="Popis" value={newItem[c.id]?.label || ''} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',amount:'',weight:''}), label: e.target.value}}))} />
+                        <input className="glass-input text-xs w-20" placeholder="ST" type="number" value={newItem[c.id]?.amount || ''} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',weight:''}), amount: e.target.value}}))} />
+                        <input className="glass-input text-xs w-16" placeholder="%" type="number" value={newItem[c.id]?.weight || ''} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',amount:''}), weight: e.target.value}}))} />
                         <button onClick={async () => {
-                            const ni = newItem[c.id];
-                            if (!ni?.label || !ni?.weight) { showMessage('error', 'Vyplňte popis a šanci.'); return; }
-                            setActionLoading(true);
-                            try {
-                              await api.admin.addCaseItem(c.id, { type: ni.type || 'ST_REWARD', label: ni.label, amount: ni.amount || null, weight: Math.round(parseFloat(ni.weight)) });
-                              setNewItem(p => ({...p, [c.id]: {type:'ST_REWARD',label:'',amount:'',weight:''}}));
-                              loadCases(); showMessage('success', 'Předmět přidán!');
-                            } catch (err: any) { showMessage('error', err.message); }
-                            setActionLoading(false);
-                          }}
-                          disabled={actionLoading} className="btn-primary text-xs px-4 disabled:opacity-50"
-                        >+ Přidat předmět</button>
+                          const ni = newItem[c.id]; if (!ni?.label || !ni?.weight) return;
+                          try { await api.admin.addCaseItem(c.id, { type: ni.type || 'ST_REWARD', label: ni.label, amount: ni.amount || null, weight: Math.round(parseFloat(ni.weight)) });
+                            setNewItem(p => ({...p, [c.id]: {type:'ST_REWARD',label:'',amount:'',weight:''}})); loadCases(); showMessage('success', 'Přidáno'); } catch (e:any) { showMessage('error', e.message); }
+                        }} className="px-3 py-1.5 text-xs rounded-lg bg-st-cyan-dim text-st-cyan font-semibold">+</button>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {cases.length === 0 && (
-              <div className="text-center py-12 text-text-muted">
-                <p className="text-4xl mb-3">📦</p>
-                <p>Žádné cases. Přidejte první výše.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ═══ GRANT MODAL ═══ */}
-        {grantModal && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setGrantModal(null)}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="glass-card p-6 w-full max-w-md relative z-10 animate-fade-up" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold mb-4">💰 Přidělit ST tokeny</h3>
-              <p className="text-text-secondary text-sm mb-4">
-                Uživatel: <span className="text-st-cyan font-semibold">{grantModal.username}</span>
-                <br />
-                Aktuální zůstatek: <span className="font-mono">{parseFloat(grantModal.balance).toFixed(6)} ST</span>
-              </p>
-              
-              <div className="space-y-3 mb-6">
-                <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Částka (ST)</label>
-                  <input
-                    type="number"
-                    step="0.000001"
-                    min="0"
-                    value={grantAmount}
-                    onChange={e => setGrantAmount(e.target.value)}
-                    className="glass-input"
-                    placeholder="0.001"
-                  />
+                  )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-text-secondary block mb-1">Důvod</label>
-                  <input
-                    type="text"
-                    value={grantReason}
-                    onChange={e => setGrantReason(e.target.value)}
-                    className="glass-input"
-                    placeholder="Bonus za testování..."
-                  />
-                </div>
-              </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={handleGrant}
-                  disabled={actionLoading || !grantAmount || !grantReason}
-                  className="btn-primary flex-1 disabled:opacity-50"
-                >
-                  {actionLoading ? '⏳' : '✅'} Potvrdit
-                </button>
-                <button onClick={() => setGrantModal(null)} className="btn-secondary flex-1">
-                  Zrušit
-                </button>
-              </div>
+      {/* ═══ MODALS ═══ */}
+      {detailUser && <UserDetailModal userId={detailUser} onClose={() => setDetailUser(null)} />}
+
+      {grantModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setGrantModal(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="glass-card p-6 w-full max-w-md relative z-10 animate-fade-up" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4">💰 Přidělit ST</h3>
+            <p className="text-text-secondary text-sm mb-4">Uživatel: <span className="text-st-cyan font-semibold">{grantModal.username}</span> · <span className="font-mono">{parseFloat(grantModal.balance).toFixed(4)} ST</span></p>
+            <div className="space-y-3 mb-6">
+              <input type="number" step="0.000001" value={grantAmount} onChange={e => setGrantAmount(e.target.value)} className="glass-input" placeholder="Částka ST" />
+              <input type="text" value={grantReason} onChange={e => setGrantReason(e.target.value)} className="glass-input" placeholder="Důvod" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleGrant} disabled={actionLoading || !grantAmount || !grantReason} className="btn-primary flex-1 disabled:opacity-50">✅ Potvrdit</button>
+              <button onClick={() => setGrantModal(null)} className="btn-secondary flex-1">Zrušit</button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {bulkModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setBulkModal(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="glass-card p-6 w-full max-w-md relative z-10 animate-fade-up" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4">💰 Bulk Grant</h3>
+            <p className="text-text-secondary text-sm mb-4">Přidělte ST všem uživatelům najednou.</p>
+            <div className="space-y-3 mb-6">
+              <input type="number" step="0.000001" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} className="glass-input" placeholder="Částka ST na uživatele" />
+              <input type="text" value={bulkReason} onChange={e => setBulkReason(e.target.value)} className="glass-input" placeholder="Důvod" />
+              <select value={bulkFilter} onChange={e => setBulkFilter(e.target.value)} className="glass-input">
+                <option value="all">Všichni uživatelé</option>
+                <option value="active_24h">Aktivní (24h)</option>
+                <option value="active_7d">Aktivní (7 dní)</option>
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handleBulkGrant} disabled={actionLoading || !bulkAmount || !bulkReason} className="btn-primary flex-1 disabled:opacity-50">{actionLoading ? '⏳' : '✅'} Rozdat</button>
+              <button onClick={() => setBulkModal(false)} className="btn-secondary flex-1">Zrušit</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

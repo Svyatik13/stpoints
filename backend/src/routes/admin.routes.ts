@@ -42,4 +42,37 @@ router.delete('/cases/items/:itemId', adminController.deleteCaseItem);
 router.get('/passcode', adminController.getPassCode);
 router.post('/passcode/regenerate', adminController.regeneratePassCode);
 
+// ══════════════════════════════════════════════════════════════
+// NEW ENDPOINTS
+// ══════════════════════════════════════════════════════════════
+
+// User Detail
+router.get('/user/:userId/detail', adminController.getUserDetail);
+
+// Broadcast
+router.get('/broadcast', adminController.getBroadcast);
+router.post('/broadcast', adminController.setBroadcast);
+router.delete('/broadcast', adminController.clearBroadcast);
+
+// Market Control
+router.get('/market-control/stocks', adminController.getMarketControlStocks);
+router.post('/market-control/set-price', adminController.setStockPrice);
+router.post('/market-control/toggle-trading', adminController.toggleTrading);
+
+// Audit Log
+router.get('/audit-log', adminController.getAuditLog);
+
+// Coinflip Oversight
+router.get('/coinflips', adminController.getCoinflipsAdmin);
+router.post('/coinflips/:gameId/cancel', adminController.forceCancelCoinflip);
+
+// Case Statistics
+router.get('/cases/stats', adminController.getCaseStats);
+
+// Bulk Grant
+router.post('/bulk-grant', adminController.bulkGrant);
+
+// Export
+router.get('/users/export', adminController.exportUsersCSV);
+
 export default router;
