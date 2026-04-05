@@ -13,7 +13,7 @@ export async function getStocks(req: Request, res: Response, next: NextFunction)
       include: {
         history: {
           orderBy: { timestamp: 'desc' },
-          take: 24, // last 24 points for the graph
+          take: 400, // fetch recent history to build candlestick chart
         },
         investments: {
           where: { userId },

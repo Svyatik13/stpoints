@@ -12,13 +12,17 @@ const DEFAULT_STOCKS = [
 
 let globalSentiment = 0.0005; // Default slight bullish bias
 let sentimentChangeCounter = 0;
+const stockMomentum: Record<string, number> = {}; // Tracks momentum per stock for realistic rends
 
 /**
  * Price Engine
- * Randomized but influenced by volatility and market sentiment.
+ * Produces realistic trends using brownian motion with momentum and occasional black swan events.
  */
 export async function updateStockPrices() {
   try {
+    const isPaused = await prisma.systemSetting.findUnique({ where: { key: 'market_paused' } });
+    if (isPaused?.value === 'true') return; // Don't update prices if market is globally paused
+
     const stocks = await prisma.stock.findMany();
 
     // Update global sentiment every 20 cycles (~1 minute)
@@ -51,24 +55,36 @@ export async function updateStockPrices() {
       const config = DEFAULT_STOCKS.find(s => s.symbol === stock.symbol) || { volatility: 1.0 };
       const volatility = config.volatility;
 
-      // Base move: random between -1 and 1
-      let rawMove = (Math.random() * 2 - 1);
+      // Initialize momentum if not exists
+      if (!stockMomentum[stock.id]) {
+        stockMomentum[stock.id] = (Math.random() * 2 - 1) * 0.005;
+      }
+
+      // Shift momentum gradually
+      const shift = (Math.random() * 2 - 1) * 0.002 * volatility;
+      stockMomentum[stock.id] += shift;
+
+      // Cap momentum so it doesn't go to infinity
+      const maxMomentum = 0.012 * volatility;
+      if (stockMomentum[stock.id] > maxMomentum) stockMomentum[stock.id] = maxMomentum;
+      if (stockMomentum[stock.id] < -maxMomentum) stockMomentum[stock.id] = -maxMomentum;
+
+      // Add base random noise
+      let rawNoise = (Math.random() * 2 - 1) * 0.004 * volatility;
       
-      // Apply volatility and global sentiment
-      // A volatility of 1.0 means typical ±1.5% moves.
-      const movePercent = (rawMove * 0.015 * volatility) + globalSentiment;
+      const movePercent = rawNoise + stockMomentum[stock.id] + globalSentiment;
       
       const change = current.mul(new Decimal(movePercent.toString()));
       let nextPrice = current.add(change);
 
       // rare black swan events (0.5% chance)
       if (Math.random() < 0.005) {
-        const jump = Math.random() < 0.5 ? 0.92 : 1.08; // ±8% jump
+        const jump = Math.random() < 0.5 ? 0.90 : 1.10; // ±10% jump
         nextPrice = nextPrice.mul(new Decimal(jump.toString()));
       }
 
-      // Floor price at 0.01 ST
-      if (nextPrice.lt(0.01)) nextPrice = new Decimal(0.01);
+      // Floor price at 0.0001 ST limit
+      if (nextPrice.lt(0.0001)) nextPrice = new Decimal(0.0001);
 
       await prisma.$transaction([
         prisma.stock.update({
@@ -86,10 +102,10 @@ export async function updateStockPrices() {
         })
       ]);
 
-      // Cleanup old history (keep last 120 points per stock for charts)
+      // Cleanup old history: keep last 1800 points per stock for nice charts (approx 1.5h at 3s updates)
       const count = await prisma.stockPriceHistory.count({ where: { stockId: stock.id } });
-      if (count > 120) {
-        const toDeleteCount = count - 120;
+      if (count > 1800) {
+        const toDeleteCount = count - 1800;
         const oldestRecords = await prisma.stockPriceHistory.findMany({
           where: { stockId: stock.id },
           orderBy: { timestamp: 'asc' },
