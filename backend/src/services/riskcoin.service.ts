@@ -9,8 +9,11 @@ export interface RiskCoinTick {
   timestamp: string;
 }
 
-let currentPrice = 1.0; // Base starting price
+let currentPrice = 1.0; 
 let currentMomentum = 0;
+let cycleMode: 'BULL' | 'BEAR' = 'BULL';
+let cycleCounter = 0;
+
 const historyMaxPoints = 100; 
 export const riskCoinHistory: RiskCoinTick[] = [
   { price: '1.000000', timestamp: new Date().toISOString() }
@@ -25,38 +28,56 @@ export function getRiskCoinState() {
 
 // 500ms Tick Engine
 export function tickRiskCoin() {
-  // Volatility scale
-  const volatility = 0.05; // 5% absolute max regular noise per tick (super fast)
+  cycleCounter++;
   
-  // Random shift in momentum between -0.01 and +0.01
-  const shift = (Math.random() * 2 - 1) * 0.01;
-  currentMomentum += shift;
+  // Shift cycle every 10-30 seconds
+  if (cycleCounter > (Math.random() * 40 + 20)) {
+    cycleMode = Math.random() < 0.45 ? 'BULL' : 'BEAR'; // Slight bear bias for risk
+    cycleCounter = 0;
+  }
+
+  // Volatility scale
+  const volatility = 0.04; 
+  
+  // Momentum shift
+  const momentumShift = (Math.random() * 2 - 1) * 0.008;
+  currentMomentum += momentumShift;
+
+  // Cycle bias
+  const cycleBias = cycleMode === 'BULL' ? 0.003 : -0.003;
+  
+  // Recovery bias: If price is super low, force some upward pressure
+  let recoveryBias = 0;
+  if (currentPrice < 0.1) recoveryBias = 0.005;
+  if (currentPrice < 0.01) recoveryBias = 0.015;
 
   // Cap momentum
-  if (currentMomentum > 0.05) currentMomentum = 0.05;
-  if (currentMomentum < -0.05) currentMomentum = -0.05;
+  if (currentMomentum > 0.04) currentMomentum = 0.04;
+  if (currentMomentum < -0.04) currentMomentum = -0.04;
 
-  // Decay momentum towards 0 slightly
-  currentMomentum *= 0.98;
+  // Decay momentum
+  currentMomentum *= 0.95;
 
   let rawNoise = (Math.random() * 2 - 1) * volatility;
-  let movePercent = rawNoise + currentMomentum;
+  let movePercent = rawNoise + currentMomentum + cycleBias + recoveryBias;
 
-  // Rare major crashes or spikes (1% chance per tick)
-  if (Math.random() < 0.01) {
-    if (Math.random() < 0.3) {
-      // 30% chance it's a spike
-      movePercent += (Math.random() * 0.5 + 0.2); // +20% to +70%
+  // Major Spike/Crash (2% chance)
+  if (Math.random() < 0.02) {
+    if (cycleMode === 'BULL' || Math.random() < 0.4) {
+      // Pump
+      movePercent += (Math.random() * 0.4 + 0.1); 
     } else {
-      // 70% chance it's a brutal crash
-      movePercent -= (Math.random() * 0.6 + 0.3); // -30% to -90%
+      // Dump
+      movePercent -= (Math.random() * 0.5 + 0.2); 
     }
   }
 
   currentPrice = currentPrice * (1 + movePercent);
 
-  // Hard floor to prevent zero
+  // Hard floor
   if (currentPrice < 0.0001) currentPrice = 0.0001;
+  // Soft ceiling to prevent vertical infinity (though unlikely)
+  if (currentPrice > 100000) currentPrice = 100000;
 
   // Record history
   riskCoinHistory.push({
