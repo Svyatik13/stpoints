@@ -11,7 +11,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (user) {
-      fetch(`${window.location.origin}/api/broadcast`).then(r => r.json()).then(d => setBroadcast(d.message)).catch(() => {});
+      fetch(`${window.location.origin}/api/broadcast`).then(r => r.json()).then(d => {
+        if (d.message) {
+          const dismissed = localStorage.getItem('dismissed_broadcast');
+          if (d.message !== dismissed) {
+            setBroadcast(d.message);
+          }
+        }
+      }).catch(() => {});
     }
   }, [user]);
   
@@ -41,7 +48,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-2">
             <span className="text-st-gold text-sm">📢</span>
             <p className="text-st-gold text-sm font-medium">{broadcast}</p>
-            <button onClick={() => setBroadcast(null)} className="ml-2 text-st-gold/50 hover:text-st-gold text-xs">✕</button>
+            <button onClick={() => {
+              if (broadcast) localStorage.setItem('dismissed_broadcast', broadcast);
+              setBroadcast(null);
+            }} className="ml-2 text-st-gold/50 hover:text-st-gold text-xs">✕</button>
           </div>
         </div>
       )}
