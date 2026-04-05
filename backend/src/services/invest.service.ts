@@ -81,8 +81,8 @@ export async function updateStockPrices() {
  * Start the price engine interval
  */
 export function startStockEngine() {
-  // Update every 10 seconds for a "Live" feel
-  setInterval(updateStockPrices, 10 * 1000);
+  // Update every 3 seconds for an intense "Live" feel
+  setInterval(updateStockPrices, 3 * 1000);
   // Initial run
   updateStockPrices();
 }

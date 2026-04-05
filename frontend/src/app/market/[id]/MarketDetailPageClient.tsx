@@ -25,7 +25,7 @@ export default function MarketDetailPageClient({ id }: { id: string }) {
 
     const interval = setInterval(() => {
       fetchListing(false); // Background refresh
-    }, 5000); // 5 seconds polling for details
+    }, 3000); // 3 seconds polling for details
 
     return () => clearInterval(interval);
   }, [id]);

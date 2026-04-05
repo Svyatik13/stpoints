@@ -71,10 +71,10 @@ export default function MarketPage() {
   useEffect(() => { 
     loadData(true); 
 
-    // Polling interval: 10 seconds for a "Live" experience
+    // Polling interval: 3 seconds for a "Live" experience
     const interval = setInterval(() => {
       loadData(false);
-    }, 10000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [loadData]);
