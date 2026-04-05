@@ -150,6 +150,7 @@ app.listen(env.port, async () => {
 
   // Start stock price engine
   startStockEngine();
+  startRiskCoinEngine();
 
   // Background jobs: run after a short delay for DB stability
   setTimeout(async () => {
