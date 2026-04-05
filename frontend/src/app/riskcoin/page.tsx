@@ -173,7 +173,15 @@ export default function RiskCoinPage() {
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-2 px-1">Nakoupit za (ST)</label>
+                  <div className="flex justify-between items-center mb-2 px-1">
+                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest block">Nakoupit za (ST)</label>
+                    <button 
+                      onClick={() => setAmountST((parseFloat(user.balance) / 1.02).toFixed(2))}
+                      className="text-[10px] font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-[0.2em]"
+                    >
+                      [ MAX ]
+                    </button>
+                  </div>
                   <div className="relative">
                     <input 
                       type="number" 
@@ -197,7 +205,15 @@ export default function RiskCoinPage() {
                 <div className="h-px bg-white/5 my-4" />
 
                 <div>
-                  <label className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-2 px-1">Prodat (Risk-Coin)</label>
+                  <div className="flex justify-between items-center mb-2 px-1">
+                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest block">Prodat (Risk-Coin)</label>
+                    <button 
+                      onClick={() => setAmountCoins(currentRCBalance)}
+                      className="text-[10px] font-black text-st-red hover:text-red-400 transition-colors uppercase tracking-[0.2em]"
+                    >
+                      [ MAX ]
+                    </button>
+                  </div>
                   <div className="relative">
                     <input 
                       type="number" 
