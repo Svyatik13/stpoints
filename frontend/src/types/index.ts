@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   balance: string;
+  riskCoinBalance: string;
   role: 'USER' | 'ADMIN';
   address: string;
   referralCount: number;
