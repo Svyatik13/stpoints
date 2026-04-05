@@ -52,7 +52,7 @@ export async function updateStockPrices() {
       const current = new Decimal(stock.currentPrice.toString());
       
       // Find stock config for volatility
-      const config = DEFAULT_STOCKS.find(s => s.symbol === stock.symbol) || { volatility: 1.0 };
+      const config = DEFAULT_STOCKS.find(s => s.symbol === stock.symbol) || { volatility: 1.0, price: stock.currentPrice.toNumber() };
       const volatility = config.volatility;
 
       // Initialize momentum if not exists
@@ -60,26 +60,28 @@ export async function updateStockPrices() {
         stockMomentum[stock.id] = (Math.random() * 2 - 1) * 0.005;
       }
 
-      // Shift momentum gradually
-      const shift = (Math.random() * 2 - 1) * 0.002 * volatility;
-      stockMomentum[stock.id] += shift;
-
-      // Cap momentum so it doesn't go to infinity
-      const maxMomentum = 0.012 * volatility;
-      if (stockMomentum[stock.id] > maxMomentum) stockMomentum[stock.id] = maxMomentum;
-      if (stockMomentum[stock.id] < -maxMomentum) stockMomentum[stock.id] = -maxMomentum;
+      // Shift momentum gradually but strongly pull towards 0
+      const shift = (Math.random() * 2 - 1) * 0.0005 * volatility;
+      stockMomentum[stock.id] = (stockMomentum[stock.id] + shift) * 0.95; // 5% decay per tick toward 0
 
       // Add base random noise
-      let rawNoise = (Math.random() * 2 - 1) * 0.004 * volatility;
+      let rawNoise = (Math.random() * 2 - 1) * 0.001 * volatility;
       
-      const movePercent = rawNoise + stockMomentum[stock.id] + globalSentiment;
+      const movePercent = rawNoise + stockMomentum[stock.id] + (globalSentiment * 0.1);
       
       const change = current.mul(new Decimal(movePercent.toString()));
       let nextPrice = current.add(change);
 
+      // Mean reversion to base price (Gravity)
+      // Every tick, pull the price 0.1% towards its original configured price
+      const basePriceTarget = new Decimal(config.price.toString());
+      const difference = basePriceTarget.sub(nextPrice);
+      const gravityPull = difference.mul(new Decimal("0.001")); // 0.1% pull towards target per tick
+      nextPrice = nextPrice.add(gravityPull);
+
       // rare black swan events (0.5% chance)
       if (Math.random() < 0.005) {
-        const jump = Math.random() < 0.5 ? 0.90 : 1.10; // ±10% jump
+        const jump = Math.random() < 0.5 ? 0.95 : 1.05; // ±5% jump
         nextPrice = nextPrice.mul(new Decimal(jump.toString()));
       }
 
