@@ -37,7 +37,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Navbar />
       <ChatSidebar />
       {broadcast && (
-        <div className="fixed top-[64px] md:top-[56px] left-0 right-0 z-40 bg-gradient-to-r from-st-gold/20 via-st-gold/10 to-st-gold/20 border-b border-st-gold/20 backdrop-blur-sm">
+        <div className="fixed top-[100px] md:top-[72px] left-0 right-0 z-40 bg-gradient-to-r from-st-gold/20 via-st-gold/10 to-st-gold/20 border-b border-st-gold/20 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-2">
             <span className="text-st-gold text-sm">📢</span>
             <p className="text-st-gold text-sm font-medium">{broadcast}</p>
@@ -45,7 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
-      <main className={user ? `${broadcast ? 'pt-[112px] md:pt-[100px]' : 'pt-[80px] md:pt-[72px]'} pb-8 px-4 sm:px-6 transition-all duration-300` : ''}>
+      <main className={user ? `${broadcast ? 'pt-[150px] md:pt-[120px]' : 'pt-[100px] md:pt-[80px]'} pb-8 px-4 sm:px-6 transition-all duration-300` : ''}>
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
