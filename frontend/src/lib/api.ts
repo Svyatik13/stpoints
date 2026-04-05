@@ -23,7 +23,19 @@ async function rawRequest<T>(endpoint: string, options: ApiOptions = {}): Promis
     credentials: 'include',
   });
 
-  const data = await res.json();
+  const contentType = res.headers.get('content-type');
+  let data: any = {};
+
+  if (contentType && contentType.includes('application/json')) {
+    data = await res.json();
+  } else if (res.status === 502 || res.status === 503 || res.status === 504) {
+    throw new Error('Node Centrála se aktualizuje. Prosím, zkuste to za 30 sekund.');
+  } else {
+    // If not JSON and not a known gateway error, but not OK
+    if (!res.ok) {
+      throw new Error('Nastala chyba spojení se serverem. Zkuste to prosím za chvíli.');
+    }
+  }
 
   if (!res.ok) {
     throw new Error(data.error || 'Nastala neočekávaná chyba.');
