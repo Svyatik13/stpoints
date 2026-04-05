@@ -311,4 +311,10 @@ export const api = {
     access: () => request<any>('/terminal/access'),
     command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
   },
+  // ── Risk-Coin ──
+  riskcoin: {
+    live: () => request<{ currentPrice: string; history: any[] }>('/riskcoin/live'),
+    buy: (amountST: string) => request<any>('/riskcoin/buy', { method: 'POST', body: { amountST } }),
+    sell: (amountCoins: string) => request<any>('/riskcoin/sell', { method: 'POST', body: { amountCoins } }),
+  },
 };

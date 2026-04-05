@@ -12,6 +12,7 @@ model User {
   username        String    @unique
   passwordHash    String    @map("password_hash")
   balance         Decimal   @default(0) @db.Decimal(18, 6)
+  riskCoinBalance Decimal   @default(0) @db.Decimal(18, 6)
   role            Role      @default(USER)
   isActive        Boolean   @default(true) @map("is_active")
   address         String?   @unique @map("wallet_address") // 42-char hexadecimal wallet address

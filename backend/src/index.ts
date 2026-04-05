@@ -28,9 +28,11 @@ import coinflipRoutes from './routes/coinflip.routes';
 import rewardsRoutes from './routes/rewards.routes';
 import chatRoutes from './routes/chat.routes';
 import investRoutes from './routes/invest.routes';
+import riskcoinRoutes from './routes/riskcoin.routes';
 
 import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
 import { startStockEngine } from './services/invest.service';
+import { startRiskCoinEngine } from './services/riskcoin.service';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -117,6 +119,7 @@ app.use('/api/coinflip', coinflipRoutes);
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/invest', investRoutes);
+app.use('/api/riskcoin', riskcoinRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {

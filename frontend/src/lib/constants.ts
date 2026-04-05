@@ -14,6 +14,7 @@ export const NAV_ITEMS = [
 export const GAMBLING_ITEMS = [
   { href: '/cases', label: 'Cases', icon: '📦' },
   { href: '/coinflip', label: 'Coinflip', icon: '🪙' },
+  { href: '/riskcoin', label: 'Risk-Coin', icon: '☣️' },
 ] as const;
 
 // Market is its own item
