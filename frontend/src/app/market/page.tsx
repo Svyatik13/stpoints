@@ -145,47 +145,6 @@ export default function MarketPage() {
   const availPasses = myPasses.filter((p: any) => !p.isUsed);
   const sellableHandles = myHandles.filter((h: any) => new Date() >= new Date(h.canSellAt));
 
-  function StockTicker({ stocks }: { stocks: any[] }) {
-    return (
-      <div className="w-full bg-black/40 border-y border-white/5 py-2 overflow-hidden select-none mb-6">
-        <div className="flex whitespace-nowrap animate-ticker hover:[animation-play-state:paused]">
-          {[...stocks, ...stocks].map((s, i) => {
-            const change = parseFloat(s.currentPrice) - parseFloat(s.lastPrice);
-            const isUp = change >= 0;
-            return (
-              <div key={`${s.id}-${i}`} className="inline-flex items-center gap-2 px-6 border-r border-white/5">
-                <span className="text-[10px] font-black text-white/50 tracking-widest">{s.symbol}</span>
-                <span className="font-mono text-xs font-bold text-white">{parseFloat(s.currentPrice).toFixed(2)}</span>
-                <span className={`font-mono text-[10px] font-bold ${isUp ? 'text-emerald-400' : 'text-st-red'}`}>
-                  {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(4)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  function Sparkline({ history, isUp }: { history: any[], isUp: boolean }) {
-    if (!history || history.length < 2) return null;
-    const prices = history.map((h: any) => parseFloat(h.price));
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    const range = max - min || 1;
-    const points = history.slice(-20).map((p: any, i: number) => {
-      const x = (i / 19) * 100;
-      const y = 30 - ((parseFloat(p.price) - min) / range) * 25;
-      return `${x},${y}`;
-    }).join(' ');
-
-    return (
-      <svg className="w-24 h-8" viewBox="0 0 100 30">
-        <polyline fill="none" stroke={isUp ? '#10b981' : '#ef4444'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
-      </svg>
-    );
-  }
-
   if (!user) return null;
 
   return (
@@ -229,8 +188,6 @@ export default function MarketPage() {
           </div>
         </div>
 
-        {activeTab === 'invest' && stocks.length > 0 && <StockTicker stocks={stocks} />}
-
         {error && <div className="glass-card-static p-4 border-red-500/30 border text-red-400 text-sm mx-6">{error}</div>}
         {success && <div className="glass-card-static p-4 border-emerald-500/30 border text-emerald-400 text-sm mx-6">✅ {success}</div>}
 
@@ -247,7 +204,6 @@ export default function MarketPage() {
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Symbol</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Aktuální Cena</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Změna</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted">Trend (24h)</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-muted text-right">Akce</th>
                       </tr>
                     </thead>
@@ -284,9 +240,6 @@ export default function MarketPage() {
                                 <span>{isUp ? '▲' : '▼'}</span>
                                 <span>{Math.abs(changePercent).toFixed(2)}%</span>
                               </div>
-                            </td>
-                            <td className="px-6 py-5">
-                               <Sparkline history={s.history} isUp={isUp} />
                             </td>
                             <td className="px-6 py-5 text-right">
                               <button className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeStockId === s.id ? 'bg-st-gold text-black' : 'bg-white/5 border border-white/10 text-white group-hover:border-st-gold/50'}`}>

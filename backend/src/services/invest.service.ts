@@ -6,13 +6,8 @@ import { logger } from '../utils/logger';
 const DEFAULT_STOCKS = [
   { name: 'ST-Points Token', symbol: 'STP', price: 1.0, volatility: 0.8 },
   { name: 'Nvidia Corp', symbol: 'NVDA', price: 850, volatility: 2.5 },
-  { name: 'Tesla Inc', symbol: 'TSLA', price: 170, volatility: 3.5 },
   { name: 'Bitcoin', symbol: 'BTC', price: 65000, volatility: 4.0 },
-  { name: 'Ethereum', symbol: 'ETH', price: 3500, volatility: 3.8 },
-  { name: 'Apple Inc', symbol: 'AAPL', price: 180, volatility: 1.2 },
-  { name: 'Gold Bullion', symbol: 'GOLD', price: 2300, volatility: 0.5 },
   { name: 'ZČU Corp', symbol: 'ZCU', price: 100, volatility: 1.5 },
-  { name: 'ST-Mining Inc', symbol: 'STMI', price: 50, volatility: 2.0 },
 ];
 
 let globalSentiment = 0.0005; // Default slight bullish bias
