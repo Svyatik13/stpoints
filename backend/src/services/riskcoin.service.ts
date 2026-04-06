@@ -156,7 +156,7 @@ export function tickRiskCoin() {
 
   // Record history
   riskCoinHistory.push({
-    price: currentPrice.toFixed(6),
+    price: currentPrice.toFixed(18),
     timestamp: new Date().toISOString()
   });
 
