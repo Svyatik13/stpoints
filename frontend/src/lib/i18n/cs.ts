@@ -18,7 +18,6 @@ export const cs = {
     wallet: 'Peněženka',
     mining: 'Těžba',
     drops: 'ST-Drops',
-    cases: 'Cases',
     stroom: 'ST-ROOM',
     leaderboard: 'Žebříček',
     profile: 'Profil',
@@ -112,7 +111,6 @@ export const cs = {
     transfersSent: 'Převody Odesláno',
     transfersReceived: 'Převody Přijato',
     giveawayWins: 'Giveaway Výhry',
-    casesOpened: 'Cases Otevřeno',
     totalEarned: 'Celkem Vyděláno',
     goMining: 'Jít těžit',
     earnMore: 'Vydělej další ST',
@@ -128,7 +126,6 @@ export const cs = {
     TRANSFER: 'Převod',
     SYSTEM_DEBIT: 'Systém',
     ST_ROOM_ACCESS: 'ST-ROOM',
-    CASE_OPENING: 'Case',
   },
   theme: {
     dark: 'Tmavý',

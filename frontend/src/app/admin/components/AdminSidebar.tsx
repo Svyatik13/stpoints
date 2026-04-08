@@ -4,11 +4,8 @@ const SECTIONS = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'users', label: 'Uživatelé', icon: '👥' },
   { id: 'broadcast', label: 'Broadcast', icon: '📢' },
-  { id: 'market', label: 'Market Control', icon: '📈' },
   { id: 'coinflip', label: 'Coinflip', icon: '🎰' },
   { id: 'giveaway', label: 'ST-Drops', icon: '🎁' },
-  { id: 'cases', label: 'Cases', icon: '📦' },
-  { id: 'case-stats', label: 'Case Analytics', icon: '📉' },
   { id: 'teachers', label: 'Učitelé', icon: '🧑‍🏫' },
   { id: 'audit', label: 'Audit Log', icon: '📋' },
 ] as const;

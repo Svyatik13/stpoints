@@ -12,9 +12,7 @@ export const NAV_ITEMS = [
 
 // Gambling section — shown as a dropdown
 export const GAMBLING_ITEMS = [
-  { href: '/cases', label: 'Cases', icon: '📦' },
   { href: '/coinflip', label: 'Coinflip', icon: '🪙' },
-  { href: '/riskcoin', label: 'Risk-Coin', icon: '☣️' },
 ] as const;
 
 // Market is its own item
@@ -34,7 +32,6 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   TIP: 'Spropitné',
   SYSTEM_DEBIT: 'Systém',
   ST_ROOM_ACCESS: 'ST-ROOM',
-  CASE_OPENING: 'Case',
   MARKET_SALE: 'Tržiště',
   MARKET_PURCHASE: 'Tržiště',
   HANDLE_CREATE: 'Handle',
@@ -52,7 +49,6 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
   TIP: 'badge-emerald',
   SYSTEM_DEBIT: 'badge-red',
   ST_ROOM_ACCESS: 'badge-purple',
-  CASE_OPENING: 'badge-gold',
   MARKET_SALE: 'badge-emerald',
   MARKET_PURCHASE: 'badge-red',
   HANDLE_CREATE: 'badge-cyan',
@@ -65,7 +61,6 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
 // Activity feed event formatting
 export const ACTIVITY_ICONS: Record<string, string> = {
   COINFLIP: '🪙',
-  CASE: '📦',
   TIP: '💰',
   TRANSFER: '💸',
   MINING: '⛏️',

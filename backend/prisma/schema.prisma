@@ -12,7 +12,6 @@ model User {
   username        String    @unique
   passwordHash    String    @map("password_hash")
   balance         Decimal   @default(0) @db.Decimal(36, 18)
-  riskCoinBalance Decimal   @default(0) @db.Decimal(36, 18)
   role            Role      @default(USER)
   isActive        Boolean   @default(true) @map("is_active")
   address         String?   @unique @map("wallet_address") // 42-char hexadecimal wallet address
@@ -35,7 +34,6 @@ model User {
   giveawayEntries      GiveawayEntry[]
   giveawayWins         GiveawayWinner[]
   stRoomSessions       StRoomSession[]
-  caseOpenings         CaseOpening[]
   userPasses           UserPass[]
   usernames            Username[]
   marketListingsSold   MarketListing[]   @relation("marketSeller")
@@ -45,7 +43,7 @@ model User {
   coinflipsCreated CoinflipGame[]   @relation("coinflipCreator")
   coinflipsJoined  CoinflipGame[]   @relation("coinflipJoiner")
   chatMessages     ChatMessage[]
-  investments      UserInvestment[]
+
 
   // Referrals
   referrerId     String? @map("referrer_id")
@@ -93,7 +91,6 @@ enum TransactionType {
   TRANSFER
   SYSTEM_DEBIT
   ST_ROOM_ACCESS
-  CASE_OPENING
   MARKET_SALE      // seller receives ST from market (delayed)
   MARKET_PURCHASE  // buyer pays ST on market
   HANDLE_CREATE    // user pays to register a username handle
@@ -102,8 +99,6 @@ enum TransactionType {
   COINFLIP_WIN     // winner receives pot from coinflip
   COINFLIP_LOSS    // loser's wager deducted
   DAILY_REWARD     // daily login streak reward
-  INVESTMENT_BUY   // user buys stock shares
-  INVESTMENT_SELL  // user sells stock shares
   AUCTION_REFUND   // outbid refund
 }
 
@@ -233,60 +228,8 @@ enum GiveawayStatus {
   CANCELLED
 }
 
-// ── Cases ────────────────────────────────────────────────────────────────────
+// ── User Passes ─────────────────────────────────────────────────────────────
 
-enum CaseItemType {
-  ST_REWARD
-  MYTHIC_PASS
-}
-
-model Case {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal  @default(0) @db.Decimal(36, 18)
-  isDaily     Boolean  @default(false) @map("is_daily")
-  isActive    Boolean  @default(true) @map("is_active")
-  sortOrder   Int      @default(0) @map("sort_order")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  items    CaseItem[]
-  openings CaseOpening[]
-
-  @@map("cases")
-}
-
-model CaseItem {
-  id     String       @id @default(cuid())
-  caseId String       @map("case_id")
-  case   Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  type   CaseItemType
-  label  String
-  amount Decimal?     @db.Decimal(36, 18)
-  weight Int
-
-  openings CaseOpening[]
-
-  @@map("case_items")
-}
-
-model CaseOpening {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  caseId       String   @map("case_id")
-  case         Case     @relation(fields: [caseId], references: [id])
-  itemId       String   @map("item_id")
-  item         CaseItem @relation(fields: [itemId], references: [id])
-  costPaid     Decimal  @map("cost_paid") @db.Decimal(36, 18)
-  rewardAmount Decimal? @map("reward_amount") @db.Decimal(36, 18)
-  rewardType   String   @map("reward_type")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  @@index([userId, createdAt])
-  @@index([caseId])
-  @@map("case_openings")
-}
 
 model UserPass {
   id         String    @id @default(cuid())
@@ -463,44 +406,4 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
-// ── Investments ──────────────────────────────────────────────────────────────
 
-model Stock {
-  id           String        @id @default(cuid())
-  name         String
-  symbol       String        @unique
-  currentPrice Decimal       @db.Decimal(36, 18) @map("current_price")
-  lastPrice    Decimal       @default(0) @db.Decimal(36, 18) @map("last_price")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-
-  history      StockPriceHistory[]
-  investments  UserInvestment[]
-
-  @@map("stocks")
-}
-
-model StockPriceHistory {
-  id        String   @id @default(cuid())
-  stockId   String   @map("stock_id")
-  stock     Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
-  price     Decimal  @db.Decimal(36, 18)
-  timestamp DateTime @default(now())
-
-  @@index([stockId, timestamp])
-  @@map("stock_price_history")
-}
-
-model UserInvestment {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stockId   String   @map("stock_id")
-  stock     Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
-  amount    Decimal  @db.Decimal(36, 18) // Total ST invested
-  shares    Decimal  @db.Decimal(36, 18) // Number of shares owned
-  avgPrice  Decimal  @db.Decimal(36, 18) // Average purchase price
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([userId, stockId])
-  @@map("user_investments")
-}

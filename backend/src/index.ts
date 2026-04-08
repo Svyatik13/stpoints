@@ -16,7 +16,6 @@ import miningRoutes from './routes/mining.routes';
 import walletRoutes from './routes/wallet.routes';
 import giveawayRoutes from './routes/giveaway.routes';
 import stroomRoutes from './routes/stroom.routes';
-import casesRoutes from './routes/cases.routes';
 import adminRoutes from './routes/admin.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import profileRoutes from './routes/profile.routes';
@@ -27,12 +26,10 @@ import activityRoutes from './routes/activity.routes';
 import coinflipRoutes from './routes/coinflip.routes';
 import rewardsRoutes from './routes/rewards.routes';
 import chatRoutes from './routes/chat.routes';
-import investRoutes from './routes/invest.routes';
-import riskcoinRoutes from './routes/riskcoin.routes';
+
 
 import { processPendingPayouts, processExpiredAuctions } from './controllers/market.controller';
-import { startStockEngine } from './services/invest.service';
-import { startRiskCoinEngine } from './services/riskcoin.service';
+
 
 const app = express();
 app.set('trust proxy', 1);
@@ -107,7 +104,6 @@ app.use('/api/mining', miningRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/giveaway', giveawayRoutes);
 app.use('/api/st-room', stroomRoutes);
-app.use('/api/cases', casesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/profile', profileRoutes);
@@ -118,8 +114,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/coinflip', coinflipRoutes);
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/invest', investRoutes);
-app.use('/api/riskcoin', riskcoinRoutes);
+
 
 // ── 404 ──
 app.use((_req, res) => {
@@ -148,9 +143,6 @@ app.listen(env.port, async () => {
   // Seed default data if empty
   await seedDefaults().catch(e => logger.error('Seed defaults failed:', e));
 
-  // Start stock price engine
-  startStockEngine();
-  await startRiskCoinEngine();
 
   // Background jobs: run after a short delay for DB stability
   setTimeout(async () => {

@@ -8,9 +8,7 @@ import AppShell from '@/components/layout/AppShell';
 import AdminSidebar, { AdminSection } from './components/AdminSidebar';
 import DashboardSection from './components/DashboardSection';
 import BroadcastSection from './components/BroadcastSection';
-import MarketControlSection from './components/MarketControlSection';
 import CoinflipSection from './components/CoinflipSection';
-import CaseStatsSection from './components/CaseStatsSection';
 import AuditLogSection from './components/AuditLogSection';
 import UserDetailModal from './components/UserDetailModal';
 
@@ -55,14 +53,6 @@ export default function AdminPage() {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [newTeacherName, setNewTeacherName] = useState('');
 
-  // Cases state
-  const [cases, setCases] = useState<any[]>([]);
-  const [expandedCase, setExpandedCase] = useState<string | null>(null);
-  const [newCase, setNewCase] = useState({ name: '', description: '', price: '10', isDaily: false });
-  const [editingCase, setEditingCase] = useState<any>(null);
-  const [newItem, setNewItem] = useState<Record<string, { type: string; label: string; amount: string; weight: string }>>({});
-  const [editingItem, setEditingItem] = useState<Record<string, { label: string; amount: string; weight: string }>>({});
-
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'ADMIN')) router.replace('/wallet');
   }, [user, authLoading, router]);
@@ -73,11 +63,10 @@ export default function AdminPage() {
     try { const d = await api.admin.users(userPage, 15, userSearch); setUsers(d.users); setUserTotal(d.pagination.total); } catch {}
   }, [userPage, userSearch]);
   const loadTeachers = useCallback(async () => { try { const d = await api.admin.teachers(); setTeachers(d.teachers); } catch {} }, []);
-  const loadCases = useCallback(async () => { try { const d = await api.admin.getCases(); setCases(d.cases || []); } catch {} }, []);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') { loadStats(); loadUsers(); loadTeachers(); loadCases(); loadPassCode(); }
-  }, [user, loadStats, loadUsers, loadTeachers, loadCases, loadPassCode]);
+    if (user?.role === 'ADMIN') { loadStats(); loadUsers(); loadTeachers(); loadPassCode(); }
+  }, [user, loadStats, loadUsers, loadTeachers, loadPassCode]);
 
   function showMessage(type: 'success' | 'error', text: string) {
     setMessage({ type, text });
@@ -143,14 +132,8 @@ export default function AdminPage() {
           {/* ═══ BROADCAST ═══ */}
           {section === 'broadcast' && <BroadcastSection onMessage={showMessage} />}
 
-          {/* ═══ MARKET CONTROL ═══ */}
-          {section === 'market' && <MarketControlSection onMessage={showMessage} />}
-
           {/* ═══ COINFLIP ═══ */}
           {section === 'coinflip' && <CoinflipSection onMessage={showMessage} />}
-
-          {/* ═══ CASE STATS ═══ */}
-          {section === 'case-stats' && <CaseStatsSection onMessage={showMessage} />}
 
           {/* ═══ AUDIT LOG ═══ */}
           {section === 'audit' && <AuditLogSection />}
@@ -273,88 +256,6 @@ export default function AdminPage() {
                   })}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* ═══ CASES ═══ */}
-          {section === 'cases' && (
-            <div className="space-y-4">
-              <div className="glass-card p-5">
-                <h3 className="font-bold mb-4 text-lg">➕ Přidat Case</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                  <input className="glass-input text-sm" placeholder="Název" value={newCase.name} onChange={e => setNewCase(p => ({...p, name: e.target.value}))} />
-                  <input className="glass-input text-sm" placeholder="Cena ST" type="number" value={newCase.price} onChange={e => setNewCase(p => ({...p, price: e.target.value}))} />
-                </div>
-                <input className="glass-input text-sm w-full mb-3" placeholder="Popis" value={newCase.description} onChange={e => setNewCase(p => ({...p, description: e.target.value}))} />
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={newCase.isDaily} onChange={e => setNewCase(p => ({...p, isDaily: e.target.checked}))} className="w-4 h-4" /> Denní</label>
-                  <button onClick={async () => { if (!newCase.name.trim()) return; setActionLoading(true); try { await api.admin.createCase({ name: newCase.name, description: newCase.description, price: newCase.price, isDaily: newCase.isDaily }); showMessage('success', `Case "${newCase.name}" přidán`); setNewCase({ name: '', description: '', price: '10', isDaily: false }); loadCases(); } catch (e:any) { showMessage('error', e.message); } setActionLoading(false); }}
-                    disabled={actionLoading || !newCase.name.trim()} className="btn-primary px-5 text-sm disabled:opacity-50 ml-auto">+ Přidat</button>
-                </div>
-              </div>
-
-              {cases.map(c => (
-                <div key={c.id} className="glass-card-static rounded-xl overflow-hidden">
-                  <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.03] transition-colors" onClick={() => setExpandedCase(expandedCase === c.id ? null : c.id)}>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">📦</span>
-                      <div>
-                        <p className="font-semibold text-sm">{c.name}</p>
-                        <p className="text-text-muted text-xs">{c.isDaily ? '🎁 Denní' : `💰 ${parseFloat(c.price).toFixed(0)} ST`} · {c.items.length} předmětů · {c._count?.openings ?? 0}× otevřen{!c.isActive && ' · ⚫ Skrytý'}</p>
-                      </div>
-                    </div>
-                    <span className="text-text-muted text-sm">{expandedCase === c.id ? '▲' : '▼'}</span>
-                  </div>
-
-                  {expandedCase === c.id && (
-                    <div className="border-t border-white/5 p-5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-text-muted text-xs">{c.description || 'Bez popisu'}</p>
-                        <div className="flex gap-2">
-                          <button onClick={async () => { try { await api.admin.updateCase(c.id, { isActive: !c.isActive }); loadCases(); } catch {} }} className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-text-muted">{c.isActive ? '🙈 Skrýt' : '👁️ Zobrazit'}</button>
-                          <button onClick={async () => { if (!window.confirm(`Smazat "${c.name}"?`)) return; try { await api.admin.deleteCase(c.id); loadCases(); showMessage('success', 'Smazáno'); } catch (e:any) { showMessage('error', e.message); }}} className="px-3 py-1.5 text-xs rounded-lg bg-st-red-dim text-st-red font-semibold">🗑️</button>
-                        </div>
-                      </div>
-
-                      {/* Items */}
-                      <div className="space-y-2">
-                        {c.items.map((item: any) => {
-                          const tw = c.items.reduce((s: number, i: any) => s + i.weight, 0);
-                          const pct = tw > 0 ? ((item.weight / tw) * 100).toFixed(1) : '0';
-                          return (
-                            <div key={item.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 group/item">
-                              <div className="relative w-14 h-5 rounded bg-white/5 flex-shrink-0 overflow-hidden">
-                                <div className="absolute inset-y-0 left-0 rounded" style={{ width: `${Math.min(parseFloat(pct), 100)}%`, background: item.type === 'MYTHIC_PASS' ? '#ffd700' : '#06b6d4', opacity: 0.4 }} />
-                                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold font-mono">{pct}%</span>
-                              </div>
-                              <span className="flex-1 text-sm">{item.type === 'MYTHIC_PASS' ? '🌈' : '💰'} {item.label}</span>
-                              <span className="text-text-muted text-xs">{item.amount ? `${parseFloat(item.amount).toFixed(0)} ST` : 'Pass'}</span>
-                              <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                                <button onClick={async () => { if (!window.confirm(`Smazat "${item.label}"?`)) return; try { await api.admin.deleteCaseItem(item.id); loadCases(); } catch {} }} className="px-1.5 py-0.5 text-xs rounded bg-st-red-dim text-st-red">✕</button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Add item */}
-                      <div className="flex gap-2 flex-wrap">
-                        <select className="glass-input text-xs" value={newItem[c.id]?.type || 'ST_REWARD'} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {label:'',amount:'',weight:''}), type: e.target.value}}))}>
-                          <option value="ST_REWARD">💰 ST</option><option value="MYTHIC_PASS">🌈 Pass</option>
-                        </select>
-                        <input className="glass-input text-xs flex-1 min-w-[100px]" placeholder="Popis" value={newItem[c.id]?.label || ''} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',amount:'',weight:''}), label: e.target.value}}))} />
-                        <input className="glass-input text-xs w-20" placeholder="ST" type="number" value={newItem[c.id]?.amount || ''} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',weight:''}), amount: e.target.value}}))} />
-                        <input className="glass-input text-xs w-16" placeholder="%" type="number" value={newItem[c.id]?.weight || ''} onChange={e => setNewItem(p => ({...p, [c.id]: {...(p[c.id] || {type:'ST_REWARD',label:'',amount:''}), weight: e.target.value}}))} />
-                        <button onClick={async () => {
-                          const ni = newItem[c.id]; if (!ni?.label || !ni?.weight) return;
-                          try { await api.admin.addCaseItem(c.id, { type: ni.type || 'ST_REWARD', label: ni.label, amount: ni.amount || null, weight: Math.round(parseFloat(ni.weight)) });
-                            setNewItem(p => ({...p, [c.id]: {type:'ST_REWARD',label:'',amount:'',weight:''}})); loadCases(); showMessage('success', 'Přidáno'); } catch (e:any) { showMessage('error', e.message); }
-                        }} className="px-3 py-1.5 text-xs rounded-lg bg-st-cyan-dim text-st-cyan font-semibold">+</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           )}
         </div>

@@ -111,7 +111,6 @@ export const TITLES: Record<string, { label: string; color: string; icon: string
   gambler:    { label: 'Gambler',    color: '#eab308', icon: '🎰',  description: '50+ coinflipů' },
   generous:   { label: 'Generous',   color: '#ec4899', icon: '💝',  description: '100+ tipů odesláno' },
   dedicated:  { label: 'Dedicated',  color: '#f97316', icon: '🔥',  description: '7-denní streak' },
-  collector:  { label: 'Collector',  color: '#8b5cf6', icon: '📦',  description: '100+ cases otevřeno' },
   trader:     { label: 'Trader',     color: '#14b8a6', icon: '📈',  description: '20+ tržních obchodů' },
   lord:       { label: 'Lord',       color: '#facc15', icon: '💍',  description: 'Zůstatek 5000+ ST' },
   god:        { label: 'God',        color: '#f472b6', icon: '🎇',  description: 'Zůstatek 25000+ ST' },
@@ -124,7 +123,7 @@ export async function getTitles(req: Request, res: Response) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
   // Compute which titles this user has unlocked
-  const [miningStats, transferStats, caseStats, coinflipStats] = await Promise.all([
+  const [miningStats, transferStats, coinflipStats] = await Promise.all([
     prisma.transaction.aggregate({
       where: { receiverId: userId, type: 'MINING_REWARD' },
       _sum: { amount: true },
@@ -132,7 +131,6 @@ export async function getTitles(req: Request, res: Response) {
     prisma.transaction.count({
       where: { senderId: userId, type: 'TIP' },
     }),
-    prisma.caseOpening.count({ where: { userId } }),
     prisma.coinflipGame.count({
       where: { OR: [{ creatorId: userId }, { joinerId: userId }], status: 'FINISHED' },
     }),
@@ -151,7 +149,6 @@ export async function getTitles(req: Request, res: Response) {
   if (coinflipStats >= 50) unlocked.push('gambler');
   if (transferStats >= 100) unlocked.push('generous');
   if (user.loginStreak >= 7) unlocked.push('dedicated');
-  if (caseStats >= 100) unlocked.push('collector');
 
   // First 20 users are OGs
   const userCount = await prisma.user.count({ where: { createdAt: { lte: user.createdAt } } });

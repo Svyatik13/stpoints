@@ -13,7 +13,6 @@ interface ProfileStats {
   transfersSent: number;
   transfersReceived: number;
   giveawayWins: number;
-  caseOpenings: number;
   totalEarned: string;
 }
 
@@ -130,13 +129,7 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-2xl font-bold font-mono text-st-gold">{stats.giveawayWins}</p>
               </div>
-              <div className="glass-card-static p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <span>📦</span>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">{t.profile.casesOpened}</span>
-                </div>
-                <p className="text-2xl font-bold font-mono">{stats.caseOpenings}</p>
-              </div>
+
               <div className="glass-card-static p-5 col-span-2 border-st-emerald/20 glow-emerald">
                 <div className="flex items-center gap-2 mb-2">
                   <span>📈</span>

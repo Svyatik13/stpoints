@@ -113,7 +113,6 @@ export const api = {
           transfersSent: number;
           transfersReceived: number;
           giveawayWins: number;
-          caseOpenings: number;
           totalEarned: string;
         };
       }>('/profile'),
@@ -145,13 +144,7 @@ export const api = {
     earlyExit: () => request<{ success: boolean; message: string }>('/st-room/early-exit', { method: 'POST' }),
   },
 
-  // ── Cases ──
-  cases: {
-    list: () => request<any>('/cases'),
-    open: (body: { caseId: string }) => request<any>('/cases/open', { method: 'POST', body }),
-    dailyStatus: () => request<any>('/cases/daily-status'),
-    passes: () => request<any>('/cases/passes'),
-  },
+
 
   // ── Giveaway ──
   giveaway: {
@@ -187,20 +180,7 @@ export const api = {
       request<any>('/admin/teachers/toggle', { method: 'POST', body }),
     setTeacherRarity: (body: { teacherId: string; rarity: string }) =>
       request<any>('/admin/teachers/rarity', { method: 'POST', body }),
-    // Cases
-    getCases: () => request<any>('/admin/cases'),
-    createCase: (body: { name: string; description?: string; price: string; isDaily?: boolean }) =>
-      request<any>('/admin/cases', { method: 'POST', body }),
-    updateCase: (caseId: string, body: { name?: string; description?: string; price?: string; isDaily?: boolean; isActive?: boolean }) =>
-      request<any>(`/admin/cases/${caseId}`, { method: 'PUT', body }),
-    deleteCase: (caseId: string) =>
-      request<any>(`/admin/cases/${caseId}`, { method: 'DELETE' }),
-    addCaseItem: (caseId: string, body: { type: string; label: string; amount?: string | null; weight: number }) =>
-      request<any>(`/admin/cases/${caseId}/items`, { method: 'POST', body }),
-    updateCaseItem: (itemId: string, body: { label?: string; type?: string; amount?: string | null; weight?: number }) =>
-      request<any>(`/admin/cases/items/${itemId}`, { method: 'PUT', body }),
-    deleteCaseItem: (itemId: string) =>
-      request<any>(`/admin/cases/items/${itemId}`, { method: 'DELETE' }),
+
     // PassCode
     getPassCode: () =>
       request<{ code: string; history: any[] }>('/admin/passcode'),
@@ -217,13 +197,7 @@ export const api = {
       request<any>('/admin/broadcast', { method: 'POST', body: { message } }),
     clearBroadcast: () =>
       request<any>('/admin/broadcast', { method: 'DELETE' }),
-    // Market Control
-    getMarketStocks: () =>
-      request<any>('/admin/market-control/stocks'),
-    setStockPrice: (stockId: string, price: string) =>
-      request<any>('/admin/market-control/set-price', { method: 'POST', body: { stockId, price } }),
-    toggleTrading: (paused: boolean) =>
-      request<any>('/admin/market-control/toggle-trading', { method: 'POST', body: { paused } }),
+
     // Audit Log
     getAuditLog: (page: number = 1) =>
       request<any>(`/admin/audit-log?page=${page}&limit=30`),
@@ -232,9 +206,7 @@ export const api = {
       request<any>(`/admin/coinflips${status ? `?status=${status}` : ''}`),
     cancelCoinflip: (gameId: string) =>
       request<any>(`/admin/coinflips/${gameId}/cancel`, { method: 'POST' }),
-    // Case Stats
-    getCaseStats: () =>
-      request<any>('/admin/cases/stats'),
+
     // Bulk Grant
     bulkGrant: (body: { amount: string; reason: string; filter: string }) =>
       request<any>('/admin/bulk-grant', { method: 'POST', body }),
@@ -302,12 +274,7 @@ export const api = {
     send: (message: string) => request<any>('/chat/send', { method: 'POST', body: { message } }),
   },
 
-  // ── Invest ──
-  invest: {
-    stocks: () => request<{ stocks: any[] }>('/invest/stocks'),
-    buy: (stockId: string, amount: string) => request<any>('/invest/buy', { method: 'POST', body: { stockId, amount } }),
-    sell: (stockId: string, shares: string) => request<any>('/invest/sell', { method: 'POST', body: { stockId, shares } }),
-  },
+
 
   // ── Public Profiles ──
   users: {
@@ -323,10 +290,5 @@ export const api = {
     access: () => request<any>('/terminal/access'),
     command: (body: { command: string }) => request<any>('/terminal/execute', { method: 'POST', body }),
   },
-  // ── Risk-Coin ──
-  riskcoin: {
-    live: () => request<{ currentPrice: string; history: any[] }>('/riskcoin/live'),
-    buy: (amountST: string) => request<any>('/riskcoin/buy', { method: 'POST', body: { amountST } }),
-    sell: (amountCoins: string) => request<any>('/riskcoin/sell', { method: 'POST', body: { amountCoins } }),
-  },
+
 };

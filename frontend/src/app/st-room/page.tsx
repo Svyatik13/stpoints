@@ -265,8 +265,7 @@ export default function StRoomPage() {
 
       // Load pass count
       try {
-        const passRes = await api.cases.passes();
-        setMyPassCount(passRes.count ?? 0);
+        setMyPassCount(0);
       } catch {}
     } catch { /* silent */ }
     finally { setLoadingData(false); }
@@ -537,14 +536,6 @@ export default function StRoomPage() {
                   🌈 Uplatnit Pass
                 </button>
               </div>
-              {myPassCount === 0 && (
-                <button
-                  onClick={() => router.push('/cases')}
-                  className="mt-3 text-xs text-st-cyan hover:underline"
-                >
-                  📦 Jít na Cases →
-                </button>
-              )}
             </div>
           </div>
         )}

@@ -29,14 +29,7 @@ router.post('/teachers', adminController.addTeacher);
 router.post('/teachers/toggle', adminController.toggleTeacherActive);
 router.post('/teachers/rarity', adminController.setTeacherRarity);
 
-// Cases
-router.get('/cases', adminController.getCasesAdmin);
-router.post('/cases', adminController.createCase);
-router.put('/cases/:caseId', adminController.updateCase);
-router.delete('/cases/:caseId', adminController.deleteCase);
-router.post('/cases/:caseId/items', adminController.addCaseItem);
-router.put('/cases/items/:itemId', adminController.updateCaseItem);
-router.delete('/cases/items/:itemId', adminController.deleteCaseItem);
+
 
 // Pass Code
 router.get('/passcode', adminController.getPassCode);
@@ -54,10 +47,7 @@ router.get('/broadcast', adminController.getBroadcast);
 router.post('/broadcast', adminController.setBroadcast);
 router.delete('/broadcast', adminController.clearBroadcast);
 
-// Market Control
-router.get('/market-control/stocks', adminController.getMarketControlStocks);
-router.post('/market-control/set-price', adminController.setStockPrice);
-router.post('/market-control/toggle-trading', adminController.toggleTrading);
+
 
 // Audit Log
 router.get('/audit-log', adminController.getAuditLog);
@@ -66,8 +56,7 @@ router.get('/audit-log', adminController.getAuditLog);
 router.get('/coinflips', adminController.getCoinflipsAdmin);
 router.post('/coinflips/:gameId/cancel', adminController.forceCancelCoinflip);
 
-// Case Statistics
-router.get('/cases/stats', adminController.getCaseStats);
+
 
 // Bulk Grant
 router.post('/bulk-grant', adminController.bulkGrant);

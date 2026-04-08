@@ -20,7 +20,6 @@ export const en: Translations = {
     wallet: 'Wallet',
     mining: 'Mining',
     drops: 'ST-Drops',
-    cases: 'Cases',
     stroom: 'ST-ROOM',
     leaderboard: 'Leaderboard',
     profile: 'Profile',
@@ -114,7 +113,6 @@ export const en: Translations = {
     transfersSent: 'Transfers Sent',
     transfersReceived: 'Transfers Received',
     giveawayWins: 'Giveaway Wins',
-    casesOpened: 'Cases Opened',
     totalEarned: 'Total Earned',
     goMining: 'Go mining',
     earnMore: 'Earn more ST',
@@ -130,7 +128,6 @@ export const en: Translations = {
     TRANSFER: 'Transfer',
     SYSTEM_DEBIT: 'System',
     ST_ROOM_ACCESS: 'ST-ROOM',
-    CASE_OPENING: 'Case',
   },
   theme: {
     dark: 'Dark',

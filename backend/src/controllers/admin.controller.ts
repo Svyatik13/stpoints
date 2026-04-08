@@ -256,92 +256,6 @@ export async function setTeacherRarity(req: Request, res: Response, next: NextFu
   }
 }
 
-// ── Cases (Admin) ──
-export async function getCasesAdmin(req: Request, res: Response, next: NextFunction) {
-  try {
-    const cases = await prisma.case.findMany({
-      orderBy: { sortOrder: 'asc' },
-      include: { items: { orderBy: { weight: 'desc' } }, _count: { select: { openings: true } } },
-    });
-    res.json({ cases });
-  } catch (error) { next(error); }
-}
-
-export async function createCase(req: Request, res: Response, next: NextFunction) {
-  try {
-    const data = z.object({
-      name: z.string().min(1).max(80),
-      description: z.string().optional(),
-      price: z.string(),
-      isDaily: z.boolean().optional().default(false),
-    }).parse(req.body);
-    const maxOrder = await prisma.case.count();
-    const newCase = await prisma.case.create({ data: { ...data, sortOrder: maxOrder } });
-    logger.info(`ADMIN: Case created: ${data.name}`);
-    res.json({ success: true, case: newCase });
-  } catch (error) { next(error); }
-}
-
-export async function updateCase(req: Request, res: Response, next: NextFunction) {
-  try {
-    const caseId = req.params.caseId as string;
-    const data = z.object({
-      name: z.string().min(1).max(80).optional(),
-      description: z.string().optional(),
-      price: z.string().optional(),
-      isDaily: z.boolean().optional(),
-      isActive: z.boolean().optional(),
-    }).parse(req.body);
-    const updated = await prisma.case.update({ where: { id: caseId }, data });
-    res.json({ success: true, case: updated });
-  } catch (error) { next(error); }
-}
-
-export async function deleteCase(req: Request, res: Response, next: NextFunction) {
-  try {
-    const caseId = req.params.caseId as string;
-    await prisma.case.delete({ where: { id: caseId } });
-    logger.info(`ADMIN: Case deleted: ${caseId}`);
-    res.json({ success: true });
-  } catch (error) { next(error); }
-}
-
-export async function addCaseItem(req: Request, res: Response, next: NextFunction) {
-  try {
-    const caseId = req.params.caseId as string;
-    const data = z.object({
-      type: z.enum(['ST_REWARD', 'MYTHIC_PASS']),
-      label: z.string().min(1).max(50),
-      amount: z.string().optional().nullable(),
-      weight: z.number().int().min(1).max(10000),
-    }).parse(req.body);
-    const item = await prisma.caseItem.create({ data: { caseId, ...data } });
-    res.json({ success: true, item });
-  } catch (error) { next(error); }
-}
-
-export async function updateCaseItem(req: Request, res: Response, next: NextFunction) {
-  try {
-    const itemId = req.params.itemId as string;
-    const data = z.object({
-      label: z.string().min(1).max(50).optional(),
-      type: z.enum(['ST_REWARD', 'MYTHIC_PASS']).optional(),
-      amount: z.string().optional().nullable(),
-      weight: z.number().int().min(1).max(10000).optional(),
-    }).parse(req.body);
-    const item = await prisma.caseItem.update({ where: { id: itemId }, data });
-    res.json({ success: true, item });
-  } catch (error) { next(error); }
-}
-
-export async function deleteCaseItem(req: Request, res: Response, next: NextFunction) {
-  try {
-    const itemId = req.params.itemId as string;
-    await prisma.caseItem.delete({ where: { id: itemId } });
-    res.json({ success: true });
-  } catch (error) { next(error); }
-}
-
 // ── Pass Code (Admin) ──
 import * as passCodeService from '../services/passcode.service';
 
@@ -394,8 +308,8 @@ export async function getUserDetail(req: Request, res: Response, next: NextFunct
         loginStreak: true, lastLoginRewardAt: true, referralCount: true,
         _count: {
           select: {
-            miningChallenges: true, giveawayWins: true, caseOpenings: true,
-            investments: true, coinflipsCreated: true, chatMessages: true,
+            miningChallenges: true, giveawayWins: true,
+            coinflipsCreated: true, chatMessages: true,
             sentTransactions: true, receivedTransactions: true, userPasses: true,
             usernames: true,
           },
@@ -411,12 +325,6 @@ export async function getUserDetail(req: Request, res: Response, next: NextFunct
       select: { id: true, type: true, amount: true, description: true, createdAt: true },
     });
 
-    // Active investments
-    const investments = await prisma.userInvestment.findMany({
-      where: { userId },
-      include: { stock: { select: { symbol: true, name: true, currentPrice: true } } },
-    });
-
     // Recent mining (last 10)
     const mining = await prisma.miningChallenge.findMany({
       where: { userId },
@@ -428,13 +336,6 @@ export async function getUserDetail(req: Request, res: Response, next: NextFunct
     res.json({
       user: { ...user, balance: user.balance.toString() },
       transactions: transactions.map(t => ({ ...t, amount: t.amount.toString() })),
-      investments: investments.map(i => ({
-        ...i,
-        amount: i.amount.toString(),
-        shares: i.shares.toString(),
-        avgPrice: i.avgPrice.toString(),
-        stock: { ...i.stock, currentPrice: i.stock.currentPrice.toString() },
-      })),
       mining: mining.map(m => ({ ...m, reward: m.reward?.toString() || null })),
     });
   } catch (error) { next(error); }
@@ -467,78 +368,6 @@ export async function clearBroadcast(req: Request, res: Response, next: NextFunc
     await prisma.systemSetting.deleteMany({ where: { key: 'broadcast_message' } });
     await logAdminAction(req.user!.userId, 'BROADCAST_CLEARED');
     res.json({ success: true });
-  } catch (error) { next(error); }
-}
-
-// ── Market Control ──
-export async function getMarketControlStocks(req: Request, res: Response, next: NextFunction) {
-  try {
-    const stocks = await prisma.stock.findMany({
-      include: {
-        _count: { select: { investments: true } },
-      },
-    });
-
-    // Get total invested per stock
-    const stocksWithDetails = await Promise.all(stocks.map(async (stock) => {
-      const totalInvested = await prisma.userInvestment.aggregate({
-        where: { stockId: stock.id },
-        _sum: { amount: true, shares: true },
-      });
-      return {
-        ...stock,
-        currentPrice: stock.currentPrice.toString(),
-        lastPrice: stock.lastPrice.toString(),
-        totalInvested: totalInvested._sum.amount?.toString() || '0',
-        totalShares: totalInvested._sum.shares?.toString() || '0',
-        investorCount: stock._count.investments,
-      };
-    }));
-
-    // Check if trading is paused
-    const pauseSetting = await prisma.systemSetting.findUnique({ where: { key: 'trading_paused' } });
-
-    res.json({ stocks: stocksWithDetails, tradingPaused: pauseSetting?.value === 'true' });
-  } catch (error) { next(error); }
-}
-
-export async function setStockPrice(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { stockId, price } = z.object({
-      stockId: z.string(),
-      price: z.string().refine(v => parseFloat(v) > 0, 'Price must be positive'),
-    }).parse(req.body);
-
-    const stock = await prisma.stock.findUniqueOrThrow({ where: { id: stockId } });
-    const newPrice = new Decimal(price);
-
-    await prisma.$transaction([
-      prisma.stock.update({
-        where: { id: stockId },
-        data: { currentPrice: newPrice, lastPrice: stock.currentPrice },
-      }),
-      prisma.stockPriceHistory.create({
-        data: { stockId, price: newPrice },
-      }),
-    ]);
-
-    await logAdminAction(req.user!.userId, 'STOCK_PRICE_SET', { stock: stock.symbol, oldPrice: stock.currentPrice.toString(), newPrice: price });
-    logger.info(`ADMIN: Stock ${stock.symbol} price set to ${price}`);
-    res.json({ success: true });
-  } catch (error) { next(error); }
-}
-
-export async function toggleTrading(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { paused } = z.object({ paused: z.boolean() }).parse(req.body);
-    await prisma.systemSetting.upsert({
-      where: { key: 'trading_paused' },
-      update: { value: String(paused) },
-      create: { key: 'trading_paused', value: String(paused) },
-    });
-    await logAdminAction(req.user!.userId, paused ? 'TRADING_PAUSED' : 'TRADING_RESUMED');
-    logger.info(`ADMIN: Trading ${paused ? 'PAUSED' : 'RESUMED'}`);
-    res.json({ success: true, paused });
   } catch (error) { next(error); }
 }
 
@@ -631,60 +460,6 @@ export async function forceCancelCoinflip(req: Request, res: Response, next: Nex
   } catch (error) { next(error); }
 }
 
-// ── Case Statistics ──
-export async function getCaseStats(req: Request, res: Response, next: NextFunction) {
-  try {
-    const cases = await prisma.case.findMany({
-      include: {
-        _count: { select: { openings: true } },
-        items: { select: { id: true, label: true, type: true, amount: true, weight: true } },
-      },
-    });
-
-    const casesWithStats = await Promise.all(cases.map(async (c) => {
-      // Revenue from this case
-      const revenue = await prisma.caseOpening.aggregate({
-        where: { caseId: c.id },
-        _sum: { costPaid: true },
-      });
-
-      // Rewards paid out
-      const rewards = await prisma.caseOpening.aggregate({
-        where: { caseId: c.id },
-        _sum: { rewardAmount: true },
-      });
-
-      // Most won item
-      const topItem = await prisma.caseOpening.groupBy({
-        by: ['itemId'],
-        where: { caseId: c.id },
-        _count: true,
-        orderBy: { _count: { itemId: 'desc' } },
-        take: 1,
-      });
-
-      const topItemInfo = topItem[0]
-        ? c.items.find(i => i.id === topItem[0].itemId)
-        : null;
-
-      return {
-        id: c.id,
-        name: c.name,
-        price: c.price.toString(),
-        isDaily: c.isDaily,
-        isActive: c.isActive,
-        totalOpenings: c._count.openings,
-        revenue: revenue._sum.costPaid?.toString() || '0',
-        rewardsPaid: rewards._sum.rewardAmount?.toString() || '0',
-        topItem: topItemInfo ? { label: topItemInfo.label, count: topItem[0]._count } : null,
-        itemCount: c.items.length,
-      };
-    }));
-
-    res.json({ cases: casesWithStats });
-  } catch (error) { next(error); }
-}
-
 // ── Bulk Grant ──
 export async function bulkGrant(req: Request, res: Response, next: NextFunction) {
   try {
@@ -737,12 +512,12 @@ export async function exportUsersCSV(req: Request, res: Response, next: NextFunc
       select: {
         id: true, username: true, balance: true, role: true, isActive: true,
         lastActiveAt: true, createdAt: true, loginStreak: true,
-        _count: { select: { miningChallenges: true, giveawayWins: true, caseOpenings: true } },
+        _count: { select: { miningChallenges: true, giveawayWins: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    const header = 'Username,Balance,Role,Active,LastActive,Created,LoginStreak,MiningCount,GiveawayWins,CaseOpenings\n';
+    const header = 'Username,Balance,Role,Active,LastActive,Created,LoginStreak,MiningCount,GiveawayWins\n';
     const rows = users.map(u => [
       u.username,
       u.balance.toString(),
@@ -753,7 +528,6 @@ export async function exportUsersCSV(req: Request, res: Response, next: NextFunc
       u.loginStreak,
       u._count.miningChallenges,
       u._count.giveawayWins,
-      u._count.caseOpenings,
     ].join(',')).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
