@@ -37,11 +37,6 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
       where: { receiverId: userId, type: 'GIVEAWAY' },
     });
 
-    // Case openings
-    const caseOpenings = await prisma.caseOpening.count({
-      where: { userId },
-    });
-
     // Total earned (all incoming transactions)
     const totalEarned = await prisma.transaction.aggregate({
       where: { receiverId: userId },
@@ -60,7 +55,6 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
         transfersSent: sentCount,
         transfersReceived: receivedCount,
         giveawayWins,
-        caseOpenings,
         totalEarned: totalEarned._sum.amount?.toString() ?? '0',
       },
     });
