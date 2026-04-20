@@ -133,13 +133,7 @@ export async function submitSolution(
   // Partial (stopped early): 50% reward for hashes computed
   const rewardMultiplier = Math.floor(hashesComputed / 10000);
   
-  // Check for ST-ROOM benefit (2x)
-  const activeSession = await prisma.stRoomSession.findFirst({
-    where: { userId, expiresAt: { gt: new Date() } }
-  });
-  const roomMultiplier = activeSession ? 2 : 1;
-
-  const baseReward = new Decimal(env.mining.rewardPer10k).mul(rewardMultiplier).mul(roomMultiplier);
+  const baseReward = new Decimal(env.mining.rewardPer10k).mul(rewardMultiplier);
   const reward = isFullSolve ? baseReward : baseReward.mul(new Decimal('0.5'));
 
   // 7. Atomic transaction
