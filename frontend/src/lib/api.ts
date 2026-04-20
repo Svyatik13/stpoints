@@ -129,8 +129,8 @@ export const api = {
     // Session-based
     startSession: () =>
       request<any>('/mining/session/start', { method: 'POST' }),
-    stopSession: () =>
-      request<any>('/mining/session/stop', { method: 'POST' }),
+    stopSession: (body: { boostSeconds: number }) =>
+      request<any>('/mining/session/stop', { method: 'POST', body }),
     session: () =>
       request<any>('/mining/session'),
   },
@@ -159,8 +159,6 @@ export const api = {
       request<any>(`/admin/user/${userId}`, { method: 'DELETE' }),
     createGiveaway: (body: { title: string; prizePool: string; winnerCount: number; distribution: string; durationMinutes: number }) =>
       request<any>('/admin/giveaway/create', { method: 'POST', body }),
-    drawGiveaway: (body: { giveawayId: string }) =>
-      request<any>('/admin/giveaway/draw', { method: 'POST', body }),
     drawGiveaway: (body: { giveawayId: string }) =>
       request<any>('/admin/giveaway/draw', { method: 'POST', body }),
 

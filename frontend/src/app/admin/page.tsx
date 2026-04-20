@@ -49,9 +49,7 @@ export default function AdminPage() {
   const [gaDist, setGaDist] = useState<'EQUAL'|'WEIGHTED'>('EQUAL');
   const [gaTime, setGaTime] = useState('');
 
-  // Teachers state
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [newTeacherName, setNewTeacherName] = useState('');
+
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'ADMIN')) router.replace('/wallet');
@@ -62,11 +60,11 @@ export default function AdminPage() {
   const loadUsers = useCallback(async () => {
     try { const d = await api.admin.users(userPage, 15, userSearch); setUsers(d.users); setUserTotal(d.pagination.total); } catch {}
   }, [userPage, userSearch]);
-  const loadTeachers = useCallback(async () => { try { const d = await api.admin.teachers(); setTeachers(d.teachers); } catch {} }, []);
+
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') { loadStats(); loadUsers(); loadTeachers(); loadPassCode(); }
-  }, [user, loadStats, loadUsers, loadTeachers, loadPassCode]);
+    if (user?.role === 'ADMIN') { loadStats(); loadUsers(); loadPassCode(); }
+  }, [user, loadStats, loadUsers, loadPassCode]);
 
   function showMessage(type: 'success' | 'error', text: string) {
     setMessage({ type, text });
@@ -225,39 +223,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ═══ TEACHERS ═══ */}
-          {section === 'teachers' && (
-            <div className="space-y-4">
-              <div className="glass-card p-6">
-                <h2 className="text-xl font-bold mb-4">🧑‍🏫 Správa Učitelů</h2>
-                <div className="flex gap-3 mb-6">
-                  <input type="text" placeholder="Jméno učitele..." value={newTeacherName} onChange={e => setNewTeacherName(e.target.value)} className="glass-input flex-1" />
-                  <button onClick={async () => { if (!newTeacherName.trim()) return; setActionLoading(true); try { await api.admin.addTeacher({ name: newTeacherName.trim() }); showMessage('success', `${newTeacherName} přidán`); setNewTeacherName(''); loadTeachers(); } catch (e:any) { showMessage('error', e.message); } setActionLoading(false); }}
-                    disabled={actionLoading || !newTeacherName.trim()} className="btn-primary px-5 disabled:opacity-50">+ Přidat</button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {teachers.map(t => {
-                    const rc: Record<string,string> = { COMMON:'text-gray-400', RARE:'text-st-emerald', EPIC:'text-st-cyan', LEGENDARY:'text-st-purple', MYTHIC:'text-yellow-400' };
-                    return (
-                      <div key={t.id} className={`glass-card-static p-4 rounded-xl space-y-3 ${!t.isActive ? 'opacity-40' : ''}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-st-cyan-dim flex items-center justify-center text-st-cyan font-bold text-xs">{t.name.charAt(0)}</div>
-                            <div><p className="font-semibold text-sm">{t.name}</p><p className={`text-xs font-bold ${rc[t.rarity]||'text-gray-400'}`}>{t.rarity}</p></div>
-                          </div>
-                          <button onClick={async () => { try { await api.admin.toggleTeacher({ teacherId: t.id }); loadTeachers(); } catch (e:any) { showMessage('error', e.message); }}}
-                            className={`px-2 py-1 text-[10px] rounded-lg font-semibold ${t.isActive ? 'bg-st-red-dim text-st-red' : 'bg-st-emerald-dim text-st-emerald'}`}>{t.isActive ? '🙈' : '👁️'}</button>
-                        </div>
-                        <select value={t.rarity||'COMMON'} onChange={async (e) => { try { await api.admin.setTeacherRarity({ teacherId: t.id, rarity: e.target.value }); loadTeachers(); } catch (err:any) { showMessage('error', err.message); }}} className="glass-input text-xs w-full">
-                          <option value="COMMON">⬜ Common</option><option value="RARE">🟩 Rare</option><option value="EPIC">🟦 Epic</option><option value="LEGENDARY">🟪 Legendary</option><option value="MYTHIC">🌈 Mythic</option>
-                        </select>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
 

@@ -6,7 +6,6 @@ const SECTIONS = [
   { id: 'broadcast', label: 'Broadcast', icon: '📢' },
   { id: 'coinflip', label: 'Coinflip', icon: '🎰' },
   { id: 'giveaway', label: 'ST-Drops', icon: '🎁' },
-  { id: 'teachers', label: 'Učitelé', icon: '🧑‍🏫' },
   { id: 'audit', label: 'Audit Log', icon: '📋' },
 ] as const;
 
