@@ -4,7 +4,7 @@ import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
-const ST_PER_SECOND = 0.008333;   // 0.5 ST/min, 30 ST/hour
+const ST_PER_SECOND = 0.004166;   // Halved: ~0.25 ST/min, 15 ST/hour
 
 export async function startMiningSession(req: Request, res: Response, next: NextFunction) {
   try {
@@ -24,9 +24,14 @@ export async function startMiningSession(req: Request, res: Response, next: Next
   } catch (error) { next(error); }
 }
 
+const stopSchema = z.object({
+  boostSeconds: z.number().int().nonnegative().optional(),
+});
+
 export async function stopMiningSession(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user!.userId;
+    const { boostSeconds = 0 } = stopSchema.parse(req.body);
 
     const result = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
@@ -37,9 +42,16 @@ export async function stopMiningSession(req: Request, res: Response, next: NextF
 
       if (elapsedSec < 5) throw new AppError('Příliš krátká těžba (minimum 5 sekund).', 400);
 
-      // Reward with ±20% variance, biased very slightly positive (mining should feel rewarding)
+      // Max possible boost check (sanity check)
+      const validBoostSec = Math.min(boostSeconds, elapsedSec);
+
+      // Reward calculation: base duration + boost duration (2x)
+      // totalDuration = (elapsedSec - validBoostSec) + (validBoostSec * 2)
+      const effectiveSec = (elapsedSec - validBoostSec) + (validBoostSec * 2);
+
+      // Reward with ±15% variance
       const variance = 0.85 + Math.random() * 0.3; // 0.85 – 1.15
-      const rawReward = elapsedSec * ST_PER_SECOND * variance;
+      const rawReward = effectiveSec * ST_PER_SECOND * variance;
       const reward = new Decimal(rawReward.toFixed(6));
 
       const currentBalance = new Decimal(user.balance.toString());
@@ -57,14 +69,15 @@ export async function stopMiningSession(req: Request, res: Response, next: NextF
           receiverId: userId,
           balanceBefore: currentBalance,
           balanceAfter: newBalance,
-          description: `Těžba: ${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s`,
+          description: `Těžba: ${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s (${validBoostSec}s boost)`,
+          metadata: { elapsedSec, boostSeconds: validBoostSec },
         },
       });
 
-      return { reward: reward.toString(), newBalance: newBalance.toString(), elapsedSeconds: elapsedSec };
+      return { reward: reward.toString(), newBalance: newBalance.toString(), elapsedSeconds: elapsedSec, boostSeconds: validBoostSec };
     });
 
-    logger.info(`MINING STOP: User ${userId}, earned ${result.reward} ST (${result.elapsedSeconds}s)`);
+    logger.info(`MINING STOP: User ${userId}, earned ${result.reward} ST (${result.elapsedSeconds}s, boost: ${result.boostSeconds}s)`);
     res.json({ success: true, ...result });
   } catch (error) { next(error); }
 }

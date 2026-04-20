@@ -33,7 +33,6 @@ model User {
   giveawaysCreated     Giveaway[]        @relation("giveawayCreator")
   giveawayEntries      GiveawayEntry[]
   giveawayWins         GiveawayWinner[]
-  stRoomSessions       StRoomSession[]
   userPasses           UserPass[]
   usernames            Username[]
   marketListingsSold   MarketListing[]   @relation("marketSeller")
@@ -90,7 +89,6 @@ enum TransactionType {
   ADMIN_GRANT
   TRANSFER
   SYSTEM_DEBIT
-  ST_ROOM_ACCESS
   MARKET_SALE      // seller receives ST from market (delayed)
   MARKET_PURCHASE  // buyer pays ST on market
   HANDLE_CREATE    // user pays to register a username handle
@@ -100,43 +98,6 @@ enum TransactionType {
   COINFLIP_LOSS    // loser's wager deducted
   DAILY_REWARD     // daily login streak reward
   AUCTION_REFUND   // outbid refund
-}
-
-model Teacher {
-  id        String        @id @default(cuid())
-  name      String        @unique
-  rarity    TeacherRarity @default(COMMON)
-  isActive  Boolean       @default(true) @map("is_active")
-  createdAt DateTime      @default(now()) @map("created_at")
-
-  stRoomSessions StRoomSession[]
-
-  @@map("teachers")
-}
-
-enum TeacherRarity {
-  COMMON
-  RARE
-  EPIC
-  LEGENDARY
-  MYTHIC
-}
-
-model StRoomSession {
-  id     String @id @default(cuid())
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  teacherId String  @map("teacher_id")
-  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-
-  cost Decimal @db.Decimal(36, 18)
-
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([userId, expiresAt])
-  @@map("stroom_sessions")
 }
 
 model MiningChallenge {

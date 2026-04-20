@@ -20,7 +20,6 @@ export const en: Translations = {
     wallet: 'Wallet',
     mining: 'Mining',
     drops: 'ST-Drops',
-    stroom: 'ST-ROOM',
     leaderboard: 'Leaderboard',
     profile: 'Profile',
     affiliate: 'Affiliate',
@@ -127,7 +126,6 @@ export const en: Translations = {
     ADMIN_GRANT: 'Admin',
     TRANSFER: 'Transfer',
     SYSTEM_DEBIT: 'System',
-    ST_ROOM_ACCESS: 'ST-ROOM',
   },
   theme: {
     dark: 'Dark',

@@ -18,7 +18,6 @@ export const cs = {
     wallet: 'Peněženka',
     mining: 'Těžba',
     drops: 'ST-Drops',
-    stroom: 'ST-ROOM',
     leaderboard: 'Žebříček',
     profile: 'Profil',
     affiliate: 'Affiliate',
@@ -125,7 +124,6 @@ export const cs = {
     ADMIN_GRANT: 'Admin',
     TRANSFER: 'Převod',
     SYSTEM_DEBIT: 'Systém',
-    ST_ROOM_ACCESS: 'ST-ROOM',
   },
   theme: {
     dark: 'Tmavý',

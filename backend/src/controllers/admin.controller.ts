@@ -210,52 +210,6 @@ export async function deleteUser(req: Request, res: Response, next: NextFunction
   }
 }
 
-// ── Teachers (ST-ROOM) ──
-export async function getTeachersAdmin(req: Request, res: Response, next: NextFunction) {
-  try {
-    const teachers = await prisma.teacher.findMany({ orderBy: { name: 'asc' } });
-    res.json({ teachers });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function addTeacher(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { name } = z.object({ name: z.string().min(2).max(50) }).parse(req.body);
-    const teacher = await prisma.teacher.create({ data: { name } });
-    logger.info(`ADMIN: Nový učitel přidán: ${name}`);
-    res.json({ success: true, teacher });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function toggleTeacherActive(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { teacherId } = z.object({ teacherId: z.string() }).parse(req.body);
-    const teacher = await prisma.teacher.findUniqueOrThrow({ where: { id: teacherId } });
-    await prisma.teacher.update({ where: { id: teacherId }, data: { isActive: !teacher.isActive } });
-    res.json({ success: true, isActive: !teacher.isActive });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function setTeacherRarity(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { teacherId, rarity } = z.object({
-      teacherId: z.string(),
-      rarity: z.enum(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC']),
-    }).parse(req.body);
-    await prisma.teacher.update({ where: { id: teacherId }, data: { rarity } });
-    logger.info(`ADMIN: Teacher ${teacherId} rarity set to ${rarity}`);
-    res.json({ success: true });
-  } catch (error) {
-    next(error);
-  }
-}
-
 // ── Pass Code (Admin) ──
 import * as passCodeService from '../services/passcode.service';
 

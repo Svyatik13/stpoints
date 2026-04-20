@@ -135,17 +135,6 @@ export const api = {
       request<any>('/mining/session'),
   },
 
-  // ── ST-ROOM ──
-  stRoom: {
-    teachers: () => request<any>('/st-room/teachers'),
-    session: () => request<any>('/st-room/session'),
-    buy: (body: { teacherId: string }) => request<any>('/st-room/buy', { method: 'POST', body }),
-    redeemPass: (body: { teacherId: string }) => request<any>('/st-room/redeem-pass', { method: 'POST', body }),
-    earlyExit: () => request<{ success: boolean; message: string }>('/st-room/early-exit', { method: 'POST' }),
-  },
-
-
-
   // ── Giveaway ──
   giveaway: {
     recent: (limit: number = 10) =>
@@ -172,14 +161,8 @@ export const api = {
       request<any>('/admin/giveaway/create', { method: 'POST', body }),
     drawGiveaway: (body: { giveawayId: string }) =>
       request<any>('/admin/giveaway/draw', { method: 'POST', body }),
-    teachers: () =>
-      request<any>('/admin/teachers'),
-    addTeacher: (body: { name: string }) =>
-      request<any>('/admin/teachers', { method: 'POST', body }),
-    toggleTeacher: (body: { teacherId: string }) =>
-      request<any>('/admin/teachers/toggle', { method: 'POST', body }),
-    setTeacherRarity: (body: { teacherId: string; rarity: string }) =>
-      request<any>('/admin/teachers/rarity', { method: 'POST', body }),
+    drawGiveaway: (body: { giveawayId: string }) =>
+      request<any>('/admin/giveaway/draw', { method: 'POST', body }),
 
     // PassCode
     getPassCode: () =>
