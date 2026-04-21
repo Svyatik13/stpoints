@@ -124,6 +124,8 @@ export default function WheelPage() {
       // Keep visualRound (winner info) for 3 more seconds before clearing
       setTimeout(() => {
         setVisualRound(null);
+        // Soft reload to ensure clean state after game
+        window.location.reload();
       }, 3000);
 
     }, 6000); 
