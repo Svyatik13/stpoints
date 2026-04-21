@@ -8,11 +8,12 @@ export interface User {
   referralCount: number;
   createdAt: string;
   lastActiveAt: string | null;
+  activeTitle: string | null;
 }
 
 export interface Transaction {
   id: string;
-  type: 'MINING_REWARD' | 'GIVEAWAY' | 'ADMIN_GRANT' | 'TRANSFER' | 'SYSTEM_DEBIT' | 'ST_ROOM_ACCESS' | 'CASE_OPENING' | 'REFERRAL_REWARD';
+  type: 'MINING_REWARD' | 'GIVEAWAY' | 'ADMIN_GRANT' | 'TRANSFER' | 'SYSTEM_DEBIT' | 'ST_ROOM_ACCESS' | 'CASE_OPENING' | 'REFERRAL_REWARD' | 'COINFLIP_WIN' | 'COINFLIP_LOSS' | 'WHEEL_WIN' | 'WHEEL_LOSS' | 'DAILY_REWARD';
   amount: string;
   description: string | null;
   balanceBefore: string;
