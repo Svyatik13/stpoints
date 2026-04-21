@@ -214,23 +214,32 @@ export default function WheelPage() {
                  {activeRound?.status === 'COUNTDOWN' ? (
                    <>
                      <span className="text-st-gold text-2xl font-bold font-mono">{countdown}s</span>
-                     <span className="text-[10px] text-text-muted uppercase tracking-widest mt-1">Spinning...</span>
+                     <span className="text-[10px] text-text-muted uppercase tracking-widest mt-1">Sázení...</span>
+                   </>
+                 ) : isSpinning ? (
+                   <>
+                     <div className="w-10 h-10 border-2 border-st-gold/20 border-t-st-gold rounded-full animate-spin mb-2" />
+                     <span className="text-[10px] text-st-gold font-bold uppercase tracking-widest animate-pulse">Točíme!</span>
                    </>
                  ) : activeRound?.status === 'WAITING' ? (
                    <>
                      <Users className="w-6 h-6 text-st-cyan mb-1" />
-                     <span className="text-[10px] text-text-muted uppercase text-center px-4">Waiting for players</span>
+                     <span className="text-[10px] text-text-muted uppercase text-center px-4">Čekání na hráče</span>
                    </>
                  ) : (
-                   <div className="flex flex-col items-center">
+                   <motion.div 
+                     initial={{ scale: 0.5, opacity: 0 }}
+                     animate={{ scale: 1, opacity: 1 }}
+                     className="flex flex-col items-center"
+                   >
                      <Trophy className="w-6 h-6 text-st-gold animate-bounce mb-1" />
-                     <span className="text-[10px] text-st-gold font-bold uppercase tracking-tighter">Winner!</span>
-                     {visualRound && (
-                       <span className="text-[9px] text-white/50 truncate max-w-[80px]">
+                     <span className="text-[10px] text-st-gold font-bold uppercase tracking-tighter">Vítěz!</span>
+                     {activeRound?.status === 'FINISHED' && (
+                       <span className="text-[11px] text-white font-bold truncate max-w-[90px] mt-1 shadow-lg">
                          {activeRound.bets.find((b: any) => b.userId === activeRound.winnerId)?.user.username}
                        </span>
                      )}
-                   </div>
+                   </motion.div>
                  )}
                </div>
             </div>
