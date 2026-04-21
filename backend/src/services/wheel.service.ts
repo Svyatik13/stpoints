@@ -16,7 +16,8 @@ export async function getActiveRound() {
     },
     include: {
       bets: {
-        include: { user: { select: { id: true, username: true } } }
+        include: { user: { select: { id: true, username: true } } },
+        orderBy: { createdAt: 'asc' }
       }
     },
     orderBy: { resolvedAt: 'desc' }
@@ -29,7 +30,8 @@ export async function getActiveRound() {
     where: { status: { in: ['WAITING', 'COUNTDOWN'] } },
     include: {
       bets: {
-        include: { user: { select: { id: true, username: true } } }
+        include: { user: { select: { id: true, username: true } } },
+        orderBy: { createdAt: 'asc' }
       }
     }
   });
@@ -137,7 +139,8 @@ export async function placeBet(userId: string, amount: number) {
       },
       include: {
         bets: {
-          include: { user: { select: { id: true, username: true } } }
+          include: { user: { select: { id: true, username: true } } },
+          orderBy: { createdAt: 'asc' }
         }
       }
     });
@@ -219,7 +222,8 @@ export async function resolveRound(roundId: string) {
       },
       include: {
         bets: {
-          include: { user: { select: { id: true, username: true } } }
+          include: { user: { select: { id: true, username: true } } },
+          orderBy: { createdAt: 'asc' }
         }
       }
     });
