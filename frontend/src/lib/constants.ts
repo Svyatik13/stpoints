@@ -7,7 +7,6 @@ export const NAV_ITEMS = [
   { href: '/wallet', label: 'Peněženka', icon: '💎' },
   { href: '/mining', label: 'Těžba', icon: '⛏️' },
   { href: '/giveaways', label: 'ST-Drops', icon: '🎁' },
-  { href: '/st-room', label: 'ST-ROOM', icon: '🔐' },
 ] as const;
 
 // Gambling section — shown as a dropdown
