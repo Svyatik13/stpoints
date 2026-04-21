@@ -41,6 +41,8 @@ export default function AdminPage() {
   const [bulkReason, setBulkReason] = useState('');
   const [bulkFilter, setBulkFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(false);
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [isLockdown, setIsLockdown] = useState(false);
 
   // Giveaway state
   const [gaTitle, setGaTitle] = useState('');
@@ -62,9 +64,17 @@ export default function AdminPage() {
   }, [userPage, userSearch]);
 
 
+  const loadSettings = useCallback(async () => {
+    try {
+      const s = await api.admin.getSettings();
+      setSettings(s);
+      setIsLockdown(s.is_lockdown === 'true');
+    } catch {}
+  }, []);
+
   useEffect(() => {
-    if (user?.role === 'ADMIN') { loadStats(); loadUsers(); loadPassCode(); }
-  }, [user, loadStats, loadUsers, loadPassCode]);
+    if (user?.role === 'ADMIN') { loadStats(); loadUsers(); loadPassCode(); loadSettings(); }
+  }, [user, loadStats, loadUsers, loadPassCode, loadSettings]);
 
   function showMessage(type: 'success' | 'error', text: string) {
     setMessage({ type, text });
@@ -109,7 +119,29 @@ export default function AdminPage() {
               <h1 className="text-2xl font-bold tracking-tight">⚙️ Admin Panel</h1>
               <p className="text-text-secondary text-sm mt-0.5">ZČU Central Node — Správa systému</p>
             </div>
-            <div className="badge badge-red text-xs">ADMIN</div>
+            <div className="flex items-center gap-4">
+              <div className={`p-2 px-3 rounded-xl border flex items-center gap-3 transition-colors ${isLockdown ? 'bg-st-red-dim border-st-red/30' : 'bg-white/[0.03] border-glass-border'}`}>
+                <div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${isLockdown ? 'text-st-red' : 'text-text-muted'}`}>Lockdown Mode</p>
+                  <p className="text-[9px] text-text-muted leading-tight">Jen st_admin</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const next = !isLockdown;
+                    if (next && !window.confirm('AKTIVOVAT LOCKDOWN? Všichni kromě st_admin budou vykopnuti.')) return;
+                    try {
+                      await api.admin.updateSetting('is_lockdown', next ? 'true' : 'false');
+                      setIsLockdown(next);
+                      showMessage('success', `Lockdown ${next ? 'AKTIVOVÁN' : 'DEAKTIVOVÁN'}`);
+                    } catch (e: any) { showMessage('error', e.message); }
+                  }}
+                  className={`w-10 h-5 rounded-full relative transition-colors ${isLockdown ? 'bg-st-red' : 'bg-white/10'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${isLockdown ? 'right-1' : 'left-1'}`} />
+                </button>
+              </div>
+              <div className="badge badge-red text-xs">ADMIN</div>
+            </div>
           </div>
 
           {/* Toast */}

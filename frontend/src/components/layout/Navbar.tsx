@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { NAV_ITEMS, GAMBLING_ITEMS, MARKET_ITEMS, ADMIN_NAV_ITEMS } from '@/lib/constants';
 import { useI18n } from '@/lib/i18n';
+import TitleBadge from '@/components/common/TitleBadge';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -135,7 +136,10 @@ export default function Navbar() {
               {user.username.charAt(0).toUpperCase()}
             </div>
             <div className="hidden sm:flex flex-col items-start">
-              <span className="text-sm font-medium text-text-primary leading-tight">{user.username}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-text-primary leading-tight">{user.username}</span>
+                <TitleBadge titleKey={user.activeTitle} />
+              </div>
               <span className="text-xs text-st-cyan font-mono leading-tight">
                 {parseFloat(user.balance).toFixed(6)} ST
               </span>

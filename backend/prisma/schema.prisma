@@ -42,6 +42,7 @@ model User {
   coinflipsCreated CoinflipGame[]   @relation("coinflipCreator")
   coinflipsJoined  CoinflipGame[]   @relation("coinflipJoiner")
   chatMessages     ChatMessage[]
+  wheelBets        WheelBet[]
 
 
   // Referrals
@@ -94,10 +95,11 @@ enum TransactionType {
   HANDLE_CREATE    // user pays to register a username handle
   REFERRAL_REWARD  // bonus for inviter or invitee
   TIP              // peer-to-peer tip
-  COINFLIP_WIN     // winner receives pot from coinflip
   COINFLIP_LOSS    // loser's wager deducted
   DAILY_REWARD     // daily login streak reward
   AUCTION_REFUND   // outbid refund
+  WHEEL_WIN        // winner receives pot from wheel
+  WHEEL_LOSS       // loser's wager deducted in wheel
 }
 
 model MiningChallenge {
@@ -368,3 +370,49 @@ model ChatMessage {
 }
 
 
+// ── Wheel Game ────────────────────────────────────────────────────────────────
+
+enum WheelStatus {
+  WAITING   // Round is open, players can join
+  COUNTDOWN // 2+ players joined, timer is running
+  SPINNING  // Timer ended, wheel is spinning
+  FINISHED  // Round resolved
+}
+
+model WheelRound {
+  id            String      @id @default(cuid())
+  totalAmount   Decimal     @default(0) @db.Decimal(36, 18)
+  status        WheelStatus @default(WAITING)
+  winnerId      String?     @map("winner_id")
+  winningNumber Float?      @map("winning_number") // 0.00 - 100.00
+
+  bets WheelBet[]
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  endsAt     DateTime? @map("ends_at") // when countdown ends
+  resolvedAt DateTime? @map("resolved_at")
+
+  @@index([status])
+  @@map("wheel_rounds")
+}
+
+model WheelBet {
+  id      String @id @default(cuid())
+  roundId String @map("round_id")
+  round   WheelRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount Decimal @db.Decimal(36, 18)
+
+  // Probability slices (0.00 - 100.00)
+  segmentStart Float @map("segment_start")
+  segmentEnd   Float @map("segment_end")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([roundId])
+  @@index([userId])
+  @@map("wheel_bets")
+}

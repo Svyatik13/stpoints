@@ -11,11 +11,13 @@ interface Props {
 
 export default function DashboardSection({ stats, passCode, onMessage, onRefresh }: Props) {
   const [pcLoading, setPcLoading] = useState(false);
+  const [maxUses, setMaxUses] = useState(1);
 
   if (!stats) return <div className="h-40 rounded-xl bg-white/[0.02] animate-pulse" />;
 
   return (
     <div className="space-y-5">
+      {/* ... KPI and Balance Cards remain same ... */}
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -55,22 +57,34 @@ export default function DashboardSection({ stats, passCode, onMessage, onRefresh
             <div className="w-10 h-10 rounded-xl bg-st-purple-dim flex items-center justify-center text-xl">🔐</div>
             <div>
               <p className="font-bold text-sm">Přístupový kód</p>
-              <p className="text-text-muted text-xs">Jednorázový — po použití se automaticky změní</p>
+              <p className="text-text-muted text-xs">Aktivní registrace ({passCode?.currentUses || 0} / {passCode?.maxUses || 1})</p>
             </div>
           </div>
-          <button
-            onClick={async () => {
-              setPcLoading(true);
-              try {
-                await api.admin.regeneratePassCode();
-                onRefresh();
-                onMessage('success', 'Nový kód vygenerován');
-              } catch (err: any) { onMessage('error', err.message); }
-              setPcLoading(false);
-            }}
-            disabled={pcLoading}
-            className="px-3 py-1.5 text-xs rounded-lg bg-st-purple-dim text-st-purple font-semibold hover:bg-st-purple/20 transition-colors disabled:opacity-40"
-          >🔄 Nový kód</button>
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end">
+              <label className="text-[10px] text-text-muted uppercase font-bold px-1">Max Použití</label>
+              <input 
+                type="number" 
+                min={1} 
+                value={maxUses} 
+                onChange={e => setMaxUses(parseInt(e.target.value) || 1)}
+                className="w-16 h-8 bg-black/40 border border-white/10 rounded-lg text-center text-sm font-mono focus:border-st-purple/50 outline-none"
+              />
+            </div>
+            <button
+              onClick={async () => {
+                setPcLoading(true);
+                try {
+                  await api.admin.regeneratePassCode(maxUses);
+                  onRefresh();
+                  onMessage('success', `Nový kód vygenerován na ${maxUses} použití`);
+                } catch (err: any) { onMessage('error', err.message); }
+                setPcLoading(false);
+              }}
+              disabled={pcLoading}
+              className="px-3 py-1.5 h-8 mt-4 text-xs rounded-lg bg-st-purple-dim text-st-purple font-semibold hover:bg-st-purple/20 transition-colors disabled:opacity-40"
+            >🔄 Nový kód</button>
+          </div>
         </div>
         {passCode ? (
           <div className="flex items-center gap-3">
@@ -78,6 +92,9 @@ export default function DashboardSection({ stats, passCode, onMessage, onRefresh
               <p className="text-4xl font-black font-mono tracking-[0.3em] text-st-purple" style={{ textShadow: '0 0 20px rgba(168,85,247,0.5)' }}>
                 {passCode.code}
               </p>
+              {passCode.currentUses >= passCode.maxUses && (
+                <p className="text-st-red text-[10px] font-bold mt-1 uppercase tracking-widest">⚠️ VYPRŠELO</p>
+              )}
             </div>
             <button
               onClick={() => { navigator.clipboard.writeText(passCode.code); onMessage('success', 'Zkopírováno!'); }}

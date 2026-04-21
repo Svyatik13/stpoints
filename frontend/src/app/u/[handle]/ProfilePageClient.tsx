@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import AppShell from '@/components/layout/AppShell';
 
 import { useToast } from '@/components/ui/Toast';
+import TitleBadge from '@/components/common/TitleBadge';
 
 export default function ProfilePageClient({ handle: staticHandle }: { handle: string }) {
   const pathname = usePathname(); // e.g. "/u/vial"
@@ -90,6 +91,9 @@ export default function ProfilePageClient({ handle: staticHandle }: { handle: st
                 </div>
 
                 <h1 className="text-2xl font-bold text-text-primary">{profile.username}</h1>
+                <div className="mt-1 flex justify-center">
+                  <TitleBadge titleKey={profile.activeTitle} className="scale-110" />
+                </div>
 
 
                 <p className="text-xs text-text-muted mt-1">

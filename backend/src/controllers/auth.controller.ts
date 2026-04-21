@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import prisma from '../config/database';
 import * as authService from '../services/auth.service';
 import * as passCodeService from '../services/passcode.service';
+import { AppError } from '../middleware/errorHandler';
 import { env } from '../config/env';
 
 const registerSchema = z.object({
@@ -48,6 +50,12 @@ function setCookies(res: Response, tokens: authService.AuthTokens, rememberMe: b
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
     const validated = registerSchema.parse(req.body);
+
+    const lockdown = await prisma.systemSetting.findUnique({ where: { key: 'is_lockdown' } });
+    if (lockdown?.value === 'true') {
+      throw new AppError('WEBSITE ON MAINTENANCE', 403);
+    }
+
     // 1. Validate pass code (throws 401 if wrong)
     await passCodeService.validatePassCode(validated.passCode);
     // 2. Register user
@@ -68,6 +76,12 @@ export async function register(req: Request, res: Response, next: NextFunction) 
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
     const validated = loginSchema.parse(req.body);
+
+    const lockdown = await prisma.systemSetting.findUnique({ where: { key: 'is_lockdown' } });
+    if (lockdown?.value === 'true' && validated.username !== 'st_admin') {
+      throw new AppError('WEBSITE ON MAINTENANCE', 403);
+    }
+
     const { user, tokens } = await authService.loginUser(validated);
     setCookies(res, tokens, validated.rememberMe);
     res.json({ user });

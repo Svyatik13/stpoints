@@ -182,9 +182,13 @@ export const api = {
     // PassCode
     getPassCode: () =>
       request<{ code: string; history: any[] }>('/admin/passcode'),
-    regeneratePassCode: () =>
-      request<{ code: string; history: any[] }>('/admin/passcode/regenerate', { method: 'POST' }),
+    regeneratePassCode: (maxUses: number = 1) =>
+      request<{ code: string; maxUses: number; currentUses: number; history: any[] }>('/admin/passcode/regenerate', { method: 'POST', body: { maxUses } }),
     // ═══ NEW ═══
+    getSettings: () =>
+      request<Record<string, string>>('/admin/settings'),
+    updateSetting: (key: string, value: string) =>
+      request<{ success: boolean }>('/admin/settings', { method: 'POST', body: { key, value } }),
     // User Detail
     getUserDetail: (userId: string) =>
       request<any>(`/admin/user/${userId}/detail`),
@@ -255,6 +259,14 @@ export const api = {
       request<any>(`/coinflip/cancel/${id}`, { method: 'POST' }),
     games: () => request<any>('/coinflip/games'),
     history: () => request<any>('/coinflip/history'),
+  },
+
+  // ── Wheel ──
+  wheel: {
+    current: () => request<any>('/wheel/current'),
+    bet: (amount: number | string) =>
+      request<any>('/wheel/bet', { method: 'POST', body: { amount } }),
+    history: () => request<any>('/wheel/history'),
   },
 
   // ── Rewards ──

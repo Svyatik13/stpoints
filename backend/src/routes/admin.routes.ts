@@ -24,8 +24,8 @@ router.post('/giveaway/draw', giveawayController.forceDraw);
 router.delete('/user/:userId', adminController.deleteUser);
 
 // Pass Code
-router.get('/passcode', adminController.getPassCode);
-router.post('/passcode/regenerate', adminController.regeneratePassCode);
+router.get('/passcode', adminController.getPassCode as any);
+router.post('/passcode/regenerate', adminController.regeneratePassCode as any);
 
 // ══════════════════════════════════════════════════════════════
 // NEW ENDPOINTS
@@ -35,9 +35,9 @@ router.post('/passcode/regenerate', adminController.regeneratePassCode);
 router.get('/user/:userId/detail', adminController.getUserDetail);
 
 // Broadcast
-router.get('/broadcast', adminController.getBroadcast);
-router.post('/broadcast', adminController.setBroadcast);
-router.delete('/broadcast', adminController.clearBroadcast);
+router.get('/broadcast', adminController.getBroadcast as any);
+router.post('/broadcast', adminController.setBroadcast as any);
+router.delete('/broadcast', adminController.clearBroadcast as any);
 
 
 
@@ -52,6 +52,10 @@ router.post('/coinflips/:gameId/cancel', adminController.forceCancelCoinflip);
 
 // Bulk Grant
 router.post('/bulk-grant', adminController.bulkGrant);
+
+// Settings
+router.get('/settings', adminController.getSettings as any);
+router.post('/settings', adminController.updateSetting as any);
 
 // Export
 router.get('/users/export', adminController.exportUsersCSV);

@@ -12,6 +12,7 @@ export const NAV_ITEMS = [
 // Gambling section — shown as a dropdown
 export const GAMBLING_ITEMS = [
   { href: '/coinflip', label: 'Coinflip', icon: '🪙' },
+  { href: '/wheel', label: 'PVP Wheel', icon: '🎡' },
 ] as const;
 
 // Market is its own item
@@ -38,6 +39,8 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   COINFLIP_WIN: 'Coinflip',
   COINFLIP_LOSS: 'Coinflip',
   DAILY_REWARD: 'Streak',
+  WHEEL_WIN: 'Wheel',
+  WHEEL_LOSS: 'Wheel',
 };
 
 export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
@@ -55,6 +58,8 @@ export const TRANSACTION_TYPE_COLORS: Record<string, string> = {
   COINFLIP_WIN: 'badge-gold',
   COINFLIP_LOSS: 'badge-red',
   DAILY_REWARD: 'badge-emerald',
+  WHEEL_WIN: 'badge-gold',
+  WHEEL_LOSS: 'badge-red',
 };
 
 // Activity feed event formatting
