@@ -17,6 +17,20 @@ const SEGMENT_COLORS = [
   '#f472b6', '#6366f1', '#f97316', '#22d3ee', '#d946ef'
 ];
 
+/**
+ * Deterministically maps a username to a color from the SEGMENT_COLORS array.
+ * This ensures a user always has the same color across different rounds.
+ */
+const getUserColor = (username: string) => {
+  if (!username) return SEGMENT_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % SEGMENT_COLORS.length;
+  return SEGMENT_COLORS[index];
+};
+
 export default function WheelPage() {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
@@ -199,7 +213,7 @@ export default function WheelPage() {
                       <path
                         key={bet.id}
                         d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${longArc} 1 ${x2} ${y2} Z`}
-                        fill={color}
+                        fill={getUserColor(bet.user.username)}
                         stroke="#000"
                         strokeWidth="0.1"
                       />
@@ -340,7 +354,7 @@ export default function WheelPage() {
                  </div>
                ) : (
                  [...(activeRound?.bets || [])].reverse().map((bet: any, i: number) => {
-                    const color = SEGMENT_COLORS[((activeRound?.bets || []).length - 1 - i) % SEGMENT_COLORS.length];
+                    const color = getUserColor(bet.user.username);
                    return (
                      <div key={bet.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02]">
                         <div className="flex items-center gap-3">
