@@ -125,6 +125,7 @@ export default function WheelPage() {
       setTimeout(() => {
         setVisualRound(null);
         setRotation(0); // Reset for next game
+        refreshUser(); // Secondary refresh to ensure balance is current
       }, 3000);
 
     }, 6000);

@@ -120,13 +120,17 @@ export async function placeBet(userId: string, amount: number) {
       });
     }
 
+    // Count unique players including the current bet
+    const isNewPlayer = !round.bets.some(b => b.userId === userId);
+    const uniquePlayerCount = round.bets.length + (isNewPlayer ? 1 : 0);
+
     // 6. Update round total
     const updatedRound = await tx.wheelRound.update({
       where: { id: round.id },
       data: { 
         totalAmount: { increment: amount },
-        // Start countdown if it's the 2nd player
-        ...(round.status === 'WAITING' && round.bets.length >= 1 ? {
+        // Start countdown only if there are 2 or more unique players
+        ...(round.status === 'WAITING' && uniquePlayerCount >= 2 ? {
           status: 'COUNTDOWN',
           endsAt: new Date(Date.now() + ROUND_DURATION_MS)
         } : {})
