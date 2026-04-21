@@ -175,7 +175,7 @@ export default function WheelPage() {
                 {total === 0 ? (
                   <circle cx="50" cy="50" r="50" fill="#1e1b4b" />
                 ) : (
-                  round.bets.map((bet: any, i: number) => {
+                  (round?.bets || []).map((bet: any, i: number) => {
                     const start = (userBets.reduce((acc, b) => acc + Number(b.amount), 0) / total) * 100;
                     const size = (Number(bet.amount) / total) * 100;
                     
@@ -235,13 +235,13 @@ export default function WheelPage() {
             </div>
             <div className="glass-card-static p-4 flex flex-col items-center">
               <Users className="w-5 h-5 text-st-cyan mb-1" />
-              <span className="text-xl font-bold font-mono text-st-cyan">{round?.bets.length}</span>
+              <span className="text-xl font-bold font-mono text-st-cyan">{round?.bets?.length || 0}</span>
               <span className="text-[10px] text-text-muted uppercase">Hráči</span>
             </div>
             <div className="glass-card-static p-4 flex flex-col items-center">
               <ArrowUpRight className="w-5 h-5 text-st-emerald mb-1" />
               <span className="text-xl font-bold font-mono text-st-emerald">
-                {user ? ((Number(round?.bets.find((b: any) => b.userId === user.id)?.amount || 0) / (total || 1)) * 100).toFixed(1) : 0}%
+                {user ? ((Number((round?.bets || []).find((b: any) => b.userId === user.id)?.amount || 0) / (total || 1)) * 100).toFixed(1) : 0}%
               </span>
               <span className="text-[10px] text-text-muted uppercase">Tvá Šance</span>
             </div>
@@ -309,17 +309,17 @@ export default function WheelPage() {
                  <Users className="w-3 h-3 text-st-cyan" /> Hráči v kole
                </h3>
                <span className="text-[10px] font-bold py-0.5 px-2 bg-st-cyan-dim text-st-cyan rounded-full">
-                 {round?.bets.length}
+                 {round?.bets?.length || 0}
                </span>
              </div>
              <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5">
-               {round?.bets.length === 0 ? (
+               {(round?.bets || []).length === 0 ? (
                  <div className="py-8 text-center text-[11px] text-text-muted">
                     Zatím žádné sázky... Buď první!
                  </div>
                ) : (
-                 [...round.bets].reverse().map((bet: any, i: number) => {
-                   const color = SEGMENT_COLORS[(round.bets.length - 1 - i) % SEGMENT_COLORS.length];
+                 [...(round?.bets || [])].reverse().map((bet: any, i: number) => {
+                    const color = SEGMENT_COLORS[((round?.bets || []).length - 1 - i) % SEGMENT_COLORS.length];
                    return (
                      <div key={bet.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02]">
                         <div className="flex items-center gap-3">

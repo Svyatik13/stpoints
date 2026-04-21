@@ -101,6 +101,11 @@ export async function placeBet(userId: string, amount: number) {
           status: 'COUNTDOWN',
           endsAt: new Date(Date.now() + ROUND_DURATION_MS)
         } : {})
+      },
+      include: {
+        bets: {
+          include: { user: { select: { id: true, username: true } } }
+        }
       }
     });
 
@@ -178,6 +183,11 @@ export async function resolveRound(roundId: string) {
         winnerId: winnerBet.userId,
         winningNumber: winningNumber,
         resolvedAt: new Date()
+      },
+      include: {
+        bets: {
+          include: { user: { select: { id: true, username: true } } }
+        }
       }
     });
   });
