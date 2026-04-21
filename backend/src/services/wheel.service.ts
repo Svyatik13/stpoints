@@ -6,6 +6,25 @@ const HOUSE_FEE = 0.03; // 3%
 const ROUND_DURATION_MS = 30000; // 30 seconds
 
 export async function getActiveRound() {
+  // 1. Check for a very recently finished round (within 10s)
+  // This gives all clients time to poll and see the "FINISHED" state
+  const tenSecondsAgo = new Date(Date.now() - 10000);
+  const recentFinished = await prisma.wheelRound.findFirst({
+    where: { 
+      status: 'FINISHED',
+      resolvedAt: { gte: tenSecondsAgo }
+    },
+    include: {
+      bets: {
+        include: { user: { select: { id: true, username: true } } }
+      }
+    },
+    orderBy: { resolvedAt: 'desc' }
+  });
+
+  if (recentFinished) return recentFinished;
+
+  // 2. Otherwise get current active round
   let round = await prisma.wheelRound.findFirst({
     where: { status: { in: ['WAITING', 'COUNTDOWN'] } },
     include: {

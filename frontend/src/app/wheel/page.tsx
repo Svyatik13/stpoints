@@ -33,6 +33,7 @@ export default function WheelPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const prevStatus = useRef<string | null>(null);
+  const lastSpunId = useRef<string | null>(null);
 
   // Poll for current round
   useEffect(() => {
@@ -40,17 +41,14 @@ export default function WheelPage() {
       try {
         const data = await api.wheel.current();
         
-        // Handle transitions
-        if (prevStatus.current === 'COUNTDOWN' && data.round.status === 'FINISHED') {
-          // CAPTURE the winning round data for the animation
+        // Handle transitions & joining a finished round late
+        if (data.round.status === 'FINISHED' && lastSpunId.current !== data.round.id) {
+          lastSpunId.current = data.round.id;
           setVisualRound(data.round);
           handleWinSpin(data.round);
         }
         
-        // If we are NOT spinning, we track the live round
-        // If we ARE spinning, we keep the visualRound (the finished one) until spin ends
         setRound(data.round);
-        
         prevStatus.current = data.round.status;
         setLoading(false);
       } catch (err) {
@@ -61,7 +59,7 @@ export default function WheelPage() {
     fetchRound();
     const interval = setInterval(fetchRound, 2000);
     return () => clearInterval(interval);
-  }, [isSpinning]); // Re-bind so handles closures correctly if needed
+  }, []);
 
   // Poll history
   useEffect(() => {
@@ -97,23 +95,20 @@ export default function WheelPage() {
     if (isSpinning) return;
 
     setIsSpinning(true);
-    // Base rotation + logic to land on winningNumber
-    // winningNumber is 0-100. 0 is 0deg, 100 is 360deg.
-    // However, wheels spin clockwise, so 0 is top (270deg in SVG space usually)
-    // We want the winning segment to be under the pointer (at 0 degrees/top)
     
-    const extraSpins = 5; // Spin 5 times
+    // LANDING LOGIC
+    // Pointer is at Top (0deg). Wheel rotation aligns a value to pointer.
+    // SVG is rotates -90deg so 0 is at Top.
+    const extraSpins = 8; // More spins for "fuller" feel
     const targetDeg = (finishedRound.winningNumber / 100) * 360;
-    // To land at top (0deg), the wheel needs to rotate such that targetDeg is at the pointer position.
-    // Pointer is at top (offset 0). 
-    // SVG rotation is -targetDeg to align.
     const finalRotation = rotation + (360 * extraSpins) + (360 - targetDeg);
     
     setRotation(finalRotation);
 
+    // 6 second animation + 3 second hold for winner display = 9 seconds total
     setTimeout(() => {
       setIsSpinning(false);
-      setVisualRound(null); // Clear visual round to show the new live round
+      
       const isWinner = finishedRound.winnerId === user?.id;
       if (isWinner) {
         confetti({
@@ -125,7 +120,13 @@ export default function WheelPage() {
         toast('success', `Gratulujeme! Vyhrál jsi ve Wheel!`);
         refreshUser();
       }
-    }, 5000); // Animation duration
+
+      // Keep visualRound (winner info) for 3 more seconds before clearing
+      setTimeout(() => {
+        setVisualRound(null);
+      }, 3000);
+
+    }, 6000); 
   };
 
   const placeBet = async () => {
@@ -150,8 +151,8 @@ export default function WheelPage() {
     </AppShell>
   );
 
-  // Use visualRound for rendering while spinning, otherwise live round
-  const activeRound = isSpinning ? visualRound : round;
+  // Use visualRound for rendering while spinning OR during the post-spin winner hold
+  const activeRound = (isSpinning || visualRound) ? (visualRound || round) : round;
   const total = Number(activeRound?.totalAmount || 0);
   let currentPos = 0;
 
@@ -174,7 +175,7 @@ export default function WheelPage() {
             <motion.div 
               className="w-full h-full rounded-full border-[8px] border-surface-600 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden relative"
               animate={{ rotate: rotation }}
-              transition={{ duration: isSpinning ? 5 : 0, ease: "easeOut" }}
+              transition={{ duration: isSpinning ? 6 : 0, ease: [0.32, 0.23, 0.4, 1] }}
             >
               <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                 {total === 0 ? (
@@ -183,7 +184,6 @@ export default function WheelPage() {
                   (activeRound?.bets || []).map((bet: any, i: number) => {
                     const size = (Number(bet.amount) / (total || 1)) * 100;
                     
-                    // Path for a slice
                     const x1 = 50 + 50 * Math.cos(2 * Math.PI * (currentPos / 100));
                     const y1 = 50 + 50 * Math.sin(2 * Math.PI * (currentPos / 100));
                     currentPos += size;
@@ -208,22 +208,28 @@ export default function WheelPage() {
               </svg>
             </motion.div>
 
-            {/* Center Info */}
+            {/* Center Info - Unified to activeRound */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                <div className="w-32 h-32 rounded-full bg-surface-900/80 backdrop-blur-md flex flex-col items-center justify-center border border-white/10">
-                 {round?.status === 'COUNTDOWN' ? (
+                 {activeRound?.status === 'COUNTDOWN' ? (
                    <>
                      <span className="text-st-gold text-2xl font-bold font-mono">{countdown}s</span>
                      <span className="text-[10px] text-text-muted uppercase tracking-widest mt-1">Spinning...</span>
                    </>
-                 ) : round?.status === 'WAITING' ? (
+                 ) : activeRound?.status === 'WAITING' ? (
                    <>
                      <Users className="w-6 h-6 text-st-cyan mb-1" />
                      <span className="text-[10px] text-text-muted uppercase text-center px-4">Waiting for players</span>
                    </>
                  ) : (
-                   <div className="animate-pulse flex flex-col items-center">
-                     <Trophy className="w-6 h-6 text-st-gold" />
+                   <div className="flex flex-col items-center">
+                     <Trophy className="w-6 h-6 text-st-gold animate-bounce mb-1" />
+                     <span className="text-[10px] text-st-gold font-bold uppercase tracking-tighter">Winner!</span>
+                     {visualRound && (
+                       <span className="text-[9px] text-white/50 truncate max-w-[80px]">
+                         {activeRound.bets.find((b: any) => b.userId === activeRound.winnerId)?.user.username}
+                       </span>
+                     )}
                    </div>
                  )}
                </div>
@@ -290,7 +296,7 @@ export default function WheelPage() {
 
               <button 
                 onClick={placeBet}
-                disabled={betting || round?.status === 'SPINNING'}
+                disabled={betting || round?.status === 'SPINNING' || round?.status === 'FINISHED'}
                 className="btn-primary w-full py-4 text-sm flex items-center justify-center gap-3 active:scale-[0.98]"
               >
                 {betting ? (
@@ -306,7 +312,7 @@ export default function WheelPage() {
             </div>
           </div>
 
-          {/* Current Players List */}
+          {/* Current Players List - Unified to activeRound */}
           <div className="glass-card-static overflow-hidden">
              <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -330,7 +336,7 @@ export default function WheelPage() {
                            <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: color }} />
                            <div className="flex flex-col">
                              <span className="text-sm font-semibold">{bet.user.username}</span>
-                             <span className="text-[10px] text-text-muted">{((Number(bet.amount) / total) * 100).toFixed(1)}% podíl</span>
+                             <span className="text-[10px] text-text-muted">{((Number(bet.amount) / (total || 1)) * 100).toFixed(1)}% podíl</span>
                            </div>
                         </div>
                         <span className="font-mono font-bold text-st-cyan text-sm">{Number(bet.amount).toFixed(2)} ST</span>
@@ -351,23 +357,26 @@ export default function WheelPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {history.map((h: any) => (
-                  <div key={h.id} className="p-4 border border-white/5 rounded-2xl bg-white/[0.02] flex items-center justify-between group hover:border-st-gold/30 transition-all">
-                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-st-gold/10 flex items-center justify-center text-st-gold border border-st-gold/20 group-hover:scale-110 transition-transform">
-                          <Trophy className="w-5 h-5" />
-                       </div>
-                       <div className="flex flex-col">
-                          <span className="text-sm font-bold truncate max-w-[100px]">{h.bets.find((b: any) => b.userId === h.winnerId)?.user.username || 'Unknown'}</span>
-                          <span className="text-[10px] text-text-muted font-mono">{new Date(h.resolvedAt).toLocaleTimeString()}</span>
-                       </div>
+                {history.map((h: any) => {
+                  const winnerBet = h.bets.find((b: any) => b.userId === h.winnerId);
+                  return (
+                    <div key={h.id} className="p-4 border border-white/5 rounded-2xl bg-white/[0.02] flex items-center justify-between group hover:border-st-gold/30 transition-all">
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-st-gold/10 flex items-center justify-center text-st-gold border border-st-gold/20 group-hover:scale-110 transition-transform">
+                            <Trophy className="w-5 h-5" />
+                         </div>
+                         <div className="flex flex-col">
+                            <span className="text-sm font-bold truncate max-w-[100px]">{winnerBet?.user?.username || 'Unknown'}</span>
+                            <span className="text-[10px] text-text-muted font-mono">{new Date(h.resolvedAt).toLocaleTimeString()}</span>
+                         </div>
+                      </div>
+                      <div className="text-right">
+                         <p className="text-st-gold font-bold font-mono text-sm">+{Number(h.totalAmount * 0.97).toFixed(2)} ST</p>
+                         <p className="text-[10px] text-text-muted">{h.bets.length} hráčů</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                       <p className="text-st-gold font-bold font-mono text-sm">+{Number(h.totalAmount * 0.97).toFixed(2)} ST</p>
-                       <p className="text-[10px] text-text-muted">{h.bets.length} hráčů</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
            </div>
         </div>
