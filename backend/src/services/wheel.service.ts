@@ -100,15 +100,25 @@ export async function placeBet(userId: string, amount: number) {
     // but storing segment boundaries at the time of resolution is easier for the "Winning Number" logic.
     // For now, we'll store them relative to the current round state.
     
-    const bet = await tx.wheelBet.create({
-      data: {
-        roundId: round.id,
-        userId: userId,
-        amount: amount,
-        segmentStart: 0, // We'll recalculate all segments on resolution or broadcast
-        segmentEnd: 0
-      }
-    });
+    // Check if user already has a bet in this round
+    const existingBet = round.bets.find(b => b.userId === userId);
+    
+    if (existingBet) {
+      await tx.wheelBet.update({
+        where: { id: existingBet.id },
+        data: { amount: { increment: amount } }
+      });
+    } else {
+      await tx.wheelBet.create({
+        data: {
+          roundId: round.id,
+          userId: userId,
+          amount: amount,
+          segmentStart: 0,
+          segmentEnd: 0
+        }
+      });
+    }
 
     // 6. Update round total
     const updatedRound = await tx.wheelRound.update({

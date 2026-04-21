@@ -41,9 +41,11 @@ export default function WheelPage() {
       try {
         const data = await api.wheel.current();
         
-        // Handle transitions & joining a finished round late
-        if (data.round.status === 'FINISHED' && lastSpunId.current !== data.round.id) {
-          lastSpunId.current = data.round.id;
+        // Use sessionStorage to remember if we already spun this round, even after a manual refresh
+        const sessionLastSpun = sessionStorage.getItem('wheel_last_spun_id');
+        
+        if (data.round.status === 'FINISHED' && sessionLastSpun !== data.round.id) {
+          sessionStorage.setItem('wheel_last_spun_id', data.round.id);
           setVisualRound(data.round);
           handleWinSpin(data.round);
         }
@@ -67,7 +69,7 @@ export default function WheelPage() {
       try {
         const data = await api.wheel.history();
         setHistory(data.history);
-      } catch {}
+      } catch { }
     };
     fetchHistory();
     const interval = setInterval(fetchHistory, 10000);
@@ -95,20 +97,18 @@ export default function WheelPage() {
     if (isSpinning) return;
 
     setIsSpinning(true);
-    
+
     // LANDING LOGIC
-    // Pointer is at Top (0deg). Wheel rotation aligns a value to pointer.
-    // SVG is rotates -90deg so 0 is at Top.
-    const extraSpins = 8; // More spins for "fuller" feel
+    const extraSpins = 8; 
     const targetDeg = (finishedRound.winningNumber / 100) * 360;
     const finalRotation = rotation + (360 * extraSpins) + (360 - targetDeg);
-    
+
     setRotation(finalRotation);
 
     // 6 second animation + 3 second hold for winner display = 9 seconds total
     setTimeout(() => {
       setIsSpinning(false);
-      
+
       const isWinner = finishedRound.winnerId === user?.id;
       if (isWinner) {
         confetti({
@@ -124,11 +124,10 @@ export default function WheelPage() {
       // Keep visualRound (winner info) for 3 more seconds before clearing
       setTimeout(() => {
         setVisualRound(null);
-        // Soft reload to ensure clean state after game
-        window.location.reload();
+        setRotation(0); // Reset for next game
       }, 3000);
 
-    }, 6000); 
+    }, 6000);
   };
 
   const placeBet = async () => {
