@@ -17,11 +17,13 @@ export interface RegisterInput {
 export interface LoginInput {
   username: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  rememberMe?: boolean;
 }
 
 export async function registerUser(input: RegisterInput): Promise<{ user: any; tokens: AuthTokens }> {
@@ -197,10 +199,10 @@ export async function loginUser(input: LoginInput): Promise<{ user: any; tokens:
     data: { lastActiveAt: new Date() },
   });
 
-  const payload: TokenPayload = { userId: user.id, role: user.role };
+  const payload: TokenPayload = { userId: user.id, role: user.role, rememberMe: input.rememberMe };
   const tokens: AuthTokens = {
     accessToken: signAccessToken(payload),
-    refreshToken: signRefreshToken(payload),
+    refreshToken: signRefreshToken(payload, input.rememberMe),
   };
 
   const { passwordHash, ...safeUser } = user;
@@ -208,7 +210,7 @@ export async function loginUser(input: LoginInput): Promise<{ user: any; tokens:
 
   logger.info(`Uživatel přihlášen: ${user.username}`);
 
-  return { user: normalizedUser, tokens };
+  return { user: normalizedUser, tokens: { ...tokens, rememberMe: input.rememberMe } };
 }
 
 export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
@@ -224,11 +226,12 @@ export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
       throw new AppError('Token obnovy neplatný.', 401);
     }
 
-    const newPayload: TokenPayload = { userId: user.id, role: user.role };
+    const newPayload: TokenPayload = { userId: user.id, role: user.role, rememberMe: payload.rememberMe };
 
     return {
       accessToken: signAccessToken(newPayload),
-      refreshToken: signRefreshToken(newPayload),
+      refreshToken: signRefreshToken(newPayload, payload.rememberMe),
+      rememberMe: payload.rememberMe,
     };
   } catch (error) {
     throw new AppError('Token obnovy neplatný nebo vypršel.', 401);

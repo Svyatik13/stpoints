@@ -103,7 +103,7 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
       return;
     }
     const tokens = await authService.refreshTokens(refreshToken);
-    setCookies(res, tokens);
+    setCookies(res, tokens, tokens.rememberMe);
     res.json({ message: 'Tokeny obnoveny.' });
   } catch (error) {
     next(error);

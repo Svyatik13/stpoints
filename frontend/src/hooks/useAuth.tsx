@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
     } catch (error: any) {
       // Only clear user if it's a definitive auth error
-      if (error?.code === 'UNAUTHORIZED' || error?.code === 'TOKEN_EXPIRED') {
+      if (error instanceof ApiError && (error.status === 401 || error.code === 'TOKEN_EXPIRED')) {
         setUser(null);
       }
       // Log error for debugging but don't force logout on 500/network error

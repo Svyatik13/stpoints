@@ -8,6 +8,18 @@ interface ApiOptions {
   headers?: Record<string, string>;
 }
 
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.name = 'ApiError';
+  }
+}
+
 let refreshPromise: Promise<void> | null = null;
 
 async function rawRequest<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
@@ -38,7 +50,7 @@ async function rawRequest<T>(endpoint: string, options: ApiOptions = {}): Promis
   }
 
   if (!res.ok) {
-    throw new Error(data.error || 'Nastala neočekávaná chyba.');
+    throw new ApiError(data.error || 'Nastala neočekávaná chyba.', res.status, data.code);
   }
 
   return data;
@@ -49,15 +61,20 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
     return await rawRequest<T>(endpoint, options);
   } catch (error: any) {
     const isRefreshEndpoint = endpoint === '/auth/refresh';
-    const isTokenError = error?.code === 'TOKEN_EXPIRED' || error?.message?.includes('token');
+    const isTokenError = error instanceof ApiError && (error.code === 'TOKEN_EXPIRED' || error.status === 401);
 
     if (isTokenError && !isRefreshEndpoint) {
       if (!refreshPromise) {
         refreshPromise = rawRequest<any>('/auth/refresh', { method: 'POST' })
           .finally(() => { refreshPromise = null; });
       }
-      await refreshPromise;
-      return await rawRequest<T>(endpoint, options);
+      try {
+        await refreshPromise;
+        return await rawRequest<T>(endpoint, options);
+      } catch (refreshError) {
+        // If refresh fails, clear logout flag and rethrow to trigger auth cleanup
+        throw refreshError;
+      }
     }
     throw error;
   }
