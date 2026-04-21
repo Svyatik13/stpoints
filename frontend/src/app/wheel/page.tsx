@@ -45,6 +45,7 @@ export default function WheelPage() {
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [showVictory, setShowVictory] = useState(false);
 
   const prevStatus = useRef<string | null>(null);
   const lastSpunId = useRef<string | null>(null);
@@ -125,12 +126,27 @@ export default function WheelPage() {
 
       const isWinner = finishedRound.winnerId === user?.id;
       if (isWinner) {
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#00e8ff', '#fbbf24', '#ffffff']
-        });
+        setShowVictory(true);
+        
+        // Triple burst of confetti for maximum excitement
+        const duration = 3 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+
+        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+        const interval: any = setInterval(function() {
+          const timeLeft = animationEnd - Date.now();
+
+          if (timeLeft <= 0) {
+            return clearInterval(interval);
+          }
+
+          const particleCount = 50 * (timeLeft / duration);
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+
         toast('success', `Gratulujeme! Vyhrál jsi ve Wheel!`);
         refreshUser();
       }
@@ -139,6 +155,7 @@ export default function WheelPage() {
       setTimeout(() => {
         setVisualRound(null);
         setRotation(0); // Reset for next game
+        setShowVictory(false);
         refreshUser(); // Secondary refresh to ensure balance is current
       }, 3000);
 
@@ -174,6 +191,47 @@ export default function WheelPage() {
 
   return (
     <AppShell>
+      {/* Fullscreen Victory Overlay */}
+      <AnimatePresence>
+        {showVictory && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md pointer-events-none"
+          >
+            <motion.div 
+              initial={{ scale: 0.5, y: 50, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+              transition={{ type: "spring", damping: 15 }}
+              className="flex flex-col items-center gap-6"
+            >
+              <div className="relative">
+                <motion.div 
+                  animate={{ 
+                    scale: [1, 1.2, 1],
+                    rotate: [0, 5, -5, 0]
+                  }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                  className="w-32 h-32 rounded-full bg-st-gold-dim flex items-center justify-center border-4 border-st-gold shadow-[0_0_50px_rgba(251,191,36,0.6)]"
+                >
+                  <Trophy className="w-16 h-16 text-st-gold" />
+                </motion.div>
+                <div className="absolute -top-10 -left-10 w-52 h-52 bg-st-gold/20 blur-[60px] rounded-full -z-10" />
+              </div>
+
+              <div className="text-center space-y-2">
+                <h2 className="text-5xl font-black italic tracking-tighter text-st-gold uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]">
+                  VYHRÁL JSI!
+                </h2>
+                <p className="text-st-gold/60 font-bold tracking-widest text-sm uppercase">ST Points jsou tvoje</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-up">
         
         {/* Main Wheel Area */}
