@@ -23,6 +23,7 @@ export default function WheelPage() {
   const { toast } = useToast();
   
   const [round, setRound] = useState<any>(null);
+  const [visualRound, setVisualRound] = useState<any>(null);
   const [betAmount, setBetAmount] = useState('10');
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,12 +39,17 @@ export default function WheelPage() {
     const fetchRound = async () => {
       try {
         const data = await api.wheel.current();
-        setRound(data.round);
         
         // Handle transitions
         if (prevStatus.current === 'COUNTDOWN' && data.round.status === 'FINISHED') {
+          // CAPTURE the winning round data for the animation
+          setVisualRound(data.round);
           handleWinSpin(data.round);
         }
+        
+        // If we are NOT spinning, we track the live round
+        // If we ARE spinning, we keep the visualRound (the finished one) until spin ends
+        setRound(data.round);
         
         prevStatus.current = data.round.status;
         setLoading(false);
@@ -55,7 +61,7 @@ export default function WheelPage() {
     fetchRound();
     const interval = setInterval(fetchRound, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isSpinning]); // Re-bind so handles closures correctly if needed
 
   // Poll history
   useEffect(() => {
@@ -107,6 +113,7 @@ export default function WheelPage() {
 
     setTimeout(() => {
       setIsSpinning(false);
+      setVisualRound(null); // Clear visual round to show the new live round
       const isWinner = finishedRound.winnerId === user?.id;
       if (isWinner) {
         confetti({
@@ -143,12 +150,10 @@ export default function WheelPage() {
     </AppShell>
   );
 
-  // Group bets by user for the wheel segments
-  const userBets: any[] = [];
+  // Use visualRound for rendering while spinning, otherwise live round
+  const activeRound = isSpinning ? visualRound : round;
+  const total = Number(activeRound?.totalAmount || 0);
   let currentPos = 0;
-  
-  // Actually, we should use the raw bets for the segments
-  const total = Number(round?.totalAmount || 0);
 
   return (
     <AppShell>
@@ -175,9 +180,8 @@ export default function WheelPage() {
                 {total === 0 ? (
                   <circle cx="50" cy="50" r="50" fill="#1e1b4b" />
                 ) : (
-                  (round?.bets || []).map((bet: any, i: number) => {
-                    const start = (userBets.reduce((acc, b) => acc + Number(b.amount), 0) / total) * 100;
-                    const size = (Number(bet.amount) / total) * 100;
+                  (activeRound?.bets || []).map((bet: any, i: number) => {
+                    const size = (Number(bet.amount) / (total || 1)) * 100;
                     
                     // Path for a slice
                     const x1 = 50 + 50 * Math.cos(2 * Math.PI * (currentPos / 100));
@@ -235,13 +239,13 @@ export default function WheelPage() {
             </div>
             <div className="glass-card-static p-4 flex flex-col items-center">
               <Users className="w-5 h-5 text-st-cyan mb-1" />
-              <span className="text-xl font-bold font-mono text-st-cyan">{round?.bets?.length || 0}</span>
+              <span className="text-xl font-bold font-mono text-st-cyan">{activeRound?.bets?.length || 0}</span>
               <span className="text-[10px] text-text-muted uppercase">Hráči</span>
             </div>
             <div className="glass-card-static p-4 flex flex-col items-center">
               <ArrowUpRight className="w-5 h-5 text-st-emerald mb-1" />
               <span className="text-xl font-bold font-mono text-st-emerald">
-                {user ? ((Number((round?.bets || []).find((b: any) => b.userId === user.id)?.amount || 0) / (total || 1)) * 100).toFixed(1) : 0}%
+                {user ? ((Number((activeRound?.bets || []).find((b: any) => b.userId === user.id)?.amount || 0) / (total || 1)) * 100).toFixed(1) : 0}%
               </span>
               <span className="text-[10px] text-text-muted uppercase">Tvá Šance</span>
             </div>
@@ -309,17 +313,17 @@ export default function WheelPage() {
                  <Users className="w-3 h-3 text-st-cyan" /> Hráči v kole
                </h3>
                <span className="text-[10px] font-bold py-0.5 px-2 bg-st-cyan-dim text-st-cyan rounded-full">
-                 {round?.bets?.length || 0}
+                 {activeRound?.bets?.length || 0}
                </span>
              </div>
              <div className="max-h-[300px] overflow-y-auto divide-y divide-white/5">
-               {(round?.bets || []).length === 0 ? (
+               {(activeRound?.bets || []).length === 0 ? (
                  <div className="py-8 text-center text-[11px] text-text-muted">
                     Zatím žádné sázky... Buď první!
                  </div>
                ) : (
-                 [...(round?.bets || [])].reverse().map((bet: any, i: number) => {
-                    const color = SEGMENT_COLORS[((round?.bets || []).length - 1 - i) % SEGMENT_COLORS.length];
+                 [...(activeRound?.bets || [])].reverse().map((bet: any, i: number) => {
+                    const color = SEGMENT_COLORS[((activeRound?.bets || []).length - 1 - i) % SEGMENT_COLORS.length];
                    return (
                      <div key={bet.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02]">
                         <div className="flex items-center gap-3">
