@@ -194,7 +194,7 @@ export default function WalletPage() {
               <p className="text-text-muted text-[10px] font-bold tracking-widest uppercase mb-3">Aktivní Titul</p>
               <div className="h-10 flex items-center">
                 {activeTitle ? (
-                  <TitleBadge titleKey={activeTitle} label={allTitles[activeTitle]?.label} className="text-sm px-3 py-1" />
+                  <TitleBadge titleKey={activeTitle} className="text-sm px-3 py-1" />
                 ) : (
                   <span className="text-text-muted italic text-xs">Žádný aktivní titul</span>
                 )}
