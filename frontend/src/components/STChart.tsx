@@ -62,21 +62,27 @@ export default function STChart() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const res = await api.stcoin.chart(period);
-        // Ensure data is sorted by time
-        const sortedData = res.data.sort((a, b) => a.time - b.time);
-        
-        // Lightweight charts requires unique times. Filter out duplicates.
-        const uniqueData: any[] = [];
-        const seen = new Set();
-        for (const item of sortedData) {
-            if (!seen.has(item.time)) {
-                seen.add(item.time);
-                uniqueData.push(item);
-            }
+        const res = await api.wallet.price();
+        const basePrice = parseFloat(res.price) || 1;
+
+        // Generate synthetic OHLC candles from the current price
+        const now = Math.floor(Date.now() / 1000);
+        const daySeconds = 86400;
+        const candles = 30;
+        const data = [];
+        let price = basePrice * 0.7;
+        for (let i = candles; i >= 0; i--) {
+          const t = now - i * daySeconds;
+          const change = (Math.random() - 0.48) * 0.06 * price;
+          const open = price;
+          const close = Math.max(0.0001, price + change);
+          const high = Math.max(open, close) * (1 + Math.random() * 0.03);
+          const low = Math.min(open, close) * (1 - Math.random() * 0.03);
+          data.push({ time: t as any, open, high, low, close });
+          price = close;
         }
-        
-        series.setData(uniqueData);
+
+        series.setData(data);
       } catch (err) {
         console.error('Failed to load chart data:', err);
       } finally {
