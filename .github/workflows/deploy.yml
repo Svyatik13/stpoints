@@ -11,7 +11,7 @@ jobs:
       - name: Deploy to OCI VPS via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: 141.147.53.229
+          host: 158.180.56.213
           username: ubuntu
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |

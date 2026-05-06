@@ -18,7 +18,7 @@ Use this workflow to safely deploy code changes from the local repository to the
 ## Phase 2: VPS Synchronization
 1. SSH into the VPS:
    ```bash
-   ssh -i /Users/savy/Downloads/key.key ubuntu@141.147.53.229
+   ssh -i /Users/savy/stpoints/key.key ubuntu@158.180.56.213
    ```
 2. Navigate to the project root and pull the latest code:
    ```bash
