@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, Time } from 'lightweight-charts';
+import { createChart, CandlestickSeries, IChartApi, ISeriesApi, Time } from 'lightweight-charts';
 import { api } from '@/lib/api';
 
 export default function STChart() {
@@ -32,7 +32,7 @@ export default function STChart() {
       },
     });
 
-    const newSeries = newChart.addCandlestickSeries({
+    const newSeries = newChart.addSeries(CandlestickSeries, {
       upColor: '#26a69a',
       downColor: '#ef5350',
       borderVisible: false,
